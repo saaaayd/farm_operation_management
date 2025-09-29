@@ -14,5 +14,18 @@ if (token) {
     window.axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }
 
+// Add response interceptor for error handling
+window.axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response?.status === 401) {
+            // Token expired or invalid
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Export axios for use in Vue components
 export default axios;

@@ -1,137 +1,165 @@
 <template>
-  <div class="marketplace-page">
-    <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">Marketplace</h1>
-          <p class="text-gray-600 mt-2">Buy and sell agricultural products</p>
-        </div>
-        <div class="flex space-x-3">
-          <button
-            @click="viewCart"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Cart ({{ cartItemCount }})
-          </button>
-          <button
-            @click="sellProduct"
-            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Sell Product
-          </button>
-        </div>
-      </div>
-
-      <!-- Categories -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-lg font-semibold mb-4">Categories</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <button
-            v-for="category in categories"
-            :key="category.id"
-            @click="selectCategory(category.id)"
-            :class="selectedCategory === category.id ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'"
-            class="p-3 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <div class="text-2xl mb-2">{{ category.icon }}</div>
-            <div class="text-sm font-medium">{{ category.name }}</div>
-          </button>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+          <div class="flex items-center">
+            <router-link to="/dashboard" class="text-gray-500 hover:text-gray-700 mr-4">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </router-link>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">Rice Marketplace</h1>
+              <p class="text-sm text-gray-500">Browse and purchase premium rice products</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-4">
+            <router-link 
+              to="/cart"
+              class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+              </svg>
+              <span 
+                v-if="marketplaceStore.cartItemsCount > 0"
+                class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
+              >
+                {{ marketplaceStore.cartItemsCount }}
+              </span>
+            </router-link>
+          </div>
         </div>
       </div>
+    </header>
 
-      <!-- Filters and Search -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Search and Filters -->
+      <div class="bg-white rounded-lg shadow p-6 mb-8">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search products..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
+            <div class="relative">
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search for rice varieties..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
-            <select
-              v-model="priceFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <label class="block text-sm font-medium text-gray-700 mb-2">Rice Variety</label>
+            <select 
+              v-model="filters.variety" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             >
-              <option value="">All Prices</option>
-              <option value="0-50">$0 - $50</option>
-              <option value="50-100">$50 - $100</option>
-              <option value="100-500">$100 - $500</option>
-              <option value="500+">$500+</option>
+              <option value="">All Varieties</option>
+              <option value="IR64">IR64</option>
+              <option value="Jasmine">Jasmine Rice</option>
+              <option value="Basmati">Basmati Rice</option>
+              <option value="Arborio">Arborio Rice</option>
+              <option value="Brown Rice">Brown Rice</option>
+              <option value="Sticky Rice">Sticky Rice</option>
+              <option value="Wild Rice">Wild Rice</option>
             </select>
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-            <select
-              v-model="locationFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+            <select 
+              v-model="filters.sortBy" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             >
-              <option value="">All Locations</option>
-              <option value="local">Local (within 50 miles)</option>
-              <option value="regional">Regional (within 200 miles)</option>
-              <option value="national">National</option>
+              <option value="name">Name</option>
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
+              <option value="newest">Newest First</option>
             </select>
-          </div>
-          <div class="flex items-end">
-            <button
-              @click="clearFilters"
-              class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Clear Filters
-            </button>
           </div>
         </div>
       </div>
 
       <!-- Products Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <div
-          v-for="product in filteredProducts"
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-for="n in 8" :key="n" class="bg-white rounded-lg shadow p-6 animate-pulse">
+          <div class="h-48 bg-gray-200 rounded mb-4"></div>
+          <div class="h-4 bg-gray-200 rounded mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+        </div>
+      </div>
+
+      <div v-else-if="filteredProducts.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div 
+          v-for="product in filteredProducts" 
           :key="product.id"
-          class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+          class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
         >
-          <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-            <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
-              <span class="text-gray-500 text-4xl">{{ product.icon }}</span>
+          <div class="p-6">
+            <!-- Product Image -->
+            <div class="h-48 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-4 flex items-center justify-center">
+              <svg class="h-20 w-20 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
             </div>
-          </div>
-          <div class="p-4">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ product.name }}</h3>
-            <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ product.description }}</p>
-            
-            <div class="flex items-center justify-between mb-3">
-              <div class="text-2xl font-bold text-green-600">${{ product.price }}</div>
-              <div class="text-sm text-gray-500">{{ product.unit }}</div>
-            </div>
-            
-            <div class="flex items-center justify-between mb-3">
-              <div class="text-sm text-gray-600">
-                <span class="font-medium">{{ product.seller_name }}</span>
-                <span class="ml-1">• {{ product.location }}</span>
+
+            <!-- Product Info -->
+            <div class="mb-4">
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ product.name }}</h3>
+              <p class="text-sm text-gray-600 mb-2">{{ product.description || 'Premium rice variety' }}</p>
+              
+              <!-- Farmer Info -->
+              <div class="flex items-center text-sm text-gray-500 mb-2">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {{ product.farmer?.name || 'Local Farmer' }}
               </div>
-              <div class="flex items-center">
-                <span class="text-yellow-400">★</span>
-                <span class="text-sm text-gray-600 ml-1">{{ product.rating }}</span>
+
+              <!-- Quality Grade -->
+              <div class="flex items-center mb-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
+                  Grade {{ product.quality_grade || 'A' }}
+                </span>
               </div>
             </div>
-            
-            <div class="flex space-x-2">
-              <button
-                @click="viewProduct(product.id)"
-                class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+
+            <!-- Price and Availability -->
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <span class="text-xl font-bold text-green-600">
+                  ${{ product.price }}/{{ product.unit }}
+                </span>
+              </div>
+              <div class="text-sm text-gray-500">
+                {{ product.quantity }} {{ product.unit }} available
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-2">
+              <button 
+                @click="addToCart(product)"
+                :disabled="product.quantity <= 0"
+                class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ product.quantity <= 0 ? 'Out of Stock' : 'Add to Cart' }}
+              </button>
+              <button 
+                @click="viewProduct(product)"
+                class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 View Details
-              </button>
-              <button
-                @click="addToCart(product.id)"
-                class="flex-1 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-              >
-                Add to Cart
               </button>
             </div>
           </div>
@@ -139,13 +167,15 @@
       </div>
 
       <!-- Empty State -->
-      <div v-if="filteredProducts.length === 0" class="text-center py-12">
-        <div class="text-gray-400 text-6xl mb-4">🛒</div>
-        <h3 class="text-xl font-medium text-gray-900 mb-2">No products found</h3>
-        <p class="text-gray-600 mb-6">Try adjusting your search or filters</p>
-        <button
+      <div v-else class="text-center py-12">
+        <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+        <p class="text-gray-600 mb-4">Try adjusting your search or filters</p>
+        <button 
           @click="clearFilters"
-          class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
           Clear Filters
         </button>
@@ -154,239 +184,126 @@
       <!-- Pagination -->
       <div v-if="filteredProducts.length > 0" class="mt-8 flex justify-center">
         <nav class="flex items-center space-x-2">
-          <button
-            @click="previousPage"
+          <button 
+            @click="currentPage--"
             :disabled="currentPage === 1"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
-          <span class="px-3 py-2 text-sm text-gray-700">
+          
+          <span class="px-3 py-2 text-sm font-medium text-gray-700">
             Page {{ currentPage }} of {{ totalPages }}
           </span>
-          <button
-            @click="nextPage"
+          
+          <button 
+            @click="currentPage++"
             :disabled="currentPage === totalPages"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
           </button>
         </nav>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useMarketplaceStore } from '@/stores/marketplace';
 
-const router = useRouter()
-const searchQuery = ref('')
-const selectedCategory = ref('')
-const priceFilter = ref('')
-const locationFilter = ref('')
-const currentPage = ref(1)
-const itemsPerPage = 12
+const router = useRouter();
+const marketplaceStore = useMarketplaceStore();
 
-const categories = ref([
-  { id: 'seeds', name: 'Seeds', icon: '🌱' },
-  { id: 'fertilizer', name: 'Fertilizer', icon: '🌿' },
-  { id: 'equipment', name: 'Equipment', icon: '🚜' },
-  { id: 'tools', name: 'Tools', icon: '🔧' },
-  { id: 'livestock', name: 'Livestock', icon: '🐄' },
-  { id: 'produce', name: 'Produce', icon: '🥕' }
-])
+const loading = ref(false);
+const searchQuery = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 12;
 
-const products = ref([
-  {
-    id: 1,
-    name: 'Corn Seeds - Pioneer 1234',
-    description: 'High-yield corn seeds perfect for spring planting. Excellent disease resistance.',
-    price: 180.00,
-    unit: 'per bag',
-    category: 'seeds',
-    seller_name: 'AgriSupply Co.',
-    location: 'Springfield, IL',
-    rating: 4.8,
-    icon: '🌱',
-    stock: 50
-  },
-  {
-    id: 2,
-    name: 'Nitrogen Fertilizer',
-    description: 'High-grade nitrogen fertilizer for optimal crop growth.',
-    price: 450.00,
-    unit: 'per ton',
-    category: 'fertilizer',
-    seller_name: 'Farm Depot',
-    location: 'Des Moines, IA',
-    rating: 4.6,
-    icon: '🌿',
-    stock: 25
-  },
-  {
-    id: 3,
-    name: 'John Deere Tractor',
-    description: 'Used 2018 John Deere 6120M tractor in excellent condition.',
-    price: 45000.00,
-    unit: 'each',
-    category: 'equipment',
-    seller_name: 'Equipment Sales Inc.',
-    location: 'Cedar Rapids, IA',
-    rating: 4.9,
-    icon: '🚜',
-    stock: 1
-  },
-  {
-    id: 4,
-    name: 'Fresh Organic Tomatoes',
-    description: 'Freshly harvested organic tomatoes from local farm.',
-    price: 3.50,
-    unit: 'per lb',
-    category: 'produce',
-    seller_name: 'Green Valley Farm',
-    location: 'Madison, WI',
-    rating: 4.7,
-    icon: '🍅',
-    stock: 200
-  },
-  {
-    id: 5,
-    name: 'Garden Tools Set',
-    description: 'Complete set of professional garden tools.',
-    price: 89.99,
-    unit: 'per set',
-    category: 'tools',
-    seller_name: 'Tool Master',
-    location: 'Milwaukee, WI',
-    rating: 4.5,
-    icon: '🔧',
-    stock: 15
-  },
-  {
-    id: 6,
-    name: 'Holstein Dairy Cows',
-    description: 'Registered Holstein dairy cows, excellent milk production.',
-    price: 2500.00,
-    unit: 'per head',
-    category: 'livestock',
-    seller_name: 'Dairy Farm LLC',
-    location: 'Green Bay, WI',
-    rating: 4.8,
-    icon: '🐄',
-    stock: 8
-  }
-])
+const filters = ref({
+  variety: '',
+  sortBy: 'name'
+});
 
-const cartItemCount = ref(3) // Mock cart count
-
+const products = computed(() => marketplaceStore.riceProducts);
 const filteredProducts = computed(() => {
-  let filtered = products.value
+  let filtered = products.value;
 
-  // Filter by category
-  if (selectedCategory.value) {
-    filtered = filtered.filter(product => product.category === selectedCategory.value)
-  }
-
-  // Filter by search query
+  // Search filter
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(product => 
       product.name.toLowerCase().includes(query) ||
-      product.description.toLowerCase().includes(query) ||
-      product.seller_name.toLowerCase().includes(query)
-    )
+      product.description?.toLowerCase().includes(query) ||
+      product.farmer?.name?.toLowerCase().includes(query)
+    );
   }
 
-  // Filter by price range
-  if (priceFilter.value) {
-    const [min, max] = priceFilter.value.split('-').map(p => p === '+' ? Infinity : parseFloat(p))
-    filtered = filtered.filter(product => {
-      const price = product.price
-      return price >= min && (max === undefined || price <= max)
-    })
+  // Variety filter
+  if (filters.value.variety) {
+    filtered = filtered.filter(product => 
+      product.name.toLowerCase().includes(filters.value.variety.toLowerCase())
+    );
   }
 
-  // Filter by location
-  if (locationFilter.value) {
-    // Mock location filtering
-    filtered = filtered.filter(product => {
-      if (locationFilter.value === 'local') return product.location.includes('IL')
-      if (locationFilter.value === 'regional') return product.location.includes('IA') || product.location.includes('WI')
-      return true
-    })
+  // Sort
+  switch (filters.value.sortBy) {
+    case 'price_low':
+      filtered.sort((a, b) => a.price - b.price);
+      break;
+    case 'price_high':
+      filtered.sort((a, b) => b.price - a.price);
+      break;
+    case 'newest':
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      break;
+    default:
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   // Pagination
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filtered.slice(start, end)
-})
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filtered.slice(start, end);
+});
 
 const totalPages = computed(() => {
-  return Math.ceil(products.value.length / itemsPerPage)
-})
+  return Math.ceil(products.value.length / itemsPerPage);
+});
 
-const selectCategory = (categoryId) => {
-  selectedCategory.value = selectedCategory.value === categoryId ? '' : categoryId
-  currentPage.value = 1
-}
+const addToCart = (product) => {
+  marketplaceStore.addToCart(product, 1);
+  // You could add a toast notification here
+};
 
-const viewProduct = (id) => {
-  router.push(`/marketplace/products/${id}`)
-}
-
-const addToCart = (id) => {
-  // Add to cart logic
-  console.log('Add to cart:', id)
-  cartItemCount.value++
-}
-
-const viewCart = () => {
-  router.push('/cart')
-}
-
-const sellProduct = () => {
-  // Navigate to sell product page
-  console.log('Sell product')
-}
+const viewProduct = (product) => {
+  router.push(`/marketplace/products/${product.id}`);
+};
 
 const clearFilters = () => {
-  searchQuery.value = ''
-  selectedCategory.value = ''
-  priceFilter.value = ''
-  locationFilter.value = ''
-  currentPage.value = 1
-}
+  searchQuery.value = '';
+  filters.value = {
+    variety: '',
+    sortBy: 'name'
+  };
+  currentPage.value = 1;
+};
 
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
+// Reset pagination when filters change
+watch([searchQuery, filters], () => {
+  currentPage.value = 1;
+});
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    await marketplaceStore.fetchProducts();
+  } catch (error) {
+    console.error('Failed to load products:', error);
+  } finally {
+    loading.value = false;
   }
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
-}
-
-onMounted(() => {
-  // Load products from API
-})
+});
 </script>
-
-<style scoped>
-.marketplace-page {
-  min-height: 100vh;
-  background-color: #f8fafc;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>

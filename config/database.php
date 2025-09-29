@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'default' => 'mysql',
+    'default' => 'pgsql',
 
     /*
     |--------------------------------------------------------------------------
@@ -112,13 +112,6 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
-        // 'mongodb' => [
-        //     'driver' => 'mongodb',
-        //     'dsn' => env('DB_DSN', env('DB_URI', 'mongodb://'.env('DB_HOST', '127.0.0.1').':'.env('DB_PORT', '27017').'/'.env('DB_DATABASE', 'capstone'))),
-        //     'database' => env('DB_DATABASE', 'capstone'),
-        //     'username' => env('DB_USERNAME', 'lagrosascydiemar_db_user'),
-        //     'password' => env('DB_PASSWORD', 'bpx4nAaanKgicDca'),
-        // ],
     ],
 
     /*

@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
-class Harvest extends Controller
+class HarvestController extends Controller
 {
     /**
      * Display a listing of harvests

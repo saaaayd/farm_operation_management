@@ -8,10 +8,10 @@
           </svg>
         </div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Create your account
+          Join RiceFARM
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          Join the Farm Operations Management System
+          Create your account to manage rice farming operations
         </p>
       </div>
       
@@ -44,6 +44,24 @@
             />
           </div>
           
+          
+          <div>
+            <label for="role" class="block text-sm font-medium text-gray-700">Account Type</label>
+            <select
+              id="role"
+              v-model="form.role"
+              name="role"
+              required
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+            >
+              <option value="">Select account type</option>
+              <option value="farmer">Farmer - Manage rice farming operations</option>
+              <option value="buyer">Buyer - Purchase rice products</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500">
+              Farmers can manage fields, plantings, and sell rice. Buyers can browse and purchase rice products.
+            </p>
+          </div>
           
           <div>
             <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (Optional)</label>
@@ -128,6 +146,7 @@ const form = ref({
   name: '',
   email: '',
   phone: '',
+  role: '',
   password: '',
   password_confirmation: ''
 });

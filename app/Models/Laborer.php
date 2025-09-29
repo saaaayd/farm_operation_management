@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class Laborer extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'laborers';
 
     protected $fillable = [
         'name',

@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 class Planting extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'plantings';
 
     protected $fillable = [
         'field_id',

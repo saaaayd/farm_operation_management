@@ -2,22 +2,26 @@
 
 namespace App\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class Field extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'fields';
 
     protected $fillable = [
         'user_id',
+        'farm_id',
+        'name',
         'location',
+        'field_coordinates',
         'soil_type',
         'size',
+        'water_access',
+        'drainage_quality',
     ];
 
     protected $casts = [
         'location' => 'array',
+        'field_coordinates' => 'array',
         'size' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

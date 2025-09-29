@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class LaborWage extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'labor_wages';
 
     protected $fillable = [
         'laborer_id',

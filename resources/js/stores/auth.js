@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', {
     isAdmin: (state) => state.user?.role === 'admin',
     isFarmer: (state) => state.user?.role === 'farmer',
     isBuyer: (state) => state.user?.role === 'buyer',
+    needsOnboarding: (state) => state.user?.role === 'farmer' && !state.user?.farm_profile,
   },
 
   actions: {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Field;
 use App\Models\WeatherLog;
+use App\Exceptions\WeatherServiceException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -49,7 +50,10 @@ class WeatherService
                 'lon' => $lon
             ]);
 
-            return null;
+            throw new WeatherServiceException(
+                'Failed to fetch weather data',
+                ['lat' => $lat, 'lon' => $lon, 'error' => $e->getMessage()]
+            );
         }
     }
 

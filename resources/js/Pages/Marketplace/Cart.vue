@@ -1,87 +1,123 @@
 <template>
-  <div class="cart-page">
-    <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p class="text-gray-600 mt-2">{{ cartItems.length }} items in your cart</p>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+          <div class="flex items-center">
+            <router-link to="/marketplace" class="text-gray-500 hover:text-gray-700 mr-4">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </router-link>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">Shopping Cart</h1>
+              <p class="text-sm text-gray-500">Review your rice products before checkout</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">
+              {{ marketplaceStore.cartItemsCount }} items
+            </span>
+            <button 
+              v-if="marketplaceStore.cartItemsCount > 0"
+              @click="clearCart"
+              class="text-red-600 hover:text-red-700 text-sm font-medium"
+            >
+              Clear Cart
+            </button>
+          </div>
         </div>
-        <button
-          @click="continueShopping"
-          class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-        >
-          Continue Shopping
-        </button>
       </div>
+    </header>
 
-      <div v-if="cartItems.length === 0" class="text-center py-12">
-        <div class="text-gray-400 text-6xl mb-4">🛒</div>
-        <h3 class="text-xl font-medium text-gray-900 mb-2">Your cart is empty</h3>
-        <p class="text-gray-600 mb-6">Add some products to get started</p>
-        <button
-          @click="continueShopping"
-          class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div v-if="marketplaceStore.cartItemsCount === 0" class="text-center py-12">
+        <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
+        <p class="text-gray-600 mb-4">Add some rice products to get started</p>
+        <router-link 
+          to="/marketplace"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center"
         >
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
           Browse Products
-        </button>
+        </router-link>
       </div>
 
       <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Cart Items -->
-        <div class="lg:col-span-2 space-y-6">
-          <div
-            v-for="item in cartItems"
-            :key="item.id"
-            class="bg-white rounded-lg shadow-md p-6"
-          >
-            <div class="flex items-start space-x-4">
-              <div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span class="text-gray-500 text-2xl">{{ item.icon }}</span>
-              </div>
-              
-              <div class="flex-1">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ item.name }}</h3>
-                <p class="text-gray-600 text-sm mb-2">{{ item.description }}</p>
-                <div class="flex items-center space-x-4 text-sm text-gray-600">
-                  <span>Sold by: {{ item.seller_name }}</span>
-                  <span>•</span>
-                  <span>{{ item.location }}</span>
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Cart Items</h3>
+            </div>
+            
+            <div class="divide-y divide-gray-200">
+              <div 
+                v-for="item in marketplaceStore.cart" 
+                :key="item.id"
+                class="p-6"
+              >
+                <div class="flex items-center space-x-4">
+                  <!-- Product Image -->
+                  <div class="h-20 w-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="h-10 w-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+
+                  <!-- Product Info -->
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-lg font-medium text-gray-900">{{ item.name }}</h4>
+                    <p class="text-sm text-gray-600">{{ item.farmer?.name || 'Local Farmer' }}</p>
+                    <p class="text-sm font-medium text-green-600">${{ item.price }}/{{ item.unit }}</p>
+                  </div>
+
+                  <!-- Quantity Controls -->
+                  <div class="flex items-center space-x-3">
+                    <button 
+                      @click="updateQuantity(item.id, item.quantity - 1)"
+                      class="h-8 w-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                      </svg>
+                    </button>
+                    
+                    <span class="text-lg font-medium text-gray-900 w-8 text-center">
+                      {{ item.quantity }}
+                    </span>
+                    
+                    <button 
+                      @click="updateQuantity(item.id, item.quantity + 1)"
+                      class="h-8 w-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Item Total -->
+                  <div class="text-right">
+                    <p class="text-lg font-semibold text-gray-900">
+                      ${{ (item.price * item.quantity).toFixed(2) }}
+                    </p>
+                    <button 
+                      @click="removeItem(item.id)"
+                      class="text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              </div>
-              
-              <div class="flex flex-col items-end space-y-4">
-                <div class="text-right">
-                  <div class="text-lg font-bold text-green-600">${{ item.price }}</div>
-                  <div class="text-sm text-gray-600">{{ item.unit }}</div>
-                </div>
-                
-                <div class="flex items-center space-x-2">
-                  <button
-                    @click="decreaseQuantity(item.id)"
-                    class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
-                  >
-                    -
-                  </button>
-                  <span class="w-12 text-center font-medium">{{ item.quantity }}</span>
-                  <button
-                    @click="increaseQuantity(item.id)"
-                    class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
-                  >
-                    +
-                  </button>
-                </div>
-                
-                <div class="text-right">
-                  <div class="text-lg font-bold">${{ (item.price * item.quantity).toFixed(2) }}</div>
-                </div>
-                
-                <button
-                  @click="removeItem(item.id)"
-                  class="text-red-600 hover:text-red-800 text-sm"
-                >
-                  Remove
-                </button>
               </div>
             </div>
           </div>
@@ -89,195 +125,112 @@
 
         <!-- Order Summary -->
         <div class="lg:col-span-1">
-          <div class="bg-white rounded-lg shadow-md p-6 sticky top-8">
-            <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+          <div class="bg-white rounded-lg shadow p-6 sticky top-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Order Summary</h3>
             
             <div class="space-y-3 mb-6">
-              <div class="flex justify-between">
-                <span class="text-gray-600">Subtotal:</span>
-                <span class="font-medium">${{ subtotal.toFixed(2) }}</span>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="text-gray-900">${{ marketplaceStore.cartTotal.toFixed(2) }}</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Shipping:</span>
-                <span class="font-medium">${{ shipping.toFixed(2) }}</span>
+              
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Shipping</span>
+                <span class="text-gray-900">${{ shippingCost.toFixed(2) }}</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Tax:</span>
-                <span class="font-medium">${{ tax.toFixed(2) }}</span>
+              
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Tax</span>
+                <span class="text-gray-900">${{ taxAmount.toFixed(2) }}</span>
               </div>
+              
               <div class="border-t border-gray-200 pt-3">
-                <div class="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span>${{ total.toFixed(2) }}</span>
+                <div class="flex justify-between text-lg font-semibold">
+                  <span class="text-gray-900">Total</span>
+                  <span class="text-gray-900">${{ totalAmount.toFixed(2) }}</span>
                 </div>
               </div>
             </div>
-            
-            <button
+
+            <!-- Delivery Information -->
+            <div class="mb-6">
+              <h4 class="text-sm font-medium text-gray-900 mb-3">Delivery Information</h4>
+              <div class="space-y-2 text-sm text-gray-600">
+                <div class="flex items-center">
+                  <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Estimated delivery: 3-5 business days
+                </div>
+                <div class="flex items-center">
+                  <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Free shipping on orders over $50
+                </div>
+              </div>
+            </div>
+
+            <!-- Checkout Button -->
+            <button 
               @click="proceedToCheckout"
-              class="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+              class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
               Proceed to Checkout
             </button>
-            
-            <div class="text-center">
-              <p class="text-sm text-gray-600 mb-2">Secure checkout with</p>
-              <div class="flex justify-center space-x-2">
-                <span class="text-sm text-gray-500">💳</span>
-                <span class="text-sm text-gray-500">🏦</span>
-                <span class="text-sm text-gray-500">💰</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Promo Code -->
-          <div class="bg-white rounded-lg shadow-md p-6 mt-6">
-            <h3 class="text-lg font-semibold mb-4">Promo Code</h3>
-            <div class="flex space-x-2">
-              <input
-                v-model="promoCode"
-                type="text"
-                placeholder="Enter promo code"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                @click="applyPromoCode"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Apply
-              </button>
-            </div>
-            <div v-if="appliedPromo" class="mt-2 text-sm text-green-600">
-              Promo code applied! 10% discount
-            </div>
-          </div>
-          
-          <!-- Shipping Information -->
-          <div class="bg-white rounded-lg shadow-md p-6 mt-6">
-            <h3 class="text-lg font-semibold mb-4">Shipping Information</h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-600">Standard Shipping:</span>
-                <span>3-5 business days</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Express Shipping:</span>
-                <span>1-2 business days</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Free shipping on orders over:</span>
-                <span>$100</span>
-              </div>
-            </div>
+
+            <!-- Continue Shopping -->
+            <router-link 
+              to="/marketplace"
+              class="block w-full text-center bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium mt-3"
+            >
+              Continue Shopping
+            </router-link>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useMarketplaceStore } from '@/stores/marketplace';
 
-const router = useRouter()
-const promoCode = ref('')
-const appliedPromo = ref(false)
+const router = useRouter();
+const marketplaceStore = useMarketplaceStore();
 
-const cartItems = ref([
-  {
-    id: 1,
-    name: 'Corn Seeds - Pioneer 1234',
-    description: 'High-yield corn seeds perfect for spring planting',
-    price: 180.00,
-    unit: 'per bag',
-    quantity: 2,
-    seller_name: 'AgriSupply Co.',
-    location: 'Springfield, IL',
-    icon: '🌱'
-  },
-  {
-    id: 2,
-    name: 'Nitrogen Fertilizer',
-    description: 'High-grade nitrogen fertilizer for optimal crop growth',
-    price: 450.00,
-    unit: 'per ton',
-    quantity: 1,
-    seller_name: 'Farm Depot',
-    location: 'Des Moines, IA',
-    icon: '🌿'
-  },
-  {
-    id: 3,
-    name: 'Garden Tools Set',
-    description: 'Complete set of professional garden tools',
-    price: 89.99,
-    unit: 'per set',
-    quantity: 1,
-    seller_name: 'Tool Master',
-    location: 'Milwaukee, WI',
-    icon: '🔧'
+const shippingCost = computed(() => {
+  return marketplaceStore.cartTotal >= 50 ? 0 : 10;
+});
+
+const taxAmount = computed(() => {
+  return marketplaceStore.cartTotal * 0.08; // 8% tax
+});
+
+const totalAmount = computed(() => {
+  return marketplaceStore.cartTotal + shippingCost.value + taxAmount.value;
+});
+
+const updateQuantity = (productId, newQuantity) => {
+  if (newQuantity <= 0) {
+    marketplaceStore.removeFromCart(productId);
+  } else {
+    marketplaceStore.updateCartQuantity(productId, newQuantity);
   }
-])
+};
 
-const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-})
+const removeItem = (productId) => {
+  marketplaceStore.removeFromCart(productId);
+};
 
-const shipping = computed(() => {
-  return subtotal.value > 100 ? 0 : 15.00
-})
-
-const tax = computed(() => {
-  return subtotal.value * 0.08 // 8% tax
-})
-
-const total = computed(() => {
-  let totalAmount = subtotal.value + shipping.value + tax.value
-  if (appliedPromo.value) {
-    totalAmount *= 0.9 // 10% discount
-  }
-  return totalAmount
-})
-
-const increaseQuantity = (itemId) => {
-  const item = cartItems.value.find(item => item.id === itemId)
-  if (item) {
-    item.quantity++
-  }
-}
-
-const decreaseQuantity = (itemId) => {
-  const item = cartItems.value.find(item => item.id === itemId)
-  if (item && item.quantity > 1) {
-    item.quantity--
-  }
-}
-
-const removeItem = (itemId) => {
-  cartItems.value = cartItems.value.filter(item => item.id !== itemId)
-}
-
-const applyPromoCode = () => {
-  if (promoCode.value.toLowerCase() === 'save10') {
-    appliedPromo.value = true
-    promoCode.value = ''
-  }
-}
+const clearCart = () => {
+  marketplaceStore.clearCart();
+};
 
 const proceedToCheckout = () => {
-  // Navigate to checkout page
-  router.push('/checkout')
-}
-
-const continueShopping = () => {
-  router.push('/marketplace')
-}
+  router.push('/checkout');
+};
 </script>
-
-<style scoped>
-.cart-page {
-  min-height: 100vh;
-  background-color: #f8fafc;
-}
-</style>

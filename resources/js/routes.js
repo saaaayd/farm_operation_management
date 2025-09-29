@@ -3,16 +3,30 @@ import { useAuthStore } from '@/stores/auth';
 // Import components
 import Login from '@/Pages/Auth/Login.vue';
 import Register from '@/Pages/Auth/Register.vue';
+import FarmProfile from '@/Pages/Onboarding/FarmProfile.vue';
 import Dashboard from '@/Pages/Dashboard.vue';
 import Profile from '@/Pages/Profile.vue';
 
+// Farmer-specific components
+import FarmerDashboard from '@/Pages/Farmer/Dashboard.vue';
+import BuyerDashboard from '@/Pages/Buyer/Dashboard.vue';
+import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
+
 // Farm Management
-import FieldsList from '@/Pages/Farm/Fields/Index.vue';
-import FieldDetail from '@/Pages/Farm/Fields/Show.vue';
-import PlantingsList from '@/Pages/Farm/Plantings/Index.vue';
-import PlantingDetail from '@/Pages/Farm/Plantings/Show.vue';
-import TasksList from '@/Pages/Farm/Tasks/Index.vue';
-import TaskDetail from '@/Pages/Farm/Tasks/Show.vue';
+import PlantingsIndex from '@/Pages/Farmer/Plantings/Index.vue';
+import PlantingsCreate from '@/Pages/Farmer/Plantings/Create.vue';
+import TasksIndex from '@/Pages/Farmer/Tasks/Index.vue';
+import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
+
+// Weather
+import WeatherAnalytics from '@/Pages/Farmer/Weather/Analytics.vue';
+
+// Marketplace
+import MarketplaceIndex from '@/Pages/Marketplace/Index.vue';
+import Cart from '@/Pages/Marketplace/Cart.vue';
+
+// Reports
+import ReportsIndex from '@/Pages/Farmer/Reports/Index.vue';
 
 // Inventory Management
 import InventoryList from '@/Pages/Inventory/Index.vue';
@@ -58,6 +72,12 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
+    path: '/onboarding',
+    name: 'onboarding',
+    component: FarmProfile,
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: Dashboard,
@@ -70,41 +90,59 @@ const routes = [
     meta: { requiresAuth: true }
   },
   
-  // Farm Management Routes
-  {
-    path: '/fields',
-    name: 'fields',
-    component: FieldsList,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
-  },
-  {
-    path: '/fields/:id',
-    name: 'field-detail',
-    component: FieldDetail,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
-  },
+  // Farm Management Routes (Rice-specific)
   {
     path: '/plantings',
     name: 'plantings',
-    component: PlantingsList,
+    component: PlantingsIndex,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {
-    path: '/plantings/:id',
-    name: 'planting-detail',
-    component: PlantingDetail,
+    path: '/plantings/create',
+    name: 'plantings-create',
+    component: PlantingsCreate,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {
     path: '/tasks',
     name: 'tasks',
-    component: TasksList,
+    component: TasksIndex,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {
-    path: '/tasks/:id',
-    name: 'task-detail',
-    component: TaskDetail,
+    path: '/harvests/create',
+    name: 'harvests-create',
+    component: HarvestsCreate,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  
+  // Weather Routes
+  {
+    path: '/weather',
+    name: 'weather',
+    component: WeatherAnalytics,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  
+  // Marketplace Routes
+  {
+    path: '/marketplace',
+    name: 'marketplace',
+    component: MarketplaceIndex,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cart',
+    name: 'cart',
+    component: Cart,
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  
+  // Reports Routes
+  {
+    path: '/reports',
+    name: 'reports',
+    component: ReportsIndex,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   
@@ -235,6 +273,18 @@ export const setupRouterGuards = (router) => {
     // Check if route requires guest (not authenticated)
     if (to.meta.requiresGuest && authStore.isAuthenticated) {
       next('/dashboard');
+      return;
+    }
+    
+    // Check if route requires onboarding completion
+    if (to.meta.requiresOnboarding && authStore.needsOnboarding) {
+      next('/onboarding');
+      return;
+    }
+    
+    // Check if user needs onboarding but trying to access other routes
+    if (authStore.needsOnboarding && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
+      next('/onboarding');
       return;
     }
     
