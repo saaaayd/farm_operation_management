@@ -249,4 +249,132 @@ class WeatherController extends Controller
 
         return response()->json($dashboardData);
     }
+
+    /**
+     * Get rice-specific weather analytics for a field
+     */
+    public function getRiceAnalytics(Request $request, Field $field): JsonResponse
+    {
+        // Check if user can access this field
+        $user = $request->user();
+        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'days' => 'integer|min:1|max:365',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $days = $request->get('days', 30);
+
+        try {
+            $analytics = $this->weatherService->getRiceWeatherAnalytics($field, $days);
+            $recommendations = $this->weatherService->getRiceFarmingRecommendations($field);
+
+            return response()->json([
+                'field' => $field,
+                'analytics' => $analytics,
+                'recommendations' => $recommendations,
+                'period_days' => $days
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to get rice weather analytics',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get rice farming dashboard with weather insights
+     */
+    public function getRiceDashboard(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $query = Field::query();
+        if (!$user->isAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        $fields = $query->with(['latestWeather', 'plantings.riceVariety'])->get();
+
+        $dashboardData = [
+            'total_fields' => $fields->count(),
+            'rice_fields' => 0,
+            'active_plantings' => 0,
+            'weather_alerts' => [],
+            'rice_analytics_summary' => [
+                'total_growing_degree_days' => 0,
+                'heat_stress_fields' => 0,
+                'optimal_conditions_fields' => 0,
+                'disease_risk_fields' => 0,
+            ],
+            'field_details' => []
+        ];
+
+        foreach ($fields as $field) {
+            $currentPlanting = $field->getCurrentRicePlanting();
+            $isRiceField = $currentPlanting !== null;
+            
+            if ($isRiceField) {
+                $dashboardData['rice_fields']++;
+                $dashboardData['active_plantings']++;
+            }
+
+            if ($field->latestWeather) {
+                $alerts = $this->weatherService->getWeatherAlerts($field);
+                $riceAlerts = array_filter($alerts, fn($alert) => isset($alert['rice_specific']) && $alert['rice_specific']);
+                
+                $dashboardData['weather_alerts'] = array_merge(
+                    $dashboardData['weather_alerts'],
+                    array_map(fn($alert) => array_merge($alert, ['field' => $field->name ?? "Field {$field->id}"]), $riceAlerts)
+                );
+
+                // Get rice analytics for the field
+                if ($isRiceField) {
+                    try {
+                        $analytics = $this->weatherService->getRiceWeatherAnalytics($field, 7);
+                        if (isset($analytics['rice_analytics'])) {
+                            $riceAnalytics = $analytics['rice_analytics'];
+                            
+                            $dashboardData['rice_analytics_summary']['total_growing_degree_days'] += $riceAnalytics['growing_degree_days'] ?? 0;
+                            
+                            if (($riceAnalytics['heat_stress_days'] ?? 0) > 0) {
+                                $dashboardData['rice_analytics_summary']['heat_stress_fields']++;
+                            }
+                            
+                            if (($riceAnalytics['weather_suitability_score'] ?? 0) >= 70) {
+                                $dashboardData['rice_analytics_summary']['optimal_conditions_fields']++;
+                            }
+                            
+                            if (($riceAnalytics['disease_risk_days'] ?? 0) > 2) {
+                                $dashboardData['rice_analytics_summary']['disease_risk_fields']++;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Continue processing other fields if one fails
+                    }
+                }
+
+                $dashboardData['field_details'][] = [
+                    'field' => $field,
+                    'weather' => $field->latestWeather,
+                    'is_rice_field' => $isRiceField,
+                    'current_planting' => $currentPlanting,
+                    'alerts_count' => count($riceAlerts),
+                    'critical_alerts' => count(array_filter($riceAlerts, fn($alert) => $alert['type'] === 'critical')),
+                ];
+            }
+        }
+
+        return response()->json($dashboardData);
+    }
 }

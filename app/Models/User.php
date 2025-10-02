@@ -51,7 +51,7 @@ class User extends Authenticatable
      */
     const ROLE_ADMIN = 'admin';
     const ROLE_FARMER = 'farmer';
-    const ROLE_BUYER = 'buyer';
+    const ROLE_USER = 'user'; // Marketplace buyer only
 
     /**
      * Check if user is admin
@@ -70,11 +70,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is buyer
+     * Check if user is marketplace user (buyer only)
      */
-    public function isBuyer(): bool
+    public function isUser(): bool
     {
-        return $this->role === self::ROLE_BUYER;
+        return $this->role === self::ROLE_USER;
+    }
+
+    /**
+     * Check if user can access marketplace as buyer
+     */
+    public function canBuy(): bool
+    {
+        return $this->role === self::ROLE_USER;
+    }
+
+    /**
+     * Check if user can sell in marketplace
+     */
+    public function canSell(): bool
+    {
+        return $this->role === self::ROLE_FARMER;
     }
 
     /**

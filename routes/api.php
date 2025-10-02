@@ -32,9 +32,31 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard routes
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
+    // Rice Farm Profile routes
+    Route::prefix('farmer')->group(function () {
+        Route::post('/rice-farm-profile', [\App\Http\Controllers\RiceFarmProfileController::class, 'createRiceFarmProfile']);
+    });
+
+    // Rice Varieties routes
+    Route::prefix('rice-varieties')->group(function () {
+        Route::get('/', [\App\Http\Controllers\RiceVarietyController::class, 'index']);
+        Route::get('/current-season', [\App\Http\Controllers\RiceFarmProfileController::class, 'getCurrentSeasonVarieties']);
+        Route::get('/recommended/{field}', [\App\Http\Controllers\RiceFarmProfileController::class, 'getRecommendedVarieties']);
+    });
+
+    // Rice Growth Stages routes
+    Route::prefix('rice-growth-stages')->group(function () {
+        Route::get('/', [\App\Http\Controllers\RiceGrowthStageController::class, 'index']);
+        Route::get('/ordered', [\App\Http\Controllers\RiceGrowthStageController::class, 'getOrdered']);
+    });
+
+    // Field Analysis routes
+    Route::get('/fields/{field}/analysis', [\App\Http\Controllers\RiceFarmProfileController::class, 'getFieldAnalysis']);
+
     // Weather routes
     Route::prefix('weather')->group(function () {
         Route::get('/dashboard', [WeatherController::class, 'dashboard']);
+        Route::get('/rice-dashboard', [WeatherController::class, 'getRiceDashboard']);
         Route::post('/update-all', [WeatherController::class, 'updateAllWeather']);
         
         Route::prefix('fields/{field}')->group(function () {
@@ -42,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/forecast', [WeatherController::class, 'getForecast']);
             Route::get('/history', [WeatherController::class, 'getHistory']);
             Route::get('/alerts', [WeatherController::class, 'getAlerts']);
+            Route::get('/rice-analytics', [WeatherController::class, 'getRiceAnalytics']);
             Route::post('/update', [WeatherController::class, 'updateWeather']);
         });
     });
@@ -62,6 +85,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{planting}', [\App\Http\Controllers\Farm\PlantingController::class, 'show']);
         Route::put('/{planting}', [\App\Http\Controllers\Farm\PlantingController::class, 'update']);
         Route::delete('/{planting}', [\App\Http\Controllers\Farm\PlantingController::class, 'destroy']);
+    });
+
+    // Rice Farming Lifecycle routes
+    Route::prefix('rice-farming')->group(function () {
+        Route::post('/plantings', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'createRicePlanting']);
+        Route::get('/lifecycle-overview', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'getLifecycleOverview']);
+        Route::get('/plantings/{planting}/lifecycle', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'getPlantingLifecycle']);
+        Route::post('/plantings/{planting}/advance-stage', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'advanceToNextStage']);
+        Route::get('/plantings/{planting}/recommendations', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'getStageRecommendations']);
+        Route::post('/stages/{stage}/delay', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'markStageDelayed']);
     });
 
     // Task management routes
@@ -112,7 +145,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/alerts/low-stock', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'lowStockAlerts']);
     });
 
-    // Marketplace routes
+    // Rice Marketplace routes
+    Route::prefix('rice-marketplace')->group(function () {
+        Route::get('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'getProducts']);
+        Route::get('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getProduct']);
+        Route::get('/stats', [\App\Http\Controllers\RiceMarketplaceController::class, 'getMarketplaceStats']);
+        
+        // Product management (farmers only)
+        Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
+        Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
+        Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
+        
+        // Order management
+        Route::get('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrders']);
+        Route::get('/orders/{order}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrder']);
+        Route::post('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'createOrder']);
+        Route::post('/orders/{order}/confirm', [\App\Http\Controllers\RiceMarketplaceController::class, 'confirmOrder']);
+        Route::post('/orders/{order}/cancel', [\App\Http\Controllers\RiceMarketplaceController::class, 'cancelOrder']);
+    });
+
+    // Legacy Marketplace routes (for backward compatibility)
     Route::prefix('marketplace')->group(function () {
         Route::get('/products', [\App\Http\Controllers\MarketPlace\ProductController::class, 'getAvailableProducts']);
         Route::get('/products/{product}', [\App\Http\Controllers\MarketPlace\ProductController::class, 'show']);
@@ -154,6 +206,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{expense}', [\App\Http\Controllers\Financial\ExpenseController::class, 'show']);
         Route::put('/{expense}', [\App\Http\Controllers\Financial\ExpenseController::class, 'update']);
         Route::delete('/{expense}', [\App\Http\Controllers\Financial\ExpenseController::class, 'destroy']);
+    });
+
+    // Rice Farming Analytics routes
+    Route::prefix('analytics')->group(function () {
+        Route::get('/rice-farming', [\App\Http\Controllers\RiceFarmingAnalyticsController::class, 'getRiceFarmingAnalytics']);
     });
 
     // Reports routes (simplified)
