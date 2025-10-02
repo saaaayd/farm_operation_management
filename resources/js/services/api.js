@@ -52,6 +52,7 @@ export const authAPI = {
 export const farmProfileAPI = {
   get: () => api.get('/farmer/profile'),
   create: (profileData) => api.post('/farmer/profile', profileData),
+  createRiceFarm: (profileData) => api.post('/farmer/rice-farm-profile', profileData),
   update: (profileData) => api.put('/farmer/profile', profileData),
 };
 
@@ -113,7 +114,24 @@ export const weatherAPI = {
   updateWeather: (fieldId, weatherData) => api.post(`/weather/fields/${fieldId}/update`, weatherData),
 };
 
-// Marketplace API
+// Rice Marketplace API
+export const riceMarketplaceAPI = {
+  getProducts: (filters = {}) => api.get('/rice-marketplace/products', { params: filters }),
+  getProductById: (id) => api.get(`/rice-marketplace/products/${id}`),
+  createProduct: (productData) => api.post('/rice-marketplace/products', productData),
+  updateProduct: (id, productData) => api.put(`/rice-marketplace/products/${id}`, productData),
+  deleteProduct: (id) => api.delete(`/rice-marketplace/products/${id}`),
+  getStats: () => api.get('/rice-marketplace/stats'),
+  
+  // Orders
+  getOrders: (filters = {}) => api.get('/rice-marketplace/orders', { params: filters }),
+  getOrderById: (id) => api.get(`/rice-marketplace/orders/${id}`),
+  createOrder: (orderData) => api.post('/rice-marketplace/orders', orderData),
+  confirmOrder: (id, data = {}) => api.post(`/rice-marketplace/orders/${id}/confirm`, data),
+  cancelOrder: (id, data) => api.post(`/rice-marketplace/orders/${id}/cancel`, data),
+};
+
+// Legacy Marketplace API (for backward compatibility)
 export const marketplaceAPI = {
   getProducts: (filters = {}) => api.get('/marketplace/products', { params: filters }),
   getProductById: (id) => api.get(`/marketplace/products/${id}`),
@@ -174,6 +192,11 @@ export const dashboardAPI = {
   getAdminStats: () => api.get('/dashboard/admin'),
 };
 
+// Analytics API
+export const analyticsAPI = {
+  getRiceFarmingAnalytics: (period = '12') => api.get(`/analytics/rice-farming?period=${period}`),
+};
+
 // Reports API
 export const reportsAPI = {
   getFinancialReport: (period = '365') => api.get(`/reports/financial?period=${period}`),
@@ -181,6 +204,40 @@ export const reportsAPI = {
   getWeatherReport: (period = '365') => api.get(`/reports/weather?period=${period}`),
   getLaborCostReport: (period = '365') => api.get(`/reports/labor-cost?period=${period}`),
   getInventoryUsageReport: (period = '365') => api.get(`/reports/inventory-usage?period=${period}`),
+};
+
+// Rice Varieties API
+export const riceVarietiesAPI = {
+  getAll: () => api.get('/rice-varieties'),
+  getById: (id) => api.get(`/rice-varieties/${id}`),
+  getCurrentSeason: () => api.get('/rice-varieties/current-season'),
+  getRecommended: (fieldId) => api.get(`/rice-varieties/recommended/${fieldId}`),
+};
+
+// Rice Growth Stages API
+export const riceGrowthStagesAPI = {
+  getAll: () => api.get('/rice-growth-stages'),
+  getById: (id) => api.get(`/rice-growth-stages/${id}`),
+  getOrdered: () => api.get('/rice-growth-stages/ordered'),
+};
+
+// Planting Stages API
+export const plantingStagesAPI = {
+  getByPlanting: (plantingId) => api.get(`/plantings/${plantingId}/stages`),
+  updateStage: (stageId, stageData) => api.put(`/planting-stages/${stageId}`, stageData),
+  startStage: (stageId) => api.post(`/planting-stages/${stageId}/start`),
+  completeStage: (stageId, notes = null) => api.post(`/planting-stages/${stageId}/complete`, { notes }),
+  markDelayed: (stageId, notes = null) => api.post(`/planting-stages/${stageId}/delayed`, { notes }),
+};
+
+// Rice Farming Lifecycle API
+export const riceFarmingAPI = {
+  createPlanting: (plantingData) => api.post('/rice-farming/plantings', plantingData),
+  getLifecycleOverview: () => api.get('/rice-farming/lifecycle-overview'),
+  getPlantingLifecycle: (plantingId) => api.get(`/rice-farming/plantings/${plantingId}/lifecycle`),
+  advanceStage: (plantingId, stageData) => api.post(`/rice-farming/plantings/${plantingId}/advance-stage`, stageData),
+  getRecommendations: (plantingId) => api.get(`/rice-farming/plantings/${plantingId}/recommendations`),
+  markStageDelayed: (stageId, delayData) => api.post(`/rice-farming/stages/${stageId}/delay`, delayData),
 };
 
 // Admin API

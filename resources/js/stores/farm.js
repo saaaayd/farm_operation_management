@@ -55,6 +55,21 @@ export const useFarmStore = defineStore('farm', {
       }
     },
 
+    async createRiceFarmProfile(profileData) {
+      this.loading = true;
+      try {
+        const response = await farmProfileAPI.createRiceFarm(profileData);
+        this.farmProfile = response.data.farmProfile;
+        this.fields = response.data.fields || [];
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to create rice farm profile';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async fetchFields() {
       this.loading = true;
       try {
