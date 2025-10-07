@@ -2,7 +2,7 @@
   <div class="flex h-screen bg-gray-100">
     <!-- Sidebar -->
     <div 
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
       <!-- Sidebar Header -->
@@ -44,8 +44,9 @@
       </div>
 
       <!-- Navigation Menu -->
-      <nav class="mt-6 px-3 flex-1 overflow-y-auto">
-        <div class="space-y-1">
+      <div class="flex flex-col h-full">
+        <nav class="flex-1 px-3 py-4 overflow-y-auto">
+          <div class="space-y-1">
           <!-- Dashboard -->
           <router-link
             to="/dashboard"
@@ -90,17 +91,7 @@
 
           <!-- Farmer Section -->
           <template v-if="authStore.user?.role === 'farmer'">
-            <div class="nav-section-title">Farm Management</div>
-            
-            <router-link
-              to="/farm/overview"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/farm/overview') }"
-            >
-              <MapIcon class="nav-icon" />
-              Farm Overview
-            </router-link>
-
+            <!-- Core Farm Management -->
             <router-link
               to="/fields"
               class="nav-item"
@@ -108,17 +99,6 @@
             >
               <GlobeAltIcon class="nav-icon" />
               Rice Fields
-            </router-link>
-
-            <div class="nav-section-title">Rice Farming</div>
-            
-            <router-link
-              to="/rice-farming/lifecycle"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/rice-farming/lifecycle') }"
-            >
-              <ArrowPathIcon class="nav-icon" />
-              Lifecycle Management
             </router-link>
 
             <router-link
@@ -139,15 +119,13 @@
               Harvests
             </router-link>
 
-            <div class="nav-section-title">Operations</div>
-            
             <router-link
               to="/tasks"
               class="nav-item"
               :class="{ 'nav-item-active': $route.path.startsWith('/tasks') }"
             >
               <ClipboardDocumentListIcon class="nav-icon" />
-              Tasks & Activities
+              Tasks
             </router-link>
 
             <router-link
@@ -159,15 +137,6 @@
               Inventory
             </router-link>
 
-            <router-link
-              to="/labor"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/labor') }"
-            >
-              <UserGroupIcon class="nav-icon" />
-              Labor Management
-            </router-link>
-
             <div class="nav-section-title">Analytics</div>
             
             <router-link
@@ -176,7 +145,7 @@
               :class="{ 'nav-item-active': $route.path.startsWith('/weather') }"
             >
               <CloudIcon class="nav-icon" />
-              Weather Analytics
+              Weather
             </router-link>
 
             <router-link
@@ -185,10 +154,10 @@
               :class="{ 'nav-item-active': $route.path.startsWith('/reports') }"
             >
               <DocumentChartBarIcon class="nav-icon" />
-              Farm Reports
+              Reports
             </router-link>
 
-            <div class="nav-section-title">Marketplace</div>
+            <div class="nav-section-title">Business</div>
             
             <router-link
               to="/marketplace/my-products"
@@ -196,7 +165,7 @@
               :class="{ 'nav-item-active': $route.path.startsWith('/marketplace/my-products') }"
             >
               <ShoppingBagIcon class="nav-icon" />
-              My Rice Products
+              My Products
             </router-link>
 
             <router-link
@@ -205,20 +174,9 @@
               :class="{ 'nav-item-active': $route.path.startsWith('/marketplace/orders') }"
             >
               <DocumentTextIcon class="nav-icon" />
-              Sales Orders
+              Orders
             </router-link>
 
-            <router-link
-              to="/marketplace/browse"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path === '/marketplace/browse' }"
-            >
-              <MagnifyingGlassIcon class="nav-icon" />
-              Browse Marketplace
-            </router-link>
-
-            <div class="nav-section-title">Financial</div>
-            
             <router-link
               to="/financial/expenses"
               class="nav-item"
@@ -226,15 +184,6 @@
             >
               <CurrencyDollarIcon class="nav-icon" />
               Expenses
-            </router-link>
-
-            <router-link
-              to="/financial/income"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/financial/income') }"
-            >
-              <BanknotesIcon class="nav-icon" />
-              Income & Sales
             </router-link>
           </template>
 
@@ -278,17 +227,18 @@
               Favorites
             </router-link>
           </template>
-        </div>
+          </div>
+        </nav>
 
         <!-- Bottom Section -->
-        <div class="mt-auto pt-6 pb-4 border-t border-gray-200">
+        <div class="px-3 py-4 border-t border-gray-200 bg-white">
           <router-link
             to="/profile"
             class="nav-item"
             :class="{ 'nav-item-active': $route.path === '/profile' }"
           >
             <UserCircleIcon class="nav-icon" />
-            Profile Settings
+            Profile
           </router-link>
 
           <button
@@ -299,7 +249,7 @@
             Logout
           </button>
         </div>
-      </nav>
+      </div>
     </div>
 
     <!-- Mobile overlay -->
@@ -310,7 +260,7 @@
     ></div>
 
     <!-- Main content -->
-    <div class="flex-1 lg:ml-0">
+    <div class="flex-1 lg:ml-64">
       <!-- Mobile header -->
       <div class="lg:hidden bg-white shadow-sm border-b border-gray-200">
         <div class="flex items-center justify-between h-16 px-4">
@@ -432,5 +382,25 @@ const logout = async () => {
 
 .nav-section-title:first-child {
   margin-top: 0;
+}
+
+/* Ensure sidebar is always fixed and doesn't scroll with content */
+.sidebar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 16rem; /* w-64 */
+  z-index: 50;
+}
+
+@media (max-width: 1023px) {
+  .sidebar-container {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar-container.open {
+    transform: translateX(0);
+  }
 }
 </style>
