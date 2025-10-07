@@ -30,10 +30,28 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log error for debugging
+    console.error('API Error:', error);
+    
+    // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Use router if available, otherwise fallback to window.location
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
+    
+    // Handle server errors gracefully
+    if (error.response?.status >= 500) {
+      console.error('Server error detected:', error.response.status);
+    }
+    
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error or server unreachable');
+    }
+    
     return Promise.reject(error);
   }
 );

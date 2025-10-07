@@ -106,7 +106,7 @@
         <!-- Weather Widget -->
         <div class="lg:col-span-1">
           <CurrentWeather 
-            v-if="primaryField" 
+            v-if="primaryField && primaryField.id" 
             :field-id="primaryField.id" 
           />
           <div v-else class="bg-white rounded-lg shadow-lg p-6">
@@ -115,12 +115,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
               </svg>
               <p class="text-sm">No fields available for weather data</p>
-              <router-link 
-                to="/fields" 
-                class="text-green-600 hover:text-green-700 text-sm font-medium"
+              <button 
+                @click="navigateTo('/fields')" 
+                :disabled="isNavigating"
+                class="text-green-600 hover:text-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add your first field
-              </router-link>
+              </button>
             </div>
           </div>
         </div>
@@ -130,12 +131,13 @@
           <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-900">Upcoming Tasks</h3>
-              <router-link 
-                to="/tasks" 
-                class="text-green-600 hover:text-green-700 text-sm font-medium"
+              <button 
+                @click="navigateTo('/tasks')" 
+                :disabled="isNavigating"
+                class="text-green-600 hover:text-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 View all tasks
-              </router-link>
+              </button>
             </div>
             
             <div v-if="upcomingTasks.length > 0" class="space-y-3">
@@ -184,9 +186,10 @@
       <div class="mt-8">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <router-link 
-            to="/tasks/create"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          <button 
+            @click="navigateTo('/tasks/create')"
+            :disabled="isNavigating"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,11 +197,12 @@
               </svg>
             </div>
             <p class="text-sm font-medium text-gray-900">Create Task</p>
-          </router-link>
+          </button>
 
-          <router-link 
-            to="/harvests/create"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          <button 
+            @click="navigateTo('/harvests/create')"
+            :disabled="isNavigating"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,11 +210,12 @@
               </svg>
             </div>
             <p class="text-sm font-medium text-gray-900">Record Harvest</p>
-          </router-link>
+          </button>
 
-          <router-link 
-            to="/inventory"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          <button 
+            @click="navigateTo('/inventory')"
+            :disabled="isNavigating"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,11 +223,12 @@
               </svg>
             </div>
             <p class="text-sm font-medium text-gray-900">Check Inventory</p>
-          </router-link>
+          </button>
 
-          <router-link 
-            to="/marketplace"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          <button 
+            @click="navigateTo('/marketplace')"
+            :disabled="isNavigating"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +236,7 @@
               </svg>
             </div>
             <p class="text-sm font-medium text-gray-900">Marketplace</p>
-          </router-link>
+          </button>
         </div>
       </div>
     </main>
@@ -252,28 +258,75 @@ const farmStore = useFarmStore();
 const inventoryStore = useInventoryStore();
 const marketplaceStore = useMarketplaceStore();
 
+// Add loading state to prevent button spamming
+const isNavigating = ref(false);
+
 const totalPlantedArea = computed(() => {
-  return farmStore.plantings
-    .filter(p => p.status !== 'harvested')
-    .reduce((total, planting) => {
-      return total + (planting.field?.size || 0);
-    }, 0).toFixed(2);
+  try {
+    if (!Array.isArray(farmStore.plantings)) return '0.00';
+    return farmStore.plantings
+      .filter(p => p && p.status !== 'harvested')
+      .reduce((total, planting) => {
+        return total + (planting.field?.size || 0);
+      }, 0).toFixed(2);
+  } catch (error) {
+    console.warn('Error calculating total planted area:', error);
+    return '0.00';
+  }
 });
 
 const tasksDueToday = computed(() => {
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  return farmStore.tasks.filter(task => {
-    const dueDate = new Date(task.due_date);
-    return dueDate <= today && ['pending', 'in_progress'].includes(task.status);
-  }).length;
+  try {
+    if (!Array.isArray(farmStore.tasks)) return 0;
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return farmStore.tasks.filter(task => {
+      if (!task || !task.due_date) return false;
+      const dueDate = new Date(task.due_date);
+      return dueDate <= today && ['pending', 'in_progress'].includes(task.status);
+    }).length;
+  } catch (error) {
+    console.warn('Error calculating tasks due today:', error);
+    return 0;
+  }
 });
 
-const upcomingTasks = computed(() => farmStore.upcomingTasks);
-const lowStockCount = computed(() => inventoryStore.lowStockItems.length);
-const pendingOrders = computed(() => marketplaceStore.orders.filter(order => order.status === 'pending').length);
+const upcomingTasks = computed(() => {
+  try {
+    return Array.isArray(farmStore.upcomingTasks) ? farmStore.upcomingTasks : [];
+  } catch (error) {
+    console.warn('Error getting upcoming tasks:', error);
+    return [];
+  }
+});
 
-const primaryField = computed(() => farmStore.fields[0]);
+const lowStockCount = computed(() => {
+  try {
+    return Array.isArray(inventoryStore.lowStockItems) ? inventoryStore.lowStockItems.length : 0;
+  } catch (error) {
+    console.warn('Error calculating low stock count:', error);
+    return 0;
+  }
+});
+
+const pendingOrders = computed(() => {
+  try {
+    if (!Array.isArray(marketplaceStore.orders)) return 0;
+    return marketplaceStore.orders.filter(order => order && order.status === 'pending').length;
+  } catch (error) {
+    console.warn('Error calculating pending orders:', error);
+    return 0;
+  }
+});
+
+const primaryField = computed(() => {
+  try {
+    return Array.isArray(farmStore.fields) && farmStore.fields.length > 0 ? farmStore.fields[0] : null;
+  } catch (error) {
+    console.warn('Error getting primary field:', error);
+    return null;
+  }
+});
 
 const getTaskPriorityColor = (priority) => {
   const colors = {
@@ -299,21 +352,56 @@ const formatDate = (date) => {
 };
 
 const logout = async () => {
-  await authStore.logout();
-  router.push('/login');
+  try {
+    await authStore.logout();
+    router.push('/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Force logout even if API call fails
+    authStore.user = null;
+    authStore.token = null;
+    localStorage.removeItem('token');
+    router.push('/login');
+  }
+};
+
+const navigateTo = async (path) => {
+  if (isNavigating.value) return; // Prevent double-clicks
+  
+  isNavigating.value = true;
+  try {
+    await router.push(path);
+  } catch (error) {
+    console.error('Navigation error:', error);
+    // Fallback to window location if router fails
+    window.location.href = path;
+  } finally {
+    // Reset after a short delay
+    setTimeout(() => {
+      isNavigating.value = false;
+    }, 500);
+  }
 };
 
 onMounted(async () => {
-  try {
-    await Promise.all([
-      farmStore.fetchFields(),
-      farmStore.fetchPlantings(),
-      farmStore.fetchTasks(),
-      inventoryStore.fetchItems(),
-      marketplaceStore.fetchOrders()
-    ]);
-  } catch (error) {
-    console.error('Failed to load dashboard data:', error);
-  }
+  // Load data sequentially with individual error handling to prevent crashes
+  const loadData = async () => {
+    const promises = [
+      farmStore.fetchFields().catch(err => console.warn('Failed to fetch fields:', err)),
+      farmStore.fetchPlantings().catch(err => console.warn('Failed to fetch plantings:', err)),
+      farmStore.fetchTasks().catch(err => console.warn('Failed to fetch tasks:', err)),
+      inventoryStore.fetchItems().catch(err => console.warn('Failed to fetch inventory:', err)),
+      marketplaceStore.fetchOrders().catch(err => console.warn('Failed to fetch orders:', err))
+    ];
+    
+    try {
+      await Promise.allSettled(promises);
+    } catch (error) {
+      console.error('Critical error loading dashboard data:', error);
+    }
+  };
+  
+  // Add a small delay to prevent overwhelming the server
+  setTimeout(loadData, 100);
 });
 </script>
