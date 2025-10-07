@@ -346,19 +346,19 @@ const availablePlantings = computed(() => {
 });
 
 // Auto-calculate yield per hectare
-watch([() => form.yield, () => form.planting_id], ([yield, plantingId]) => {
-  if (yield && plantingId) {
+watch([() => form.yield, () => form.planting_id], ([yieldValue, plantingId]) => {
+  if (yieldValue && plantingId) {
     const planting = plantings.value.find(p => p.id === parseInt(plantingId));
     if (planting && planting.field?.size) {
-      form.yield_per_hectare = (parseFloat(yield) / planting.field.size).toFixed(2);
+      form.yield_per_hectare = (parseFloat(yieldValue) / planting.field.size).toFixed(2);
     }
   }
 });
 
 // Auto-calculate total value
-watch([() => form.yield, () => form.price_per_kg], ([yield, price]) => {
-  if (yield && price) {
-    form.total_value = (parseFloat(yield) * parseFloat(price)).toFixed(2);
+watch([() => form.yield, () => form.price_per_kg], ([yieldValue, price]) => {
+  if (yieldValue && price) {
+    form.total_value = (parseFloat(yieldValue) * parseFloat(price)).toFixed(2);
   }
 });
 

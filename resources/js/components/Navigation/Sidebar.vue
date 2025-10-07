@@ -387,18 +387,50 @@ const logout = async () => {
 
 <style scoped>
 .nav-item {
-  @apply flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150;
+  display: flex;
+  align-items: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(55 65 81);
+  border-radius: 0.5rem;
+  transition: all 0.15s;
+}
+
+.nav-item:hover {
+  background-color: rgb(243 244 246);
+  color: rgb(17 24 39);
 }
 
 .nav-item-active {
-  @apply bg-green-100 text-green-700;
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
 }
 
 .nav-icon {
-  @apply w-5 h-5 mr-3 flex-shrink-0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
 }
 
 .nav-section-title {
-  @apply px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 first:mt-0;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(107 114 128);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1.5rem;
+}
+
+.nav-section-title:first-child {
+  margin-top: 0;
 }
 </style>
