@@ -179,14 +179,29 @@ const isFavorableForFarming = computed(() => {
 });
 
 const refreshWeather = async () => {
+  if (!props.fieldId) {
+    error.value = 'No field ID provided';
+    return;
+  }
+  
   loading.value = true;
   error.value = '';
   
   try {
-    await Promise.all([
+    // Use Promise.allSettled to prevent one failure from breaking everything
+    const results = await Promise.allSettled([
       weatherStore.fetchCurrentWeather(props.fieldId),
       weatherStore.fetchWeatherAlerts(props.fieldId)
     ]);
+    
+    // Check if any promises were rejected
+    const failures = results.filter(result => result.status === 'rejected');
+    if (failures.length > 0) {
+      console.warn('Some weather data failed to load:', failures);
+      if (failures.length === results.length) {
+        error.value = 'Failed to fetch weather data';
+      }
+    }
   } catch (err) {
     error.value = err.message || 'Failed to fetch weather data';
   } finally {
