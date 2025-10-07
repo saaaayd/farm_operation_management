@@ -22,8 +22,11 @@ import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
 import WeatherAnalytics from '@/Pages/Farmer/Weather/Analytics.vue';
 
 // Marketplace
-import MarketplaceIndex from '@/Pages/Marketplace/Index.vue';
+import Marketplace from '@/Pages/Marketplace/Index.vue';
+import ProductDetail from '@/Pages/Marketplace/ProductDetail.vue';
 import Cart from '@/Pages/Marketplace/Cart.vue';
+import OrdersList from '@/Pages/Marketplace/Orders/Index.vue';
+import OrderDetail from '@/Pages/Marketplace/Orders/Show.vue';
 
 // Reports
 import ReportsIndex from '@/Pages/Farmer/Reports/Index.vue';
@@ -36,15 +39,7 @@ import InventoryDetail from '@/Pages/Inventory/Show.vue';
 import WeatherDashboard from '@/Pages/Weather/Dashboard.vue';
 import FieldWeather from '@/Pages/Weather/FieldWeather.vue';
 
-// Marketplace
-import Marketplace from '@/Pages/Marketplace/Index.vue';
-import ProductDetail from '@/Pages/Marketplace/ProductDetail.vue';
-import Cart from '@/Pages/Marketplace/Cart.vue';
-import OrdersList from '@/Pages/Marketplace/Orders/Index.vue';
-import OrderDetail from '@/Pages/Marketplace/Orders/Show.vue';
-
 // Admin
-import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
 import UsersList from '@/Pages/Admin/Users/Index.vue';
 import SystemStats from '@/Pages/Admin/SystemStats.vue';
 
@@ -120,23 +115,10 @@ const routes = [
   {
     path: '/weather',
     name: 'weather',
-    component: WeatherAnalytics,
+    component: WeatherDashboard,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   
-  // Marketplace Routes
-  {
-    path: '/marketplace',
-    name: 'marketplace',
-    component: MarketplaceIndex,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/cart',
-    name: 'cart',
-    component: Cart,
-    meta: { requiresAuth: true, roles: ['buyer'] }
-  },
   
   // Reports Routes
   {
@@ -160,13 +142,7 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   
-  // Weather Routes
-  {
-    path: '/weather',
-    name: 'weather',
-    component: WeatherDashboard,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
-  },
+  // Weather Routes  
   {
     path: '/weather/fields/:id',
     name: 'field-weather',
