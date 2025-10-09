@@ -345,9 +345,9 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
-import LineChart from '@/components/Charts/LineChart.vue';
-import BarChart from '@/components/Charts/BarChart.vue';
-import PieChart from '@/components/Charts/PieChart.vue';
+import LineChart from '@/Components/Charts/LineChart.vue';
+import BarChart from '@/Components/Charts/BarChart.vue';
+import PieChart from '@/Components/Charts/PieChart.vue';
 
 // Reactive data
 const analytics = ref(null);

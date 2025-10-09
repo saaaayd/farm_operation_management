@@ -1,30 +1,23 @@
 <template>
-  <div class="chart-container">
-    <canvas ref="chartCanvas"></canvas>
+  <div class="chart-container bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg flex items-center justify-center">
+    <div class="text-center p-4">
+      <div class="text-blue-500 mb-2">
+        <svg class="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+      <h3 class="text-sm font-medium text-gray-900">Bar Chart Placeholder</h3>
+      <p class="text-xs text-gray-500 mt-1">Chart temporarily disabled for debugging</p>
+      <div class="mt-2 text-xs text-gray-400">
+        Labels: {{ data?.labels?.length || 0 }} | 
+        Datasets: {{ data?.datasets?.length || 0 }}
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue';
-import {
-  Chart,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-
-// Register Chart.js components
-Chart.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { onMounted } from 'vue';
 
 const props = defineProps({
   data: {
@@ -45,97 +38,9 @@ const props = defineProps({
   }
 });
 
-const chartCanvas = ref(null);
-let chartInstance = null;
-
-const defaultOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top',
-    },
-    title: {
-      display: false,
-    },
-    tooltip: {
-      enabled: true,
-      mode: 'index',
-      intersect: false,
-    }
-  },
-  scales: {
-    x: {
-      display: true,
-      title: {
-        display: true,
-        text: 'Category'
-      }
-    },
-    y: {
-      display: true,
-      beginAtZero: true,
-      title: {
-        display: true,
-        text: 'Value'
-      }
-    }
-  },
-  interaction: {
-    mode: 'index',
-    intersect: false,
-  },
-};
-
-const createChart = () => {
-  if (!chartCanvas.value) return;
-
-  const ctx = chartCanvas.value.getContext('2d');
-  
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: props.data,
-    options: {
-      ...defaultOptions,
-      ...props.options,
-    }
-  });
-};
-
-const updateChart = () => {
-  if (chartInstance) {
-    chartInstance.data = props.data;
-    chartInstance.options = {
-      ...defaultOptions,
-      ...props.options,
-    };
-    chartInstance.update();
-  }
-};
-
-onMounted(async () => {
-  await nextTick();
-  createChart();
-});
-
-watch(() => props.data, () => {
-  updateChart();
-}, { deep: true });
-
-watch(() => props.options, () => {
-  updateChart();
-}, { deep: true });
-
-// Cleanup on unmount
-onUnmounted(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+onMounted(() => {
+  console.log('🔄 BarChart (Placeholder): Component mounted successfully');
+  console.log('📊 BarChart (Placeholder): Data received:', props.data);
 });
 </script>
 
