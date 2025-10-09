@@ -23,24 +23,112 @@ export const useInventoryStore = defineStore('inventory', {
   }),
 
   getters: {
-    lowStockItems: (state) => state.items.filter(item => item.quantity <= item.min_stock),
-    outOfStockItems: (state) => state.items.filter(item => item.quantity <= 0),
-    riceSeeds: (state) => state.items.filter(item => item.category === 'seeds'),
-    fertilizers: (state) => state.items.filter(item => item.category === 'fertilizer'),
-    pesticides: (state) => state.items.filter(item => item.category === 'pesticide'),
-    equipment: (state) => state.items.filter(item => item.category === 'equipment'),
-    harvestedRice: (state) => state.items.filter(item => item.category === 'produce'),
+    lowStockItems: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => {
+          return item && 
+                 typeof item.quantity === 'number' && 
+                 typeof item.min_stock === 'number' && 
+                 item.quantity <= item.min_stock;
+        });
+      } catch (error) {
+        console.warn('Error in lowStockItems getter:', error);
+        return [];
+      }
+    },
+    outOfStockItems: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => {
+          return item && typeof item.quantity === 'number' && item.quantity <= 0;
+        });
+      } catch (error) {
+        console.warn('Error in outOfStockItems getter:', error);
+        return [];
+      }
+    },
+    riceSeeds: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => item && item.category === 'seeds');
+      } catch (error) {
+        console.warn('Error in riceSeeds getter:', error);
+        return [];
+      }
+    },
+    fertilizers: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => item && item.category === 'fertilizer');
+      } catch (error) {
+        console.warn('Error in fertilizers getter:', error);
+        return [];
+      }
+    },
+    pesticides: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => item && item.category === 'pesticide');
+      } catch (error) {
+        console.warn('Error in pesticides getter:', error);
+        return [];
+      }
+    },
+    equipment: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => item && item.category === 'equipment');
+      } catch (error) {
+        console.warn('Error in equipment getter:', error);
+        return [];
+      }
+    },
+    harvestedRice: (state) => {
+      try {
+        if (!Array.isArray(state.items)) return [];
+        return state.items.filter(item => item && item.category === 'produce');
+      } catch (error) {
+        console.warn('Error in harvestedRice getter:', error);
+        return [];
+      }
+    },
   },
 
   actions: {
     async fetchItems() {
       this.loading = true;
+      this.error = null;
+      
       try {
         const response = await axios.get('/api/inventory');
-        this.items = response.data.inventory_items;
+        
+        if (!response.data) {
+          console.warn('No inventory data received, using empty array');
+          this.items = [];
+          return { inventory_items: [] };
+        }
+        
+        // Handle different response formats
+        const items = response.data.inventory_items || response.data.items || response.data.inventory || [];
+        
+        if (!Array.isArray(items)) {
+          console.warn('Invalid inventory items data received, using empty array');
+          this.items = [];
+          return { inventory_items: [] };
+        }
+        
+        this.items = items;
+        console.log(`✓ Loaded ${this.items.length} inventory items`);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch inventory items';
+        console.error('Failed to fetch inventory items:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch inventory items';
+        
+        if (!this.items.length) {
+          this.items = [];
+        }
+        
         throw error;
       } finally {
         this.loading = false;

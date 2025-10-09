@@ -228,50 +228,72 @@ export default routes;
 // Navigation guard function to be used in main app
 export const setupRouterGuards = (router) => {
   router.beforeEach((to, from, next) => {
-    const authStore = useAuthStore();
-    
-    // Handle root path redirect
-    if (to.path === '/') {
-      if (authStore.isAuthenticated) {
-        next('/dashboard');
-      } else {
-        next('/login');
-      }
-      return;
-    }
-    
-    // Check if route requires authentication
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      next('/login');
-      return;
-    }
-    
-    // Check if route requires guest (not authenticated)
-    if (to.meta.requiresGuest && authStore.isAuthenticated) {
-      next('/dashboard');
-      return;
-    }
-    
-    // Check if route requires onboarding completion
-    if (to.meta.requiresOnboarding && authStore.needsOnboarding) {
-      next('/onboarding');
-      return;
-    }
-    
-    // Check if user needs onboarding but trying to access other routes
-    if (authStore.needsOnboarding && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
-      next('/onboarding');
-      return;
-    }
-    
-    // Check role-based access
-    if (to.meta.roles && authStore.user) {
-      if (!to.meta.roles.includes(authStore.user.role)) {
-        next('/dashboard'); // Redirect to dashboard if role not allowed
+    try {
+      const authStore = useAuthStore();
+      
+      console.log(`Router: Navigating from ${from.path} to ${to.path}`);
+      
+      // Handle root path redirect
+      if (to.path === '/') {
+        if (authStore.isAuthenticated) {
+          console.log('Router: Redirecting authenticated user to dashboard');
+          next('/dashboard');
+        } else {
+          console.log('Router: Redirecting unauthenticated user to login');
+          next('/login');
+        }
         return;
       }
+      
+      // Check if route requires authentication
+      if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        console.log('Router: Route requires auth, redirecting to login');
+        next('/login');
+        return;
+      }
+      
+      // Check if route requires guest (not authenticated)
+      if (to.meta.requiresGuest && authStore.isAuthenticated) {
+        console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
+        next('/dashboard');
+        return;
+      }
+      
+      // Check if route requires onboarding completion
+      if (to.meta.requiresOnboarding && authStore.needsOnboarding) {
+        console.log('Router: Redirecting to onboarding');
+        next('/onboarding');
+        return;
+      }
+      
+      // Check if user needs onboarding but trying to access other routes
+      if (authStore.needsOnboarding && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
+        console.log('Router: User needs onboarding, redirecting');
+        next('/onboarding');
+        return;
+      }
+      
+      // Check role-based access
+      if (to.meta.roles && authStore.user) {
+        if (!to.meta.roles.includes(authStore.user.role)) {
+          console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
+          next('/dashboard'); // Redirect to dashboard if role not allowed
+          return;
+        }
+      }
+      
+      console.log(`Router: Navigation to ${to.path} allowed`);
+      next();
+    } catch (error) {
+      console.error('Router guard error:', error);
+      // Fallback to allow navigation to prevent infinite loops
+      next();
     }
-    
-    next();
+  });
+  
+  // Add error handler for router errors
+  router.onError((error) => {
+    console.error('Router error:', error);
+    // Could show a toast notification here
   });
 };

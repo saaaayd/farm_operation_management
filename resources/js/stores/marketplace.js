@@ -13,10 +13,53 @@ export const useMarketplaceStore = defineStore('marketplace', {
   }),
 
   getters: {
-    cartItemsCount: (state) => state.cart.reduce((total, item) => total + item.quantity, 0),
-    cartTotal: (state) => state.cart.reduce((total, item) => total + (item.price * item.quantity), 0),
-    riceProducts: (state) => state.products.filter(product => product.category === 'Harvested Rice'),
-    availableProducts: (state) => state.products.filter(product => product.quantity > 0),
+    cartItemsCount: (state) => {
+      try {
+        if (!Array.isArray(state.cart)) return 0;
+        return state.cart.reduce((total, item) => {
+          return total + (item && typeof item.quantity === 'number' ? item.quantity : 0);
+        }, 0);
+      } catch (error) {
+        console.warn('Error in cartItemsCount getter:', error);
+        return 0;
+      }
+    },
+    cartTotal: (state) => {
+      try {
+        if (!Array.isArray(state.cart)) return 0;
+        return state.cart.reduce((total, item) => {
+          if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+            return total;
+          }
+          return total + (item.price * item.quantity);
+        }, 0);
+      } catch (error) {
+        console.warn('Error in cartTotal getter:', error);
+        return 0;
+      }
+    },
+    riceProducts: (state) => {
+      try {
+        if (!Array.isArray(state.products)) return [];
+        return state.products.filter(product => {
+          return product && product.category === 'Harvested Rice';
+        });
+      } catch (error) {
+        console.warn('Error in riceProducts getter:', error);
+        return [];
+      }
+    },
+    availableProducts: (state) => {
+      try {
+        if (!Array.isArray(state.products)) return [];
+        return state.products.filter(product => {
+          return product && typeof product.quantity === 'number' && product.quantity > 0;
+        });
+      } catch (error) {
+        console.warn('Error in availableProducts getter:', error);
+        return [];
+      }
+    },
   },
 
   actions: {
@@ -50,12 +93,37 @@ export const useMarketplaceStore = defineStore('marketplace', {
 
     async fetchOrders() {
       this.loading = true;
+      this.error = null;
+      
       try {
         const response = await axios.get('/api/orders');
-        this.orders = response.data.orders;
+        
+        if (!response.data) {
+          console.warn('No orders data received, using empty array');
+          this.orders = [];
+          return { orders: [] };
+        }
+        
+        // Handle different response formats
+        const orders = response.data.orders || response.data.data || [];
+        
+        if (!Array.isArray(orders)) {
+          console.warn('Invalid orders data received, using empty array');
+          this.orders = [];
+          return { orders: [] };
+        }
+        
+        this.orders = orders;
+        console.log(`✓ Loaded ${this.orders.length} orders`);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch orders';
+        console.error('Failed to fetch orders:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch orders';
+        
+        if (!this.orders.length) {
+          this.orders = [];
+        }
+        
         throw error;
       } finally {
         this.loading = false;

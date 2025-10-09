@@ -16,12 +16,28 @@ export const useFarmStore = defineStore('farm', {
     hasFarmProfile: (state) => !!state.farmProfile,
     activePlantings: (state) => state.plantings.filter(p => p.status !== 'harvested'),
     upcomingTasks: (state) => {
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      return state.tasks.filter(t => 
-        new Date(t.due_date) <= nextWeek && 
-        ['pending', 'in_progress'].includes(t.status)
-      );
+      try {
+        if (!Array.isArray(state.tasks)) return [];
+        
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        
+        return state.tasks.filter(t => {
+          if (!t || !t.due_date) return false;
+          try {
+            const dueDate = new Date(t.due_date);
+            return !isNaN(dueDate.getTime()) && 
+                   dueDate <= nextWeek && 
+                   ['pending', 'in_progress'].includes(t.status);
+          } catch (dateError) {
+            console.warn('Invalid date in task:', t.due_date);
+            return false;
+          }
+        });
+      } catch (error) {
+        console.warn('Error in upcomingTasks getter:', error);
+        return [];
+      }
     },
     lowStockItems: (state) => state.inventory?.filter(item => item.quantity <= item.min_stock) || [],
   },
@@ -147,12 +163,28 @@ export const useFarmStore = defineStore('farm', {
 
     async fetchTasks() {
       this.loading = true;
+      this.error = null;
+      
       try {
         const response = await tasksAPI.getAll();
+        
+        if (!response.data || !Array.isArray(response.data.tasks)) {
+          console.warn('Invalid tasks data received, using empty array');
+          this.tasks = [];
+          return { tasks: [] };
+        }
+        
         this.tasks = response.data.tasks;
+        console.log(`✓ Loaded ${this.tasks.length} tasks`);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch tasks';
+        console.error('Failed to fetch tasks:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch tasks';
+        
+        if (!this.tasks.length) {
+          this.tasks = [];
+        }
+        
         throw error;
       } finally {
         this.loading = false;
