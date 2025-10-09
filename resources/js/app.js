@@ -24,13 +24,11 @@ app.use(router);
 // Set up router guards after Pinia is installed
 setupRouterGuards(router);
 
-// Initialize auth state
+// Initialize auth state with error handling
 const authStore = useAuthStore();
 authStore.initializeAuth();
 
-// Fetch user data if token exists
-if (authStore.token) {
-    authStore.fetchUser();
-}
+// Fetch user data if token exists (handled in App.vue onMounted)
+// This prevents double fetching and race conditions
 
 app.mount('#app');

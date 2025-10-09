@@ -25,15 +25,28 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await axios.post('/api/login', credentials);
         
+        if (!response.data.token || !response.data.user) {
+          throw new Error('Invalid response from server');
+        }
+        
         this.token = response.data.token;
         this.user = response.data.user;
         
         localStorage.setItem('token', this.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
         
+        console.log('✓ Login successful for user:', this.user.name);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Login failed';
+        console.error('Login error:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Login failed. Please try again.';
+        
+        // Clear any partial state
+        this.token = null;
+        this.user = null;
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        
         throw error;
       } finally {
         this.loading = false;
@@ -83,18 +96,36 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchUser() {
-      if (!this.token) return;
+      if (!this.token) {
+        console.warn('No token available for fetching user');
+        return;
+      }
 
       this.loading = true;
+      this.error = null;
 
       try {
         const response = await axios.get('/api/user');
+        
+        if (!response.data.user) {
+          throw new Error('Invalid user data received');
+        }
+        
         this.user = response.data.user;
+        console.log('✓ User data fetched successfully');
       } catch (error) {
         console.error('Fetch user error:', error);
-        // If token is invalid, logout
+        
+        // If token is invalid or expired, logout gracefully
         if (error.response?.status === 401) {
-          this.logout();
+          console.warn('Token expired or invalid, logging out...');
+          await this.logout();
+          // Redirect to login if not already there
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        } else {
+          this.error = error.userMessage || 'Failed to fetch user data';
         }
       } finally {
         this.loading = false;

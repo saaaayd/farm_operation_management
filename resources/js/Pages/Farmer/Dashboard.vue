@@ -384,24 +384,69 @@ const navigateTo = async (path) => {
 };
 
 onMounted(async () => {
-  // Load data sequentially with individual error handling to prevent crashes
+  // Load data with staggered approach to prevent overwhelming the server
   const loadData = async () => {
-    const promises = [
-      farmStore.fetchFields().catch(err => console.warn('Failed to fetch fields:', err)),
-      farmStore.fetchPlantings().catch(err => console.warn('Failed to fetch plantings:', err)),
-      farmStore.fetchTasks().catch(err => console.warn('Failed to fetch tasks:', err)),
-      inventoryStore.fetchItems().catch(err => console.warn('Failed to fetch inventory:', err)),
-      marketplaceStore.fetchOrders().catch(err => console.warn('Failed to fetch orders:', err))
-    ];
-    
+    const loadingStates = {
+      fields: false,
+      plantings: false,
+      tasks: false,
+      inventory: false,
+      orders: false
+    };
+
+    // Load essential data first (fields are required for other operations)
     try {
-      await Promise.allSettled(promises);
+      loadingStates.fields = true;
+      await farmStore.fetchFields();
+      console.log('✓ Fields loaded successfully');
     } catch (error) {
-      console.error('Critical error loading dashboard data:', error);
+      console.warn('⚠ Failed to fetch fields:', error.userMessage || error.message);
+    } finally {
+      loadingStates.fields = false;
     }
+
+    // Load remaining data with delays to prevent server overload
+    const dataLoaders = [
+      {
+        name: 'plantings',
+        loader: () => farmStore.fetchPlantings(),
+        delay: 200
+      },
+      {
+        name: 'tasks',
+        loader: () => farmStore.fetchTasks(),
+        delay: 400
+      },
+      {
+        name: 'inventory',
+        loader: () => inventoryStore.fetchItems(),
+        delay: 600
+      },
+      {
+        name: 'orders',
+        loader: () => marketplaceStore.fetchOrders(),
+        delay: 800
+      }
+    ];
+
+    // Load data with staggered delays
+    dataLoaders.forEach(({ name, loader, delay }) => {
+      setTimeout(async () => {
+        try {
+          loadingStates[name] = true;
+          await loader();
+          console.log(`✓ ${name} loaded successfully`);
+        } catch (error) {
+          console.warn(`⚠ Failed to fetch ${name}:`, error.userMessage || error.message);
+          // Continue loading other data even if one fails
+        } finally {
+          loadingStates[name] = false;
+        }
+      }, delay);
+    });
   };
   
-  // Add a small delay to prevent overwhelming the server
-  setTimeout(loadData, 100);
+  // Start loading data
+  loadData();
 });
 </script>

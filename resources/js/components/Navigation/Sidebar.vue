@@ -243,10 +243,12 @@
 
           <button
             @click="logout"
-            class="nav-item text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left"
+            :disabled="isNavigating"
+            class="nav-item text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <ArrowRightOnRectangleIcon class="nav-icon" />
-            Logout
+            <ArrowRightOnRectangleIcon v-if="!isNavigating" class="nav-icon" />
+            <div v-else class="nav-icon animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+            {{ isNavigating ? 'Logging out...' : 'Logout' }}
           </button>
         </div>
       </div>
@@ -320,6 +322,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const sidebarOpen = ref(false);
+const isNavigating = ref(false);
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value;
@@ -329,9 +332,43 @@ const closeSidebar = () => {
   sidebarOpen.value = false;
 };
 
+const safeNavigate = async (path) => {
+  if (isNavigating.value) return; // Prevent double-clicks
+  
+  isNavigating.value = true;
+  try {
+    await router.push(path);
+    closeSidebar(); // Close sidebar on mobile after navigation
+  } catch (error) {
+    console.error('Navigation error:', error);
+    // Fallback to window location if router fails
+    window.location.href = path;
+  } finally {
+    setTimeout(() => {
+      isNavigating.value = false;
+    }, 500);
+  }
+};
+
 const logout = async () => {
-  await authStore.logout();
-  router.push('/login');
+  if (isNavigating.value) return; // Prevent double-clicks
+  
+  isNavigating.value = true;
+  try {
+    await authStore.logout();
+    console.log('✓ Logout successful');
+    router.push('/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Force logout even if API call fails
+    authStore.user = null;
+    authStore.token = null;
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    window.location.href = '/login';
+  } finally {
+    isNavigating.value = false;
+  }
 };
 </script>
 
