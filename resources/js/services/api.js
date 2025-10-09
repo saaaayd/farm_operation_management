@@ -6,7 +6,7 @@ const API_BASE_URL = '/api';
 // Create axios instance with timeout and retry configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 second timeout
+  timeout: 15000, // Reduced to 15 second timeout to fail faster
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -14,8 +14,8 @@ const api = axios.create({
 });
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 2; // Reduced retries to fail faster
+const RETRY_DELAY = 500; // Reduced delay
 
 // Retry logic for failed requests
 const retryRequest = async (config, retryCount = 0) => {
@@ -33,10 +33,14 @@ const retryRequest = async (config, retryCount = 0) => {
 
 // Determine if request should be retried
 const shouldRetry = (error) => {
+  // Don't retry on client errors (4xx) except timeout
+  if (error.response && error.response.status >= 400 && error.response.status < 500) {
+    return error.response.status === 408; // Only retry on request timeout
+  }
+  
   return (
     !error.response || // Network error
     error.response.status >= 500 || // Server error
-    error.response.status === 408 || // Request timeout
     error.code === 'ECONNABORTED' // Axios timeout
   );
 };
@@ -79,9 +83,16 @@ api.interceptors.response.use(
     if (shouldRetry(error) && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
+        console.log(`Retrying request to ${originalRequest.url}`);
         return await retryRequest(originalRequest);
       } catch (retryError) {
         console.error('Request failed after retries:', retryError);
+        // Add more specific error messages
+        if (retryError.code === 'ECONNABORTED') {
+          retryError.userMessage = 'Request timed out. The server may be slow or unavailable.';
+        } else if (!retryError.response) {
+          retryError.userMessage = 'Network error. Please check your internet connection.';
+        }
         return Promise.reject(retryError);
       }
     }
