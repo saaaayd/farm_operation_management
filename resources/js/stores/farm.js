@@ -72,12 +72,29 @@ export const useFarmStore = defineStore('farm', {
 
     async fetchFields() {
       this.loading = true;
+      this.error = null;
+      
       try {
         const response = await fieldsAPI.getAll();
+        
+        if (!response.data || !Array.isArray(response.data.fields)) {
+          console.warn('Invalid fields data received, using empty array');
+          this.fields = [];
+          return { fields: [] };
+        }
+        
         this.fields = response.data.fields;
+        console.log(`✓ Loaded ${this.fields.length} fields`);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch fields';
+        console.error('Failed to fetch fields:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch fields';
+        
+        // Don't clear existing data on error, just log it
+        if (!this.fields.length) {
+          this.fields = [];
+        }
+        
         throw error;
       } finally {
         this.loading = false;
@@ -86,12 +103,28 @@ export const useFarmStore = defineStore('farm', {
 
     async fetchPlantings() {
       this.loading = true;
+      this.error = null;
+      
       try {
         const response = await plantingsAPI.getAll();
+        
+        if (!response.data || !Array.isArray(response.data.plantings)) {
+          console.warn('Invalid plantings data received, using empty array');
+          this.plantings = [];
+          return { plantings: [] };
+        }
+        
         this.plantings = response.data.plantings;
+        console.log(`✓ Loaded ${this.plantings.length} plantings`);
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch plantings';
+        console.error('Failed to fetch plantings:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch plantings';
+        
+        if (!this.plantings.length) {
+          this.plantings = [];
+        }
+        
         throw error;
       } finally {
         this.loading = false;

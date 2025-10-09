@@ -3,14 +3,43 @@ import axios from 'axios';
 // API Base Configuration
 const API_BASE_URL = '/api';
 
-// Create axios instance
+// Create axios instance with timeout and retry configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+// Retry logic for failed requests
+const retryRequest = async (config, retryCount = 0) => {
+  try {
+    return await api(config);
+  } catch (error) {
+    if (retryCount < MAX_RETRIES && shouldRetry(error)) {
+      console.warn(`Request failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+      return retryRequest(config, retryCount + 1);
+    }
+    throw error;
+  }
+};
+
+// Determine if request should be retried
+const shouldRetry = (error) => {
+  return (
+    !error.response || // Network error
+    error.response.status >= 500 || // Server error
+    error.response.status === 408 || // Request timeout
+    error.code === 'ECONNABORTED' // Axios timeout
+  );
+};
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -29,27 +58,51 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
     // Log error for debugging
     console.error('API Error:', error);
     
     // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
       // Use router if available, otherwise fallback to window.location
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+    
+    // Handle timeout and network errors with retry
+    if (shouldRetry(error) && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        return await retryRequest(originalRequest);
+      } catch (retryError) {
+        console.error('Request failed after retries:', retryError);
+        return Promise.reject(retryError);
       }
     }
     
     // Handle server errors gracefully
     if (error.response?.status >= 500) {
       console.error('Server error detected:', error.response.status);
+      // Show user-friendly error message
+      error.userMessage = 'Server is temporarily unavailable. Please try again later.';
     }
     
     // Handle network errors
     if (!error.response) {
       console.error('Network error or server unreachable');
+      error.userMessage = 'Network connection failed. Please check your internet connection.';
+    }
+    
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout');
+      error.userMessage = 'Request timed out. Please try again.';
     }
     
     return Promise.reject(error);
