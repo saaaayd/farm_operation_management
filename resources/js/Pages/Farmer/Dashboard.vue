@@ -518,6 +518,7 @@ const navigateTo = async (path) => {
 };
 
 onMounted(async () => {
+  console.log('🌾 Farmer Dashboard: Component mounted, starting data load...');
   // Load data with improved error handling and retry logic
   const loadData = async () => {
     const loadingStates = {

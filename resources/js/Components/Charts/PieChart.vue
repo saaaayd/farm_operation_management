@@ -1,26 +1,24 @@
 <template>
-  <div class="chart-container">
-    <canvas ref="chartCanvas"></canvas>
+  <div class="chart-container bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg flex items-center justify-center">
+    <div class="text-center p-4">
+      <div class="text-purple-500 mb-2">
+        <svg class="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+        </svg>
+      </div>
+      <h3 class="text-sm font-medium text-gray-900">Pie Chart Placeholder</h3>
+      <p class="text-xs text-gray-500 mt-1">Chart temporarily disabled for debugging</p>
+      <div class="mt-2 text-xs text-gray-400">
+        Labels: {{ data?.labels?.length || 0 }} | 
+        Datasets: {{ data?.datasets?.length || 0 }}
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue';
-import {
-  Chart,
-  ArcElement,
-  Tooltip,
-  Legend,
-  Title,
-} from 'chart.js';
-
-// Register Chart.js components
-Chart.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  Title
-);
+import { onMounted } from 'vue';
 
 const props = defineProps({
   data: {
@@ -41,89 +39,9 @@ const props = defineProps({
   }
 });
 
-const chartCanvas = ref(null);
-let chartInstance = null;
-
-const defaultOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'bottom',
-    },
-    title: {
-      display: false,
-    },
-    tooltip: {
-      enabled: true,
-      callbacks: {
-        label: function(context) {
-          const label = context.label || '';
-          const value = context.parsed;
-          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-          const percentage = ((value / total) * 100).toFixed(1);
-          return `${label}: ${value} (${percentage}%)`;
-        }
-      }
-    }
-  },
-  elements: {
-    arc: {
-      borderWidth: 2,
-      borderColor: '#fff',
-    }
-  }
-};
-
-const createChart = () => {
-  if (!chartCanvas.value) return;
-
-  const ctx = chartCanvas.value.getContext('2d');
-  
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, {
-    type: 'pie',
-    data: props.data,
-    options: {
-      ...defaultOptions,
-      ...props.options,
-    }
-  });
-};
-
-const updateChart = () => {
-  if (chartInstance) {
-    chartInstance.data = props.data;
-    chartInstance.options = {
-      ...defaultOptions,
-      ...props.options,
-    };
-    chartInstance.update();
-  }
-};
-
-onMounted(async () => {
-  await nextTick();
-  createChart();
-});
-
-watch(() => props.data, () => {
-  updateChart();
-}, { deep: true });
-
-watch(() => props.options, () => {
-  updateChart();
-}, { deep: true });
-
-// Cleanup on unmount
-onUnmounted(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+onMounted(() => {
+  console.log('🔄 PieChart (Placeholder): Component mounted successfully');
+  console.log('📊 PieChart (Placeholder): Data received:', props.data);
 });
 </script>
 
