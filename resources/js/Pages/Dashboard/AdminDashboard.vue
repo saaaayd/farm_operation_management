@@ -321,8 +321,33 @@ const getAlertClass = (level) => {
 };
 
 const exportData = () => {
-  // Implement data export functionality
-  console.log('Exporting system data...');
+  try {
+    // Create comprehensive system data export
+    const exportData = {
+      stats: stats.value,
+      recentUsers: recentUsers.value,
+      systemActivity: systemActivity.value,
+      systemAlerts: systemAlerts.value,
+      exportDate: new Date().toISOString()
+    }
+    
+    const jsonContent = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonContent], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `system-data-export-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    console.log('System data exported successfully');
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export failed. Please try again.')
+  }
 };
 
 const loadDashboardData = async () => {

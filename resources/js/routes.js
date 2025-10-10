@@ -201,6 +201,42 @@ const routes = [
     component: SystemStats,
     meta: { requiresAuth: true, roles: ['admin'] }
   },
+  {
+    path: '/admin/users/create',
+    name: 'admin-users-create',
+    component: () => import('@/Pages/Admin/Users/Create.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/users/:id',
+    name: 'admin-users-show',
+    component: () => import('@/Pages/Admin/Users/Show.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/users/:id/edit',
+    name: 'admin-users-edit',
+    component: () => import('@/Pages/Admin/Users/Edit.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/system',
+    name: 'admin-system',
+    component: () => import('@/Pages/Admin/System/Settings.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/logs',
+    name: 'admin-logs',
+    component: () => import('@/Pages/Admin/System/Logs.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/reports',
+    name: 'admin-reports',
+    component: () => import('@/Pages/Admin/Reports/Index.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
   
   // Reports Routes
   {
