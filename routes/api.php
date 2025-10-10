@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Weather\WeatherController;
+use App\Http\Controllers\Farmer\RiceFarmProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,8 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rice Farm Profile routes
     Route::prefix('farmer')->group(function () {
-        Route::post('/rice-farm-profile', [\App\Http\Controllers\RiceFarmProfileController::class, 'createRiceFarmProfile']);
-    });
+        Route::post('/profile', [RiceFarmProfileController::class, 'createRiceFarmProfile']);
+    });    
 
     // Rice Varieties routes
     Route::prefix('rice-varieties')->group(function () {
