@@ -21,6 +21,12 @@
           >
             Export Data
           </button>
+          <button
+            @click="handleLogout"
+            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
@@ -286,7 +292,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore();
 const router = useRouter()
 const loading = ref(false)
 
@@ -468,6 +476,11 @@ const backupData = async () => {
     loading.value = false
   }
 }
+
+const handleLogout = async () => {
+  await auth.logout();
+  router.push('/login');
+};
 
 onMounted(() => {
   // Load admin dashboard data from API
