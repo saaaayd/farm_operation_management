@@ -297,10 +297,14 @@ export const setupRouterGuards = (router) => {
       
       // Check if route requires onboarding completion
       if (to.meta.requiresOnboarding && authStore.needsOnboarding) {
-        console.log('Router: Redirecting to onboarding');
-        next('/onboarding');
-        return;
+        // ✅ Prevent redirect loop when already on /onboarding
+        if (to.path !== '/onboarding') {
+          console.log('Router: Redirecting to onboarding');
+          next('/onboarding');
+          return;
+        }
       }
+
       
       // Check if user needs onboarding but trying to access other routes
       if (authStore.needsOnboarding && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
@@ -308,6 +312,7 @@ export const setupRouterGuards = (router) => {
         next('/onboarding');
         return;
       }
+
       
       // Check role-based access
       if (to.meta.roles && authStore.user) {
