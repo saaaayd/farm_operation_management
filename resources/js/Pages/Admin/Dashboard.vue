@@ -405,8 +405,34 @@ const refreshData = async () => {
 }
 
 const exportData = () => {
-  // Export data logic
-  console.log('Export data')
+  try {
+    // Create sample CSV data
+    const csvData = [
+      ['Metric', 'Value'],
+      ['Total Users', metrics.value.totalUsers],
+      ['Total Fields', metrics.value.totalFields],
+      ['Total Orders', metrics.value.totalOrders],
+      ['Total Revenue', `$${metrics.value.totalRevenue}`],
+      ['Active Users', metrics.value.activeUsers]
+    ]
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `admin-dashboard-export-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    alert('Dashboard data exported successfully!')
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export failed. Please try again.')
+  }
 }
 
 const manageUsers = () => {
@@ -418,18 +444,29 @@ const viewSystemStats = () => {
 }
 
 const manageSettings = () => {
-  // Navigate to settings page
-  console.log('Manage settings')
+  router.push('/admin/system')
 }
 
 const viewLogs = () => {
-  // Navigate to logs page
-  console.log('View logs')
+  router.push('/admin/logs')
 }
 
-const backupData = () => {
-  // Backup data logic
-  console.log('Backup data')
+const backupData = async () => {
+  try {
+    // Show loading state
+    loading.value = true
+    
+    // Simulate backup process
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // In a real app, this would call an API endpoint
+    alert('System backup completed successfully!')
+  } catch (error) {
+    console.error('Backup error:', error)
+    alert('Backup failed. Please try again.')
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {

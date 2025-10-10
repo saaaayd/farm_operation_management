@@ -314,13 +314,11 @@ const formatDate = (date) => {
 }
 
 const viewUser = (id) => {
-  // Navigate to user detail page
-  console.log('View user:', id)
+  router.push(`/admin/users/${id}`)
 }
 
 const editUser = (id) => {
-  // Navigate to edit user page
-  console.log('Edit user:', id)
+  router.push(`/admin/users/${id}/edit`)
 }
 
 const toggleUserStatus = (id) => {
@@ -331,13 +329,45 @@ const toggleUserStatus = (id) => {
 }
 
 const addUser = () => {
-  // Navigate to add user page
-  console.log('Add user')
+  router.push('/admin/users/create')
 }
 
 const exportUsers = () => {
-  // Export users logic
-  console.log('Export users')
+  try {
+    // Create CSV header
+    const csvData = [
+      ['Name', 'Email', 'Role', 'Status', 'Last Login', 'Joined']
+    ]
+    
+    // Add user data
+    users.value.forEach(user => {
+      csvData.push([
+        user.name,
+        user.email,
+        user.role,
+        user.status,
+        formatDate(user.last_login),
+        formatDate(user.joined)
+      ])
+    })
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    alert('Users exported successfully!')
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export failed. Please try again.')
+  }
 }
 
 const clearFilters = () => {
