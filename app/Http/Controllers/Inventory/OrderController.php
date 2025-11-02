@@ -22,7 +22,7 @@ class OrderController extends Controller
         $query = Order::query();
         
         if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
+            $query->where('buyer_id', $user->id);
         }
         
         // Apply filters
@@ -82,7 +82,7 @@ class OrderController extends Controller
                 'expected_delivery_date' => $request->expected_delivery_date,
                 'status' => $request->status,
                 'notes' => $request->notes,
-                'user_id' => $request->user()->id,
+                'buyer_id' => $request->user()->id,
             ]);
 
             $totalAmount = 0;
@@ -124,7 +124,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->user_id !== $user->id) {
+        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -144,7 +144,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->user_id !== $user->id) {
+        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -184,7 +184,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->user_id !== $user->id) {
+        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -204,7 +204,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->user_id !== $user->id) {
+        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

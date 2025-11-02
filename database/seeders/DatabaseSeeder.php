@@ -52,6 +52,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        
         // Create farmers
         $farmer1 = User::firstOrCreate(
             ['email' => 'john@farmops.com'],
@@ -86,6 +87,26 @@ class DatabaseSeeder extends Seeder
                 ]
             ]
         );
+
+        $farm1 = \App\Models\Farm::create([
+            'user_id' => $farmer1->id,
+            'name' => "John's Farm",
+            'farm_coordinates' => json_encode([
+                'lat' => 40.7306,
+                'lon' => -73.9352,
+            ]),
+            'size' => 50.0
+        ]);
+        
+        $farm2 = \App\Models\Farm::create([
+            'user_id' => $farmer2->id,
+            'name' => "Mary's Farm",
+            'farm_coordinates' => json_encode([
+                'lat' => 50.7306,
+                'lon' => -83.9352,
+            ]),
+            'size' => 65.0
+        ]);
 
         // Create buyers
         $buyer1 = User::firstOrCreate(
@@ -127,36 +148,40 @@ class DatabaseSeeder extends Seeder
             // Create fields for farmers
             $field1 = Field::create([
                 'user_id' => $farmer1->id,
+                'farm_id' => $farm1->id, // ✅ added
                 'location' => [
                     'lat' => 40.7128,
                     'lon' => -74.0060,
-                    'address' => 'North Field, John\'s Farm'
+                    'address' => "North Field, John's Farm"
                 ],
                 'soil_type' => 'Loamy',
                 'size' => 25.5
             ]);
-
+            
             $field2 = Field::create([
                 'user_id' => $farmer1->id,
+                'farm_id' => $farm1->id,
                 'location' => [
                     'lat' => 40.7580,
                     'lon' => -73.9855,
-                    'address' => 'South Field, John\'s Farm'
+                    'address' => "South Field, John's Farm"
                 ],
                 'soil_type' => 'Clay',
                 'size' => 18.2
             ]);
-
+            
             $field3 = Field::create([
                 'user_id' => $farmer2->id,
+                'farm_id' => $farm2->id,
                 'location' => [
                     'lat' => 41.8781,
                     'lon' => -87.6298,
-                    'address' => 'East Field, Mary\'s Farm'
+                    'address' => "East Field, Mary's Farm"
                 ],
                 'soil_type' => 'Sandy',
                 'size' => 32.0
             ]);
+            
 
             // Create laborers
             $laborer1 = Laborer::create([

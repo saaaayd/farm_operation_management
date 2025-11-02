@@ -85,6 +85,10 @@ class User extends Authenticatable
         return $this->role === self::ROLE_USER;
     }
 
+    public function farm()
+    {
+        return $this->hasOne(Farm::class); // 👈 ADD THIS FUNCTION
+    }
     /**
      * Check if user can sell in marketplace
      */

@@ -295,24 +295,32 @@ export const setupRouterGuards = (router) => {
         return;
       }
       
-      // Check if route requires onboarding completion
-      if (to.meta.requiresOnboarding && authStore.needsOnboarding) {
-        // ✅ Prevent redirect loop when already on /onboarding
-        if (to.path !== '/onboarding') {
-          console.log('Router: Redirecting to onboarding');
-          next('/onboarding');
-          return;
-        }
-      }
-
+      // --- START OF THE FIX ---
       
-      // Check if user needs onboarding but trying to access other routes
-      if (authStore.needsOnboarding && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
-        console.log('Router: User needs onboarding, redirecting');
+      // We calculate the onboarding status manually from the
+      // 'authStore.user' object, which we know is fresh.
+      const user = authStore.user;
+      const userIsFarmer = user && user.role === 'farmer';
+      
+      // Check if the user's address (where farm data is stored) is missing.
+      // This is the real source of truth for onboarding.
+      const userHasNoFarm = userIsFarmer && (!user.address || !user.address.farm_location);
+
+      // Check if user needs onboarding but is trying to go to a normal page
+      if (userHasNoFarm && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
+        console.log('Router: User is a farmer with no farm, redirecting to onboarding');
         next('/onboarding');
         return;
       }
 
+      // Check if user is ALREADY onboarded but tries to go back to /onboarding
+      if (to.meta.requiresOnboarding && !userHasNoFarm) {
+        console.log('Router: User is already onboarded, redirecting from /onboarding');
+        next('/dashboard');
+        return;
+      }
+      
+      // --- END OF THE FIX ---
       
       // Check role-based access
       if (to.meta.roles && authStore.user) {

@@ -67,7 +67,11 @@ api.interceptors.response.use(
     
     // Log error for debugging
     console.error('API Error:', error);
-    
+
+    if (error.response && error.response.status === 422) {
+      console.error('422 Validation Error Details:', error.response.data);
+      // This is the crucial part. The backend sends the validation errors here.
+    }
     // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -131,10 +135,60 @@ export const authAPI = {
 };
 
 // Farm Profile API
+// Farm Profile API
 export const farmProfileAPI = {
   get: () => api.get('/farmer/profile'),
-  create: (profileData) => api.post('/farmer/profile', profileData),
-  createRiceFarm: (profileData) => api.post('/farmer/rice-farm-profile', profileData),
+
+  create: (data) => {
+    // Map frontend values to backend expected values
+    // const waterAccessMapping = {
+    //   'easy': 'good',       // 'good' is valid
+    //   'moderate': 'moderate',  // <-- This is the main fix
+    //   'difficult': 'poor',     // 'poor' is valid
+      
+    //   // You may want to add these if your form supports them:
+    //   'very_easy': 'excellent',
+    //   'very_difficult': 'very_poor'
+    // };
+
+    const payload = {
+      farm_name: data.farm_name,
+      location: data.address || data.farm_location || data.location,
+      total_area: parseFloat(data.farm_size),
+      rice_area: parseFloat(data.farm_size),
+      water_source: data.water_source || 'irrigation_canal',
+      irrigation_type: data.irrigation_type || 'flood',
+      water_access: data.water_access || 'good', // We fixed this
+      drainage_quality: data.drainage_quality || 'good',
+      soil_type: data.soil_type,
+      
+      // 👇 This is the fix 👇
+      // The backend expects 'preferred_varieties' (plural) as an array.
+      // We will take the singular 'preferred_variety' from the form
+      // and put it into an array for the backend.
+      preferred_varieties: data.preferred_variety ? [data.preferred_variety] : [],
+      
+      previous_yield: data.previous_yield ? parseFloat(data.previous_yield) : null,
+      farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
+      notes: data.notes || null, // This is for the 'notes' field in the payload
+      
+      // These are other fields your controller uses.
+      // They are nullable, but it's good to send them.
+      farm_description: data.notes || null, // Re-using notes as description
+      planting_method: data.planting_method || null,
+      target_yield: data.target_yield ? parseFloat(data.target_yield) : null,
+      cropping_seasons: data.cropping_seasons || null,
+      farming_challenges: data.farming_challenges || [],
+    };
+  
+    // We are now sending the correct payload, but your Vue form
+    // doesn't collect all these fields. This is the next thing
+    // you will need to fix.
+    
+    console.log("📦 Sending payload to /api/farmer/profile:", payload);
+    return api.post('/farmer/profile', payload);
+  },
+  
   update: (profileData) => api.put('/farmer/profile', profileData),
 };
 

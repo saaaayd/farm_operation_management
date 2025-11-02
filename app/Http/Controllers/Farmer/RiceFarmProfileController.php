@@ -21,7 +21,7 @@ class RiceFarmProfileController extends Controller
         $validator = Validator::make($request->all(), [
             // Basic Information
             'farm_name' => 'required|string|max:255',
-            'farm_location' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
             'total_area' => 'required|numeric|min:0',
             'rice_area' => 'required|numeric|min:0|lte:total_area',
             'farming_experience' => 'nullable|integer|min:0',
@@ -70,7 +70,7 @@ class RiceFarmProfileController extends Controller
                 ['user_id' => $user->id],
                 [
                     'name' => $request->farm_name,
-                    'location' => $request->farm_location,
+                    'location' => $request->location,
                     'description' => $request->farm_description,
                 ]
             );
@@ -83,7 +83,7 @@ class RiceFarmProfileController extends Controller
                     'name' => 'Main Rice Field'
                 ],
                 [
-                    'location' => ['address' => $request->farm_location],
+                    'location' => ['address' => $request->location],
                     'field_coordinates' => null, // Can be added later
                     'soil_type' => $request->soil_type,
                     'soil_ph' => $request->soil_ph,
@@ -107,7 +107,7 @@ class RiceFarmProfileController extends Controller
             // Update user profile with farming experience
             $user->update([
                 'address' => [
-                    'farm_location' => $request->farm_location,
+                    'farm_location' => $request->location,
                     'total_area' => $request->total_area,
                     'rice_area' => $request->rice_area,
                     'farming_experience' => $request->farming_experience,
