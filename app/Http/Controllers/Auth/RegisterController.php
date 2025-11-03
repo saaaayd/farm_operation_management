@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class RegisterController extends Controller
 {
@@ -27,6 +28,10 @@ class RegisterController extends Controller
             'address.state' => 'nullable|string',
             'address.country' => 'nullable|string',
             'address.postal_code' => 'nullable|string',
+            
+            // --- ADD THIS LINE ---
+            // Ensures the role is either 'farmer' or 'buyer'
+            'role' => ['required', 'string', Rule::in(['farmer', 'buyer'])],
         ]);
 
         if ($validator->fails()) {
@@ -36,18 +41,29 @@ class RegisterController extends Controller
             ], 422);
         }
 
-        // Check if admin or farmer roles already exist (only one allowed for each)
-        $adminExists = User::where('role', 'admin')->exists();
-        $farmerExists = User::where('role', 'farmer')->exists();
+        // --- REPLACE THE OLD ROLE LOGIC WITH THIS ---
+        
+        // Get the role from the request
+        $role = $request->role;
 
-        // Default role is buyer
-        $role = 'buyer';
+        // The comment in your original file said "only one allowed for each".
+        // If you want to enforce that, you can use this logic.
+        // If you want to allow MULTIPLE farmers, just delete this "if" block.
+        if ($role === 'farmer' && User::where('role', 'farmer')->exists()) {
+            // This is just an example. If you want to allow multiple farmers,
+            // remove this check.
+            return response()->json([
+                'message' => 'A farmer account already exists.'
+            ], 422);
+        }
+        // --- END OF REPLACEMENT ---
+
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $role,
+            'role' => $role, // <-- This now correctly uses the role from the request
             'phone' => $request->phone,
             'address' => $request->address,
         ]);
