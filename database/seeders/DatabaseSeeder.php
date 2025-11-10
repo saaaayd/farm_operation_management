@@ -98,69 +98,137 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $varietyCorn = RiceVariety::updateOrCreate(
-            ['variety_code' => 'GEN-CORN'],
+        $varietyIR64 = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-IR64'],
             [
-                'name' => 'General Corn Hybrid',
-                'description' => 'Demo variety used for corn-based planting scenarios.',
-                'maturity_days' => 110,
-                'average_yield_per_hectare' => 5.20,
-                'season' => 'both',
+                'name' => 'IR64',
+                'description' => 'High-yielding, semi-dwarf Indica variety widely planted in SE Asia.',
+                'maturity_days' => 120,
+                'average_yield_per_hectare' => 5.6,
+                'season' => 'wet',
                 'grain_type' => 'long',
                 'resistance_level' => 'medium',
                 'characteristics' => [
-                    'notes' => 'Suited for temperate climates',
+                    'notes' => 'Performs best in irrigated lowland fields with good fertility.',
                 ],
                 'is_active' => true,
             ]
         );
 
-        $varietySoy = RiceVariety::updateOrCreate(
-            ['variety_code' => 'GEN-SOY'],
+        $varietyJasmine = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-JASMINE'],
             [
-                'name' => 'Versatile Soy Hybrid',
-                'description' => 'Demo variety supporting soybean rotations.',
-                'maturity_days' => 95,
-                'average_yield_per_hectare' => 3.80,
+                'name' => 'Thai Jasmine',
+                'description' => 'Premium fragrant rice valued for aroma and soft texture.',
+                'maturity_days' => 110,
+                'average_yield_per_hectare' => 4.9,
+                'season' => 'dry',
+                'grain_type' => 'long',
+                'resistance_level' => 'medium',
+                'characteristics' => [
+                    'notes' => 'Requires consistent irrigation and well-drained fields.',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietyBasmati = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-BASMATI'],
+            [
+                'name' => 'Basmati 370',
+                'description' => 'Traditional aromatic Basmati with elongated grains.',
+                'maturity_days' => 135,
+                'average_yield_per_hectare' => 4.3,
+                'season' => 'dry',
+                'grain_type' => 'long',
+                'resistance_level' => 'medium',
+                'characteristics' => [
+                    'notes' => 'Prefers cool nights; suited for river-fed plains.',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietySticky = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-STICKY'],
+            [
+                'name' => 'Glutinous Sticky Rice',
+                'description' => 'Round-grain sticky rice used for traditional delicacies.',
+                'maturity_days' => 105,
+                'average_yield_per_hectare' => 4.6,
+                'season' => 'wet',
+                'grain_type' => 'short',
+                'resistance_level' => 'high',
+                'characteristics' => [
+                    'notes' => 'Can tolerate temporary flooding; harvest promptly to retain stickiness.',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietyBrown = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-BROWN'],
+            [
+                'name' => 'Wholegrain Brown Rice',
+                'description' => 'Nutritious variety harvested and milled for brown rice.',
+                'maturity_days' => 125,
+                'average_yield_per_hectare' => 5.1,
+                'season' => 'wet',
+                'grain_type' => 'medium',
+                'resistance_level' => 'medium',
+                'characteristics' => [
+                    'notes' => 'Responds well to organic fertilisation; ideal for health-conscious markets.',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietySwarna = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-SWARNA'],
+            [
+                'name' => 'Swarna',
+                'description' => 'High-yielding variety with strong disease resistance.',
+                'maturity_days' => 130,
+                'average_yield_per_hectare' => 6.3,
                 'season' => 'wet',
                 'grain_type' => 'medium',
                 'resistance_level' => 'high',
                 'characteristics' => [
-                    'notes' => 'High resistance to common pests',
+                    'notes' => 'Handles flood-prone paddies; staple in South Asian production.',
                 ],
                 'is_active' => true,
             ]
         );
 
-        $varietyWheat = RiceVariety::updateOrCreate(
-            ['variety_code' => 'GEN-WHEAT'],
+        $varietyRed = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-RED'],
             [
-                'name' => 'Stable Wheat Variety',
-                'description' => 'Demo variety representing wheat operations.',
-                'maturity_days' => 120,
-                'average_yield_per_hectare' => 4.60,
+                'name' => 'Heirloom Red Cargo',
+                'description' => 'Deep-red wholegrain rice prized for antioxidants.',
+                'maturity_days' => 140,
+                'average_yield_per_hectare' => 3.9,
                 'season' => 'dry',
-                'grain_type' => 'short',
+                'grain_type' => 'medium',
                 'resistance_level' => 'medium',
                 'characteristics' => [
-                    'notes' => 'Performs well in cooler temperatures',
+                    'notes' => 'Requires careful drying; fetches premium prices in niche markets.',
                 ],
                 'is_active' => true,
             ]
         );
 
-        $varietyTomato = RiceVariety::updateOrCreate(
-            ['variety_code' => 'GEN-TOMA'],
+        $varietyKoshihikari = RiceVariety::updateOrCreate(
+            ['variety_code' => 'RICE-KOSHI'],
             [
-                'name' => 'Greenhouse Tomato Hybrid',
-                'description' => 'Demo variety covering tomato production.',
-                'maturity_days' => 85,
-                'average_yield_per_hectare' => 2.90,
-                'season' => 'both',
-                'grain_type' => 'medium',
+                'name' => 'Koshihikari',
+                'description' => 'Short-grain Japanese rice with excellent eating quality.',
+                'maturity_days' => 118,
+                'average_yield_per_hectare' => 5.3,
+                'season' => 'dry',
+                'grain_type' => 'short',
                 'resistance_level' => 'high',
                 'characteristics' => [
-                    'notes' => 'Great for all-season greenhouse setups',
+                    'notes' => 'Best grown in cooler climates; top choice for sushi-grade rice.',
                 ],
                 'is_active' => true,
             ]
