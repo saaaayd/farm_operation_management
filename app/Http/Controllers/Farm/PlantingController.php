@@ -28,7 +28,7 @@ class PlantingController extends Controller
             });
         }
         
-        $plantings = $query->with(['field', 'crop'])->get();
+        $plantings = $query->with(['field', 'riceVariety'])->get();
         
         return response()->json([
             'plantings' => $plantings
@@ -105,13 +105,18 @@ class PlantingController extends Controller
 
         $season = $request->input('season') ?? $this->determineSeasonFromDate($plantingDate);
 
+        $status = $request->input('status', Planting::STATUS_PLANTED);
+        if ($plantingDate->isFuture() && $status === Planting::STATUS_PLANTED) {
+            $status = Planting::STATUS_PLANNED;
+        }
+
         $planting = Planting::create([
             'field_id' => $request->field_id,
             'rice_variety_id' => $varietyId,
             'crop_type' => $request->input('crop_name') ?? $request->input('crop_type') ?? 'Rice',
             'planting_date' => $plantingDate,
             'expected_harvest_date' => $expectedHarvest,
-            'status' => $request->input('status', Planting::STATUS_PLANTED),
+            'status' => $status,
             'planting_method' => $this->normalizePlantingMethod($request->input('planting_method')),
             'seed_rate' => $seedRate,
             'area_planted' => $areaPlanted,
@@ -138,7 +143,13 @@ class PlantingController extends Controller
             ], 403);
         }
 
-        $planting->load(['field', 'crop', 'harvests']);
+        $planting->load([
+            'field',
+            'riceVariety',
+            'plantingStages.riceGrowthStage',
+            'harvests',
+            'tasks',
+        ]);
 
         return response()->json([
             'planting' => $planting
@@ -159,15 +170,17 @@ class PlantingController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'crop_name' => 'sometimes|required|string|max:255',
-            'variety' => 'nullable|string|max:255',
+            'field_id' => 'sometimes|required|exists:fields,id',
+            'rice_variety_id' => 'nullable|exists:rice_varieties,id',
+            'crop_type' => 'sometimes|required|string|max:255',
             'planting_date' => 'sometimes|required|date',
-            'expected_harvest_date' => 'nullable|date|after:planting_date',
-            'seed_quantity' => 'sometimes|required|numeric|min:0',
-            'seed_unit' => 'sometimes|required|string|in:kg,grams,pounds,seeds',
-            'spacing' => 'nullable|array',
-            'spacing.row' => 'nullable|numeric|min:0',
-            'spacing.plant' => 'nullable|numeric|min:0',
+            'expected_harvest_date' => 'nullable|date|after_or_equal:planting_date',
+            'growth_duration' => 'nullable|integer|min:30|max:240',
+            'planting_method' => 'nullable|string|in:direct_seeding,transplanting,broadcasting',
+            'seed_rate' => 'nullable|numeric|min:0',
+            'area_planted' => 'nullable|numeric|min:0',
+            'season' => 'nullable|string|in:wet,dry',
+            'status' => 'nullable|string|in:planted,growing,ready,harvested,failed',
             'notes' => 'nullable|string',
         ]);
 
@@ -178,14 +191,102 @@ class PlantingController extends Controller
             ], 422);
         }
 
-        $planting->update($request->only([
-            'crop_name', 'variety', 'planting_date', 'expected_harvest_date',
-            'seed_quantity', 'seed_unit', 'spacing', 'notes'
-        ]));
+        $data = [];
+
+        if ($request->has('field_id')) {
+            $field = Field::findOrFail($request->field_id);
+
+            if (!$user->isAdmin() && $field->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access to field'
+                ], 403);
+            }
+
+            $data['field_id'] = $field->id;
+        }
+
+        if ($request->has('rice_variety_id')) {
+            $varietyId = $request->input('rice_variety_id');
+
+            if (!$varietyId) {
+                $varietyId = RiceVariety::value('id');
+            }
+
+            if (!$varietyId) {
+                return response()->json([
+                    'message' => 'No rice variety available. Please add varieties first.'
+                ], 422);
+            }
+
+            $data['rice_variety_id'] = $varietyId;
+        }
+
+        if ($request->has('crop_type')) {
+            $data['crop_type'] = $request->crop_type;
+        }
+
+        if ($request->has('planting_method')) {
+            $data['planting_method'] = $this->normalizePlantingMethod($request->planting_method);
+        }
+
+        if ($request->has('seed_rate')) {
+            $data['seed_rate'] = $request->seed_rate;
+        }
+
+        if ($request->has('area_planted')) {
+            $data['area_planted'] = $request->area_planted;
+        }
+
+        if ($request->has('status')) {
+            $data['status'] = $request->status;
+        }
+
+        if ($request->has('notes')) {
+            $data['notes'] = $request->notes;
+        }
+
+        $plantingDate = $planting->planting_date;
+        if ($request->has('planting_date')) {
+            $plantingDate = Carbon::parse($request->planting_date);
+            $data['planting_date'] = $plantingDate;
+            if (!$request->has('season')) {
+                $data['season'] = $this->determineSeasonFromDate($plantingDate);
+            }
+        }
+
+        if ($request->has('season')) {
+            $data['season'] = $request->season;
+        }
+
+        if ($request->has('expected_harvest_date')) {
+            $data['expected_harvest_date'] = Carbon::parse($request->expected_harvest_date);
+        } elseif ($request->filled('growth_duration')) {
+            $growthDuration = (int) $request->input('growth_duration');
+            if (!$plantingDate) {
+                $plantingDate = $planting->planting_date;
+            }
+            if ($plantingDate) {
+                $expectedHarvest = (clone $plantingDate)->addDays($growthDuration);
+                $data['expected_harvest_date'] = $expectedHarvest;
+            }
+        }
+
+        if (!isset($data['status']) && isset($data['planting_date'])) {
+            if ($data['planting_date'] instanceof Carbon && $data['planting_date']->isFuture() && $planting->status === Planting::STATUS_PLANTED) {
+                $data['status'] = Planting::STATUS_PLANNED;
+            } elseif ($data['planting_date'] instanceof Carbon && $data['planting_date']->isPast() && $planting->status === Planting::STATUS_PLANNED) {
+                $data['status'] = Planting::STATUS_PLANTED;
+            }
+        }
+
+        if (!empty($data)) {
+            $planting->fill($data);
+            $planting->save();
+        }
 
         return response()->json([
             'message' => 'Planting updated successfully',
-            'planting' => $planting->load(['field', 'crop'])
+            'planting' => $planting->load(['field', 'riceVariety'])
         ]);
     }
 

@@ -16,6 +16,8 @@ import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
 import FarmerFieldsIndex from '@/Pages/Farmer/Fields/Index.vue';
 import PlantingsIndex from '@/Pages/Farmer/Plantings/Index.vue';
 import PlantingsCreate from '@/Pages/Farmer/Plantings/Create.vue';
+import PlantingsShow from '@/Pages/Farmer/Plantings/Show.vue';
+import PlantingsEdit from '@/Pages/Farmer/Plantings/Edit.vue';
 import TasksIndex from '@/Pages/Farmer/Tasks/Index.vue';
 import TasksCreate from '@/Pages/Farmer/Tasks/Create.vue';
 import HarvestsIndex from '@/Pages/Farmer/Harvests/Index.vue';
@@ -111,6 +113,18 @@ const routes = [
     path: '/plantings/create',
     name: 'plantings-create',
     component: PlantingsCreate,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/plantings/:id',
+    name: 'plantings-show',
+    component: PlantingsShow,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/plantings/:id/edit',
+    name: 'plantings-edit',
+    component: PlantingsEdit,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {

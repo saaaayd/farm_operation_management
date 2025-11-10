@@ -38,6 +38,7 @@ class Planting extends Model
     /**
      * Status constants
      */
+    const STATUS_PLANNED = 'planned';
     const STATUS_PLANTED = 'planted';
     const STATUS_GROWING = 'growing';
     const STATUS_READY = 'ready';
