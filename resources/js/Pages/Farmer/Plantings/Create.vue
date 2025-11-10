@@ -47,30 +47,53 @@
           </div>
         </div>
 
-        <!-- Rice Variety -->
+        <!-- Crop Details -->
         <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Rice Variety</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Crop Details</h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label for="crop_type" class="block text-sm font-medium text-gray-700 mb-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
                 Rice Variety *
               </label>
-              <select
+              <template v-if="riceVarieties.length">
+                <select
+                  v-model="form.rice_variety_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  required
+                >
+                  <option value="">Select variety</option>
+                  <option
+                    v-for="variety in riceVarieties"
+                    :key="variety.id"
+                    :value="variety.id"
+                  >
+                    {{ variety.name }}
+                    <span v-if="variety.average_maturity_days">
+                      — {{ variety.average_maturity_days }} days
+                    </span>
+                  </option>
+                </select>
+              </template>
+              <template v-else>
+                <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-600">
+                  No rice varieties available. Add varieties under Marketplace settings.
+                </div>
+              </template>
+            </div>
+
+            <div>
+              <label for="crop_type" class="block text-sm font-medium text-gray-700 mb-2">
+                Crop Name *
+              </label>
+              <input
                 id="crop_type"
                 v-model="form.crop_type"
+                type="text"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-              >
-                <option value="">Select rice variety</option>
-                <option value="IR64">IR64 - High yielding, 120-130 days</option>
-                <option value="Jasmine">Jasmine Rice - Aromatic, 110-120 days</option>
-                <option value="Basmati">Basmati Rice - Long grain, 130-140 days</option>
-                <option value="Arborio">Arborio Rice - Short grain, 100-110 days</option>
-                <option value="Brown Rice">Brown Rice - Whole grain, 120-130 days</option>
-                <option value="Sticky Rice">Sticky Rice - Glutinous, 100-110 days</option>
-                <option value="Wild Rice">Wild Rice - Native variety, 140-150 days</option>
-              </select>
+                placeholder="e.g. Rice (IR64)"
+              />
             </div>
 
             <div>
@@ -81,13 +104,13 @@
                 id="growth_duration"
                 v-model="form.growth_duration"
                 type="number"
-                min="80"
-                max="200"
+                min="30"
+                max="240"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
                 placeholder="120"
               />
               <p class="mt-1 text-sm text-gray-500">
-                Typical growth duration for this variety
+                Used to estimate harvest date when not provided.
               </p>
             </div>
           </div>
@@ -150,34 +173,63 @@
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label for="seed_quantity" class="block text-sm font-medium text-gray-700 mb-2">
-                Seed Quantity (kg)
+              <label for="seed_rate" class="block text-sm font-medium text-gray-700 mb-2">
+                Seed Rate (kg/ha)
               </label>
               <input
-                id="seed_quantity"
-                v-model="form.seed_quantity"
+                id="seed_rate"
+                v-model="form.seed_rate"
                 type="number"
                 step="0.1"
                 min="0"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                placeholder="25.0"
+                placeholder="e.g. 25"
               />
             </div>
 
             <div>
+              <label for="area_planted" class="block text-sm font-medium text-gray-700 mb-2">
+                Area Planted (hectares) *
+              </label>
+              <input
+                id="area_planted"
+                v-model="form.area_planted"
+                type="number"
+                step="0.1"
+                min="0"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
+            <div>
+              <label for="season" class="block text-sm font-medium text-gray-700 mb-2">
+                Season *
+              </label>
+              <select
+                id="season"
+                v-model="form.season"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="wet">Wet Season</option>
+                <option value="dry">Dry Season</option>
+              </select>
+            </div>
+
+            <div>
               <label for="planting_method" class="block text-sm font-medium text-gray-700 mb-2">
-                Planting Method
+                Planting Method *
               </label>
               <select
                 id="planting_method"
                 v-model="form.planting_method"
+                required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
               >
-                <option value="">Select method</option>
                 <option value="direct_seeding">Direct Seeding</option>
                 <option value="transplanting">Transplanting</option>
-                <option value="broadcast">Broadcast Seeding</option>
-                <option value="drill">Drill Seeding</option>
+                <option value="broadcasting">Broadcasting</option>
               </select>
             </div>
           </div>
@@ -236,9 +288,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
+import { riceVarietiesAPI } from '@/services/api';
 
 const router = useRouter();
 const farmStore = useFarmStore();
@@ -246,54 +299,66 @@ const farmStore = useFarmStore();
 const loading = ref(false);
 const error = ref('');
 const fields = ref([]);
+const riceVarieties = ref([]);
 
 const form = reactive({
   field_id: '',
+  rice_variety_id: '',
   crop_type: '',
   growth_duration: '',
   planting_date: '',
-  transplanting_date: '',
   expected_harvest_date: '',
-  seed_quantity: '',
-  planting_method: '',
+  seed_rate: '',
+  area_planted: '',
+  planting_method: 'transplanting',
+  season: '',
   notes: '',
   status: 'planted'
 });
 
-// Auto-calculate harvest date when planting date or growth duration changes
+const selectedField = computed(() =>
+  fields.value.find(field => Number(field.id) === Number(form.field_id))
+);
+
+function determineSeason(dateString) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return 'wet';
+  }
+  const month = date.getMonth() + 1;
+  return month >= 5 && month <= 10 ? 'wet' : 'dry';
+}
+
 watch([() => form.planting_date, () => form.growth_duration], ([plantingDate, growthDuration]) => {
   if (plantingDate && growthDuration) {
     const planting = new Date(plantingDate);
     const harvest = new Date(planting);
-    harvest.setDate(harvest.getDate() + parseInt(growthDuration));
+    harvest.setDate(harvest.getDate() + parseInt(growthDuration, 10));
     form.expected_harvest_date = harvest.toISOString().split('T')[0];
   }
 });
 
-// Auto-calculate transplanting date (15 days after planting)
 watch(() => form.planting_date, (plantingDate) => {
   if (plantingDate) {
-    const planting = new Date(plantingDate);
-    const transplanting = new Date(planting);
-    transplanting.setDate(transplanting.getDate() + 15);
-    form.transplanting_date = transplanting.toISOString().split('T')[0];
+    form.season = determineSeason(plantingDate);
   }
 });
 
-// Auto-set growth duration based on variety
-watch(() => form.crop_type, (variety) => {
-  const durations = {
-    'IR64': 125,
-    'Jasmine': 115,
-    'Basmati': 135,
-    'Arborio': 105,
-    'Brown Rice': 125,
-    'Sticky Rice': 105,
-    'Wild Rice': 145
-  };
-  
-  if (durations[variety]) {
-    form.growth_duration = durations[variety];
+watch(() => form.field_id, () => {
+  if (selectedField.value?.size) {
+    form.area_planted = selectedField.value.size;
+  }
+});
+
+watch(() => form.rice_variety_id, (id) => {
+  const variety = riceVarieties.value.find(v => Number(v.id) === Number(id));
+  if (variety) {
+    if (!form.crop_type) {
+      form.crop_type = variety.name;
+    }
+    if (!form.growth_duration && variety.average_maturity_days) {
+      form.growth_duration = variety.average_maturity_days;
+    }
   }
 });
 
@@ -302,7 +367,37 @@ const submitPlanting = async () => {
   error.value = '';
 
   try {
-    await farmStore.createPlanting(form);
+    const payload = {
+      field_id: Number(form.field_id),
+      rice_variety_id: form.rice_variety_id ? Number(form.rice_variety_id) : null,
+      crop_type: form.crop_type || 'Rice',
+      planting_date: form.planting_date,
+      expected_harvest_date: form.expected_harvest_date || null,
+      growth_duration: form.growth_duration ? Number(form.growth_duration) : null,
+      planting_method: form.planting_method || 'transplanting',
+      seed_rate: form.seed_rate ? Number(form.seed_rate) : null,
+      area_planted: form.area_planted ? Number(form.area_planted) : (selectedField.value?.size ?? null),
+      season: form.season || determineSeason(form.planting_date),
+      status: form.status || 'planted',
+      notes: form.notes || null,
+    };
+
+    if (!payload.expected_harvest_date && payload.growth_duration && payload.planting_date) {
+      const planting = new Date(payload.planting_date);
+      const harvest = new Date(planting);
+      harvest.setDate(harvest.getDate() + payload.growth_duration);
+      payload.expected_harvest_date = harvest.toISOString().split('T')[0];
+    }
+
+    if (!payload.area_planted || payload.area_planted <= 0) {
+      payload.area_planted = selectedField.value?.size ?? 1;
+    }
+
+    if (!payload.rice_variety_id && riceVarieties.value.length) {
+      payload.rice_variety_id = riceVarieties.value[0].id;
+    }
+
+    await farmStore.createPlanting(payload);
     router.push('/plantings');
   } catch (err) {
     error.value = err.message || 'Failed to create planting. Please try again.';
@@ -311,12 +406,44 @@ const submitPlanting = async () => {
   }
 };
 
+const fetchRiceVarieties = async () => {
+  try {
+    const response = await riceVarietiesAPI.getAll();
+    riceVarieties.value = response.data?.data || response.data || [];
+  } catch (err) {
+    console.error('Failed to load rice varieties:', err);
+    riceVarieties.value = [];
+  }
+};
+
 onMounted(async () => {
   try {
-    await farmStore.fetchFields();
+    await Promise.all([
+      farmStore.fetchFields(),
+      fetchRiceVarieties(),
+    ]);
+
     fields.value = farmStore.fields;
+
+    if (fields.value.length && !form.field_id) {
+      form.field_id = fields.value[0].id;
+      form.area_planted = fields.value[0].size ?? '';
+    }
+
+    if (riceVarieties.value.length && !form.rice_variety_id) {
+      const variety = riceVarieties.value[0];
+      form.rice_variety_id = variety.id;
+      form.crop_type = variety.name;
+      if (variety.average_maturity_days) {
+        form.growth_duration = variety.average_maturity_days;
+      }
+    }
+
+    if (form.planting_date) {
+      form.season = determineSeason(form.planting_date);
+    }
   } catch (error) {
-    console.error('Failed to load fields:', error);
+    console.error('Failed to load planting prerequisites:', error);
   }
 });
 </script>

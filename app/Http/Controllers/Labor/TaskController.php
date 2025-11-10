@@ -21,7 +21,10 @@ class TaskController extends Controller
         $query = Task::query();
         
         if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
+            // Query for tasks "where has" a laborer that belongs to the current user
+            $query->whereHas('laborer', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
         }
         
         // Apply filters

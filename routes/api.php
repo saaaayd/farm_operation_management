@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Weather\WeatherController;
 use App\Http\Controllers\Farmer\RiceFarmProfileController;
+use Illuminate\Support\Facades\Http;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +25,22 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Proxy routes for PSGC API
+    Route::get('/locations/provinces', function () {
+        $response = Http::get('https://psgc.gitlab.io/api/provinces/');
+        return response()->json($response->json());
+    });
+
+    Route::get('/locations/provinces/{code}/cities', function ($code) {
+        $response = Http::get("https://psgc.gitlab.io/api/provinces/{$code}/cities-municipalities/");
+        return response()->json($response->json());
+    });
+
+    Route::get('/locations/cities/{code}/barangays', function ($code) {
+        $response = Http::get("https://psgc.gitlab.io/api/cities-municipalities/{$code}/barangays/");
+        return response()->json($response->json());
+    });
+
     // Authentication routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -41,8 +58,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rice Varieties routes
     Route::prefix('rice-varieties')->group(function () {
         Route::get('/', [\App\Http\Controllers\RiceVarietyController::class, 'index']);
-        Route::get('/current-season', [\App\Http\Controllers\RiceFarmProfileController::class, 'getCurrentSeasonVarieties']);
-        Route::get('/recommended/{field}', [\App\Http\Controllers\RiceFarmProfileController::class, 'getRecommendedVarieties']);
+        Route::get('/current-season', [\App\Http\Controllers\Farmer\RiceFarmProfileController::class, 'getCurrentSeasonVarieties']);
+        Route::get('/recommended/{field}', [\App\Http\Controllers\Farmer\RiceFarmProfileController::class, 'getRecommendedVarieties']);
+        Route::get('/fields/{field}/analysis', [\App\Http\Controllers\Farmer\RiceFarmProfileController::class, 'getFieldAnalysis']);
+
     });
 
     // Rice Growth Stages routes
@@ -52,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Field Analysis routes
-    Route::get('/fields/{field}/analysis', [\App\Http\Controllers\RiceFarmProfileController::class, 'getFieldAnalysis']);
+    // Route::get('/fields/{field}/analysis', [\App\Http\Controllers\RiceFarmProfileController::class, 'getFieldAnalysis']);
 
     // Weather routes
     Route::prefix('weather')->group(function () {

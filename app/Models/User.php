@@ -51,7 +51,7 @@ class User extends Authenticatable
      */
     const ROLE_ADMIN = 'admin';
     const ROLE_FARMER = 'farmer';
-    const ROLE_USER = 'user'; // Marketplace buyer only
+    const ROLE_USER = 'buyer'; // Marketplace buyer only
 
     /**
      * Check if user is admin
@@ -85,6 +85,10 @@ class User extends Authenticatable
         return $this->role === self::ROLE_USER;
     }
 
+    public function farm()
+    {
+        return $this->hasOne(Farm::class); // 👈 ADD THIS FUNCTION
+    }
     /**
      * Check if user can sell in marketplace
      */

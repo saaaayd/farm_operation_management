@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { plantingsAPI, tasksAPI, harvestsAPI, fieldsAPI, farmProfileAPI } from '@/services/api';
+import { plantingsAPI, tasksAPI, harvestsAPI, fieldsAPI, farmProfileAPI, salesAPI, expensesAPI } from '@/services/api';
 
 export const useFarmStore = defineStore('farm', {
   state: () => ({
@@ -8,6 +8,8 @@ export const useFarmStore = defineStore('farm', {
     plantings: [],
     tasks: [],
     harvests: [],
+    sales: [],
+    expenses: [],
     loading: false,
     error: null,
   }),
@@ -74,11 +76,17 @@ export const useFarmStore = defineStore('farm', {
     async createRiceFarmProfile(profileData) {
       this.loading = true;
       try {
+        // 👇 Add this line
+        console.log("📦 Sending farm profile data to API:", profileData);
+    
         const response = await farmProfileAPI.createRiceFarm(profileData);
         this.farmProfile = response.data.farmProfile;
         this.fields = response.data.fields || [];
+    
+        console.log("✅ API Response:", response.data); // optional, for clarity
         return response.data;
       } catch (error) {
+        console.error("❌ Farm profile creation failed:", error);
         this.error = error.response?.data?.message || 'Failed to create rice farm profile';
         throw error;
       } finally {
@@ -208,6 +216,26 @@ export const useFarmStore = defineStore('farm', {
       }
     },
 
+    async createTask(taskData) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await tasksAPI.create(taskData);
+        if (response.data?.task) {
+          this.tasks.unshift(response.data.task);
+        } else if (response.data?.tasks) {
+          this.tasks = response.data.tasks;
+        }
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to create task';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async fetchHarvests() {
       this.loading = true;
       try {
@@ -216,6 +244,66 @@ export const useFarmStore = defineStore('farm', {
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch harvests';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchSales(params = {}) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await salesAPI.getAll(params);
+
+        if (!response.data || !Array.isArray(response.data.sales)) {
+          console.warn('Invalid sales data received, using empty array');
+          this.sales = [];
+          return { sales: [] };
+        }
+
+        this.sales = response.data.sales;
+        console.log(`✓ Loaded ${this.sales.length} sales`);
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch sales:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch sales';
+
+        if (!this.sales.length) {
+          this.sales = [];
+        }
+
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchExpenses(params = {}) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await expensesAPI.getAll(params);
+
+        if (!response.data || !Array.isArray(response.data.expenses)) {
+          console.warn('Invalid expenses data received, using empty array');
+          this.expenses = [];
+          return { expenses: [] };
+        }
+
+        this.expenses = response.data.expenses;
+        console.log(`✓ Loaded ${this.expenses.length} expenses`);
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch expenses:', error);
+        this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch expenses';
+
+        if (!this.expenses.length) {
+          this.expenses = [];
+        }
+
         throw error;
       } finally {
         this.loading = false;

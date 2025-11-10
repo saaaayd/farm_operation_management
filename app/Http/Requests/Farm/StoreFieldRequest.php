@@ -25,7 +25,7 @@ class StoreFieldRequest extends FormRequest
             'location' => 'required|array',
             'location.lat' => 'required|numeric|between:-90,90',
             'location.lon' => 'required|numeric|between:-180,180',
-            'location.address' => 'nullable|string',
+            'location.address' => 'required|string|max:255',
             'soil_type' => 'required|string|max:255',
             'size' => 'required|numeric|min:0',
         ];
