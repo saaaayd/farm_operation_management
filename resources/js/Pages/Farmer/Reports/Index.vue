@@ -42,27 +42,56 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Report Tabs -->
-      <div class="mb-8">
-        <nav class="flex space-x-8">
-          <button 
-            v-for="tab in tabs" 
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            :class="[
-              'py-2 px-1 border-b-2 font-medium text-sm',
-              activeTab === tab.id 
-                ? 'border-green-500 text-green-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-          >
-            {{ tab.name }}
-          </button>
-        </nav>
+      <div v-if="loadError" class="bg-red-50 border border-red-200 rounded-md p-6 mb-8">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Failed to load reports</h3>
+            <p class="mt-2 text-sm text-red-700">{{ loadError }}</p>
+            <button
+              @click="loadReportData"
+              class="mt-4 inline-flex items-center px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700"
+            >
+              Retry loading data
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- Yield Report -->
-      <div v-if="activeTab === 'yield'" class="space-y-8">
+      <div
+        v-else-if="loading"
+        class="flex flex-col items-center justify-center py-24 text-gray-600"
+      >
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+        <p>Loading farmer reports...</p>
+      </div>
+
+      <div v-else>
+        <!-- Report Tabs -->
+        <div class="mb-8">
+          <nav class="flex space-x-8">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              :class="[
+                'py-2 px-1 border-b-2 font-medium text-sm',
+                activeTab === tab.id 
+                  ? 'border-green-500 text-green-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              {{ tab.name }}
+            </button>
+          </nav>
+        </div>
+
+        <!-- Yield Report -->
+        <div v-if="activeTab === 'yield'" class="space-y-8">
         <!-- Yield Overview Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div class="bg-white rounded-lg shadow p-6">
@@ -323,7 +352,7 @@
             <LineChart 
               v-if="weatherCorrelationData.labels.length > 0"
               :data="weatherCorrelationData"
-              :options="chartOptions"
+              :options="weatherChartOptions"
             />
             <div v-else class="flex items-center justify-center h-full text-gray-500">
               <p>No weather correlation data available</p>
@@ -331,12 +360,13 @@
           </div>
         </div>
       </div>
+      </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useFarmStore } from '@/stores/farm';
 import { useWeatherStore } from '@/stores/weather';
 import LineChart from '@/Components/Charts/LineChart.vue';
@@ -348,6 +378,8 @@ const weatherStore = useWeatherStore();
 
 const activeTab = ref('yield');
 const selectedPeriod = ref('365');
+const loading = ref(false);
+const loadError = ref('');
 
 const tabs = [
   { id: 'yield', name: 'Yield Report' },
@@ -355,38 +387,192 @@ const tabs = [
   { id: 'weather', name: 'Weather Correlation' }
 ];
 
+const chartColors = [
+  'rgba(34, 197, 94, 0.5)',
+  'rgba(59, 130, 246, 0.5)',
+  'rgba(168, 85, 247, 0.5)',
+  'rgba(245, 158, 11, 0.5)',
+  'rgba(239, 68, 68, 0.5)',
+  'rgba(14, 165, 233, 0.5)',
+  'rgba(251, 191, 36, 0.5)'
+];
+
+const ensureArray = (value) => (Array.isArray(value) ? value : []);
+const getColor = (index) => chartColors[index % chartColors.length];
+
+const formatDateForApi = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toISOString().split('T')[0];
+};
+
+const formatLabelDate = (date) => {
+  const parsed = date ? new Date(date) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+const monthKey = (date) => {
+  const parsed = date ? new Date(date) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const monthLabelFromKey = (key) => {
+  if (!key) return '';
+  const [year, month] = key.split('-').map(Number);
+  if (!year || !month) return '';
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+};
+
+const computePeriodFilters = (period) => {
+  if (period === 'all') {
+    return { filters: {}, weatherDays: 365 };
+  }
+
+  const days = parseInt(period, 10);
+  if (!Number.isFinite(days) || days <= 0) {
+    return { filters: {}, weatherDays: 30 };
+  }
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - (days - 1));
+
+  return {
+    filters: {
+      date_from: formatDateForApi(startDate),
+      date_to: formatDateForApi(endDate),
+    },
+    weatherDays: Math.min(days, 365),
+  };
+};
+
+const aggregateByMonth = (records, dateKey, valueKey) => {
+  const result = new Map();
+  ensureArray(records).forEach((record) => {
+    const dateValue = record?.[dateKey];
+    const value = Number(record?.[valueKey]);
+    if (!dateValue || Number.isNaN(value)) {
+      return;
+    }
+
+    const key = monthKey(dateValue);
+    if (!key) return;
+
+    result.set(key, (result.get(key) || 0) + value);
+  });
+  return result;
+};
+
+const harvests = computed(() => ensureArray(farmStore.harvests));
+const fields = computed(() => ensureArray(farmStore.fields));
+const sales = computed(() => ensureArray(farmStore.sales));
+const expensesList = computed(() => ensureArray(farmStore.expenses));
+const weatherHistoryRecords = computed(() => ensureArray(weatherStore.weatherHistory));
+
+const loadReportData = async () => {
+  if (loading.value) {
+    // Allow data refresh even if already loading to keep data current
+    console.warn('Reloading farmer reports data...');
+  }
+
+  loading.value = true;
+  loadError.value = '';
+
+  try {
+    await Promise.all([
+      farmStore.fetchFields(),
+      farmStore.fetchHarvests()
+    ]);
+
+    const { filters, weatherDays } = computePeriodFilters(selectedPeriod.value);
+
+    await Promise.all([
+      farmStore.fetchSales(filters),
+      farmStore.fetchExpenses(filters)
+    ]);
+
+    const primaryFieldId = fields.value[0]?.id;
+
+    if (primaryFieldId) {
+      await weatherStore.fetchWeatherHistory(primaryFieldId, weatherDays);
+    } else {
+      console.warn('No fields found for weather analytics');
+    }
+  } catch (error) {
+    console.error('Failed to load report data:', error);
+    loadError.value = error.userMessage || error.response?.data?.message || 'Unable to load report data. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+};
+
 // Yield Report Data
 const totalYield = computed(() => {
-  return farmStore.harvests.reduce((total, harvest) => total + (harvest.yield || 0), 0).toFixed(0);
+  const total = harvests.value.reduce((sum, harvest) => sum + (Number(harvest?.yield) || 0), 0);
+  return total.toFixed(0);
 });
 
 const averageYieldPerHectare = computed(() => {
-  const totalYield = farmStore.harvests.reduce((total, harvest) => total + (harvest.yield || 0), 0);
-  const totalArea = farmStore.fields.reduce((total, field) => total + (field.size || 0), 0);
-  return totalArea > 0 ? (totalYield / totalArea).toFixed(0) : 0;
+  if (!harvests.value.length || !fields.value.length) {
+    return '0';
+  }
+
+  const totalYieldKg = harvests.value.reduce((sum, harvest) => sum + (Number(harvest?.yield) || 0), 0);
+  const totalArea = fields.value.reduce((sum, field) => sum + (Number(field?.size) || 0), 0);
+
+  if (totalArea <= 0) {
+    return '0';
+  }
+
+  return (totalYieldKg / totalArea).toFixed(0);
 });
 
 const bestVariety = computed(() => {
-  const varietyYields = {};
-  farmStore.harvests.forEach(harvest => {
-    const variety = harvest.planting?.crop_type || 'Unknown';
-    varietyYields[variety] = (varietyYields[variety] || 0) + (harvest.yield || 0);
-  });
-  
-  return Object.keys(varietyYields).reduce((best, variety) => 
-    varietyYields[variety] > varietyYields[best] ? variety : best, 'N/A'
-  );
+  if (!harvests.value.length) {
+    return 'N/A';
+  }
+
+  const varietyTotals = harvests.value.reduce((acc, harvest) => {
+    const variety = harvest?.planting?.crop_type || 'Unknown Variety';
+    const yieldValue = Number(harvest?.yield) || 0;
+    acc[variety] = (acc[variety] || 0) + yieldValue;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(varietyTotals);
+  if (!entries.length) {
+    return 'N/A';
+  }
+
+  const [topVariety] = entries.reduce((best, current) => (current[1] > best[1] ? current : best));
+  return topVariety;
 });
 
-const totalHarvests = computed(() => farmStore.harvests.length);
+const totalHarvests = computed(() => harvests.value.length);
 
 const yieldChartData = computed(() => {
-  const data = farmStore.harvests.slice(-12); // Last 12 harvests
+  const ordered = harvests.value
+    .filter(harvest => harvest?.harvest_date && !Number.isNaN(new Date(harvest.harvest_date).getTime()))
+    .sort((a, b) => new Date(a.harvest_date) - new Date(b.harvest_date))
+    .slice(-12);
+
+  if (!ordered.length) {
+    return { labels: [], datasets: [] };
+  }
+
   return {
-    labels: data.map(harvest => new Date(harvest.harvest_date).toLocaleDateString()),
+    labels: ordered.map((harvest) => formatLabelDate(harvest.harvest_date)),
     datasets: [{
       label: 'Yield (kg)',
-      data: data.map(harvest => harvest.yield || 0),
+      data: ordered.map((harvest) => Number(harvest?.yield) || 0),
       borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(34, 197, 94, 0.1)',
       tension: 0.1
@@ -395,125 +581,221 @@ const yieldChartData = computed(() => {
 });
 
 const varietyChartData = computed(() => {
-  const varietyYields = {};
-  farmStore.harvests.forEach(harvest => {
-    const variety = harvest.planting?.crop_type || 'Unknown';
-    varietyYields[variety] = (varietyYields[variety] || 0) + (harvest.yield || 0);
-  });
-  
+  const varietyTotals = harvests.value.reduce((acc, harvest) => {
+    const variety = harvest?.planting?.crop_type || 'Unknown Variety';
+    const yieldValue = Number(harvest?.yield) || 0;
+    acc[variety] = (acc[variety] || 0) + yieldValue;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(varietyTotals).sort((a, b) => b[1] - a[1]);
+
+  if (!entries.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const labels = entries.map(([variety]) => variety);
+  const data = entries.map(([, total]) => total);
+
   return {
-    labels: Object.keys(varietyYields),
+    labels,
     datasets: [{
       label: 'Yield (kg)',
-      data: Object.values(varietyYields),
-      backgroundColor: [
-        'rgba(34, 197, 94, 0.5)',
-        'rgba(59, 130, 246, 0.5)',
-        'rgba(168, 85, 247, 0.5)',
-        'rgba(245, 158, 11, 0.5)',
-        'rgba(239, 68, 68, 0.5)'
-      ]
+      data,
+      backgroundColor: labels.map((_, index) => getColor(index))
     }]
   };
 });
 
 // Financial Report Data
 const totalRevenue = computed(() => {
-  return farmStore.sales?.reduce((total, sale) => total + (sale.total_amount || 0), 0).toFixed(2) || '0.00';
+  const total = sales.value.reduce((sum, sale) => sum + (Number(sale?.total_amount) || 0), 0);
+  return total.toFixed(2);
 });
 
 const totalExpenses = computed(() => {
-  return farmStore.expenses?.reduce((total, expense) => total + (expense.amount || 0), 0).toFixed(2) || '0.00';
+  const total = expensesList.value.reduce((sum, expense) => sum + (Number(expense?.amount) || 0), 0);
+  return total.toFixed(2);
 });
 
 const netProfit = computed(() => {
-  return (parseFloat(totalRevenue.value) - parseFloat(totalExpenses.value)).toFixed(2);
+  const profit = parseFloat(totalRevenue.value) - parseFloat(totalExpenses.value);
+  return profit.toFixed(2);
 });
 
 const profitMargin = computed(() => {
   const revenue = parseFloat(totalRevenue.value);
+  if (revenue <= 0) {
+    return '0.0';
+  }
   const profit = parseFloat(netProfit.value);
-  return revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0.0';
+  return ((profit / revenue) * 100).toFixed(1);
+});
+
+const revenueByMonth = computed(() => aggregateByMonth(sales.value, 'sale_date', 'total_amount'));
+const expensesByMonth = computed(() => aggregateByMonth(expensesList.value, 'date', 'amount'));
+
+const monthLabels = computed(() => {
+  const keys = new Set([
+    ...revenueByMonth.value.keys(),
+    ...expensesByMonth.value.keys()
+  ]);
+  return Array.from(keys).sort();
 });
 
 const financialChartData = computed(() => {
-  // Mock data - in real app, this would come from sales/expenses data
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  if (!monthLabels.value.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const labels = monthLabels.value.map(monthLabelFromKey);
+
+  const revenueData = monthLabels.value.map((key) => parseFloat((revenueByMonth.value.get(key) || 0).toFixed(2)));
+  const expensesData = monthLabels.value.map((key) => parseFloat((expensesByMonth.value.get(key) || 0).toFixed(2)));
+
   return {
-    labels: months,
+    labels,
     datasets: [
       {
         label: 'Revenue',
-        data: [1200, 1500, 1800, 1600, 2000, 2200],
+        data: revenueData,
         borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        tension: 0.1
+        backgroundColor: 'rgba(34, 197, 94, 0.15)',
+        tension: 0.2,
+        fill: true
       },
       {
         label: 'Expenses',
-        data: [800, 900, 1000, 950, 1100, 1200],
+        data: expensesData,
         borderColor: 'rgb(239, 68, 68)',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        tension: 0.1
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        tension: 0.2,
+        fill: true
       }
     ]
   };
 });
 
 const expenseChartData = computed(() => {
+  if (!expensesList.value.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const categoryTotals = expensesList.value.reduce((acc, expense) => {
+    const category = expense?.category || 'Uncategorized';
+    const amount = Number(expense?.amount) || 0;
+    acc[category] = (acc[category] || 0) + amount;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const labels = entries.map(([category]) => category);
+  const data = entries.map(([, amount]) => Number(amount.toFixed(2)));
+
   return {
-    labels: ['Seeds', 'Fertilizer', 'Labor', 'Equipment', 'Other'],
+    labels,
     datasets: [{
-      data: [25, 30, 20, 15, 10],
-      backgroundColor: [
-        'rgba(34, 197, 94, 0.5)',
-        'rgba(59, 130, 246, 0.5)',
-        'rgba(168, 85, 247, 0.5)',
-        'rgba(245, 158, 11, 0.5)',
-        'rgba(239, 68, 68, 0.5)'
-      ]
+      data,
+      backgroundColor: labels.map((_, index) => getColor(index)),
+      borderWidth: 1
     }]
   };
 });
 
 // Weather Correlation Data
+const weatherByMonth = computed(() => {
+  const map = new Map();
+  weatherHistoryRecords.value.forEach((record) => {
+    const key = monthKey(record?.recorded_at);
+    if (!key) return;
+
+    const rainfall = Number(record?.rainfall) || 0;
+    const temperature = Number(record?.temperature) || 0;
+    const entry = map.get(key) || { rainfall: 0, temperature: 0, count: 0 };
+
+    entry.rainfall += rainfall;
+    entry.temperature += temperature;
+    entry.count += 1;
+
+    map.set(key, entry);
+  });
+  return map;
+});
+
 const averageRainfall = computed(() => {
-  const weatherData = weatherStore.weatherHistory;
-  if (weatherData.length === 0) return '0';
-  const totalRainfall = weatherData.reduce((total, record) => total + (record.rainfall || 0), 0);
-  return (totalRainfall / weatherData.length).toFixed(1);
+  if (!weatherHistoryRecords.value.length) {
+    return '0.0';
+  }
+  const total = weatherHistoryRecords.value.reduce((sum, record) => sum + (Number(record?.rainfall) || 0), 0);
+  return (total / weatherHistoryRecords.value.length).toFixed(1);
 });
 
 const averageTemperature = computed(() => {
-  const weatherData = weatherStore.weatherHistory;
-  if (weatherData.length === 0) return '0';
-  const totalTemp = weatherData.reduce((total, record) => total + (record.temperature || 0), 0);
-  return (totalTemp / weatherData.length).toFixed(1);
+  if (!weatherHistoryRecords.value.length) {
+    return '0.0';
+  }
+  const total = weatherHistoryRecords.value.reduce((sum, record) => sum + (Number(record?.temperature) || 0), 0);
+  return (total / weatherHistoryRecords.value.length).toFixed(1);
 });
 
 const weatherImpact = computed(() => {
-  // Mock calculation - in real app, this would be calculated based on weather-yield correlation
-  return '85';
+  if (!weatherHistoryRecords.value.length) {
+    return '0';
+  }
+  const favorable = weatherHistoryRecords.value.filter((record) => {
+    const rainfall = Number(record?.rainfall);
+    const temperature = Number(record?.temperature);
+    if (Number.isNaN(rainfall) || Number.isNaN(temperature)) {
+      return false;
+    }
+    return rainfall >= 60 && rainfall <= 140 && temperature >= 20 && temperature <= 35;
+  }).length;
+
+  return ((favorable / weatherHistoryRecords.value.length) * 100).toFixed(0);
 });
 
+const yieldByMonth = computed(() => aggregateByMonth(harvests.value, 'harvest_date', 'yield'));
+
 const weatherCorrelationData = computed(() => {
-  // Mock data - in real app, this would correlate weather data with yield data
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const keys = new Set([
+    ...weatherByMonth.value.keys(),
+    ...yieldByMonth.value.keys()
+  ]);
+
+  const orderedKeys = Array.from(keys).sort();
+
+  if (!orderedKeys.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const labels = orderedKeys.map(monthLabelFromKey);
+  const rainfallData = orderedKeys.map((key) => {
+    const entry = weatherByMonth.value.get(key);
+    if (!entry || entry.count === 0) return 0;
+    return Number((entry.rainfall / entry.count).toFixed(1));
+  });
+  const yieldData = orderedKeys.map((key) => {
+    const totalYield = yieldByMonth.value.get(key) || 0;
+    return Number(totalYield.toFixed(1));
+  });
+
   return {
-    labels: months,
+    labels,
     datasets: [
       {
-        label: 'Rainfall (mm)',
-        data: [50, 60, 80, 120, 100, 70],
+        label: 'Avg Rainfall (mm)',
+        data: rainfallData,
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.2,
         yAxisID: 'y'
       },
       {
         label: 'Yield (kg)',
-        data: [800, 900, 1200, 1500, 1300, 1000],
+        data: yieldData,
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        tension: 0.2,
         yAxisID: 'y1'
       }
     ]
@@ -535,6 +817,30 @@ const chartOptions = {
   }
 };
 
+const weatherChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: true,
+      position: 'bottom'
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      position: 'left'
+    },
+    y1: {
+      beginAtZero: true,
+      position: 'right',
+      grid: {
+        drawOnChartArea: false
+      }
+    }
+  }
+};
+
 const pieChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -550,17 +856,11 @@ const exportReport = () => {
   console.log('Exporting report...');
 };
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      farmStore.fetchHarvests(),
-      farmStore.fetchFields(),
-      farmStore.fetchSales(),
-      farmStore.fetchExpenses(),
-      weatherStore.fetchWeatherHistory(farmStore.fields[0]?.id)
-    ]);
-  } catch (error) {
-    console.error('Failed to load report data:', error);
-  }
+watch(selectedPeriod, () => {
+  loadReportData();
+});
+
+onMounted(() => {
+  loadReportData();
 });
 </script>

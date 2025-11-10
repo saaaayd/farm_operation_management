@@ -1,0 +1,61 @@
+FARM OPERATIONS MANAGEMENT SYSTEM
+FARMER/ADMINISTRATOR (FARM MANAGER) FEATURES
+
+1. CORE FARM OPERATIONS MANAGEMENT:
+
+    - Planning, Tracking, and Resource Use:
+        - [cite_start]Create, update, and delete farm plans and product records[cite: 941].
+        - [cite_start]Track farm activities such as planting, harvesting, labor assignments, and inventory use[cite: 942].
+        - [cite_start]Log and view the use of farm resources like seeds, fertilizer, and labor[cite: 943].
+        - [cite_start]Manage planting schedules, batch progress tracking, and crop growth monitoring[cite: 668].
+        - [cite_start]Track field conditions, crop type, planting dates, and expected harvests[cite: 669].
+        - [cite_start]Retrieve/Record Harvest Data[cite: 728].
+        - [cite_start]Monitor labor allocation and plan labor tasks[cite: 579, 749].
+
+    - Inventory and Supply Handling:
+        - [cite_start]Manage categorized inventory, distinguishing between Farm Supply (fertilizers, seedlings, pesticides, and equipment) and Farm Product Items (harvested rice)[cite: 659].
+        - [cite_start]Track usage, stock levels, and supply needs per category[cite: 660].
+        - [cite_start]Update inventory records in real time[cite: 662].
+        - [cite_start]Facilitate the creation of purchase orders (for resupply)[cite: 661].
+
+    - Financials and Expense Tracking:
+        - [cite_start]All operations, labor, and supply costs are captured and classified[cite: 683].
+        - [cite_start]Utilize data for expense tracking and operational auditing[cite: 685].
+        - [cite_start]Monitor revenue, expenses, and profit margins (Net Profit, Total Expenses, etc.)[cite: 752, 1392, 1394, 1395].
+
+2. INTEGRATED WEATHER ANALYTICS:
+
+    - Weather Data Access:
+        - [cite_start]The system fetches real-time weather data using a weather API[cite: 945].
+        - [cite_start]Weather forecasts are displayed and updated regularly[cite: 946].
+        - [cite_start]Access the weather analytics module, which retrieves real-time information from a third-party API and shows local forecasts and notifications[cite: 580].
+        - [cite_start]Display Filtered Weather Forecast[cite: 746].
+
+    - Decision Support and Risk Mitigation:
+        - [cite_start]The system provides weather-based decision support for farming activities[cite: 947].
+        - [cite_start]Farmers make informed decisions about when to plant, irrigate, or harvest on the basis of weather conditions[cite: 581, 754].
+        - [cite_start]Receive alerts or suggestions based on predicted weather[cite: 677].
+
+3. ONLINE PRODUCT MARKETPLACE (SELLER FUNCTIONALITY):
+
+    - Product Listing:
+        - [cite_start]Farmers can post products for sale with details, pricing, and quality[cite: 951, 582].
+    - Order Management:
+        - [cite_start]Track orders received from buyers[cite: 582, 752].
+        - [cite_start]Accept/decline client orders/negotiations[cite: 731].
+        - [cite_start]System allows for direct communication between buyers and sellers[cite: 953].
+    - [cite_start]Limitation: The system does not handle payments; all transactions are confirmed manually[cite: 956].
+
+4. DASHBOARD, ANALYTICS, & ADMINISTRATION:
+
+    - Data-Driven Decision Making:
+        - [cite_start]The system provides visual summaries of farm activities, weather history, and sales data[cite: 963, 964].
+        - [cite_start]Farmers can track their sales and order records[cite: 965].
+        - [cite_start]Reports help farmers monitor operations and resource usage[cite: 966].
+        - [cite_start]Retrieve/Print Report and Charts (visualizing data like earnings growth)[cite: 744, 1335].
+
+    - User and System Management:
+        - [cite_start]Administrators can approve user registrations and manage access roles[cite: 959].
+        - [cite_start]Create and manage user accounts, such as storing system credentials[cite: 710].
+        - [cite_start]Authentication is done through email and password[cite: 961].
+        - [cite_start]Each entry of data is validated to rule out null values and duplication issues[cite: 755].

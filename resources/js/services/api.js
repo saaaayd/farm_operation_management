@@ -289,7 +289,7 @@ export const ordersAPI = {
 
 // Sales API
 export const salesAPI = {
-  getAll: () => api.get('/sales'),
+  getAll: (params = {}) => api.get('/sales', { params }),
   getById: (id) => api.get(`/sales/${id}`),
   create: (saleData) => api.post('/sales', saleData),
   update: (id, saleData) => api.put(`/sales/${id}`, saleData),
@@ -298,7 +298,7 @@ export const salesAPI = {
 
 // Expenses API
 export const expensesAPI = {
-  getAll: () => api.get('/expenses'),
+  getAll: (params = {}) => api.get('/expenses', { params }),
   getById: (id) => api.get(`/expenses/${id}`),
   create: (expenseData) => api.post('/expenses', expenseData),
   update: (id, expenseData) => api.put(`/expenses/${id}`, expenseData),

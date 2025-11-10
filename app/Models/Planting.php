@@ -19,6 +19,7 @@ class Planting extends Model
         'planting_method',
         'seed_rate',
         'area_planted',
+        'season',
         'notes',
         'weather_conditions',
     ];

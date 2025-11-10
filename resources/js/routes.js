@@ -13,9 +13,12 @@ import BuyerDashboard from '@/Pages/Buyer/Dashboard.vue';
 import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
 
 // Farm Management
+import FarmerFieldsIndex from '@/Pages/Farmer/Fields/Index.vue';
 import PlantingsIndex from '@/Pages/Farmer/Plantings/Index.vue';
 import PlantingsCreate from '@/Pages/Farmer/Plantings/Create.vue';
 import TasksIndex from '@/Pages/Farmer/Tasks/Index.vue';
+import TasksCreate from '@/Pages/Farmer/Tasks/Create.vue';
+import HarvestsIndex from '@/Pages/Farmer/Harvests/Index.vue';
 import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
 
 // Weather
@@ -27,6 +30,9 @@ import ProductDetail from '@/Pages/Marketplace/ProductDetail.vue';
 import Cart from '@/Pages/Marketplace/Cart.vue';
 import OrdersList from '@/Pages/Marketplace/Orders/Index.vue';
 import OrderDetail from '@/Pages/Marketplace/Orders/Show.vue';
+import MarketplaceProductsIndex from '@/Pages/Marketplace/Product/Index.vue';
+import MarketplaceProductCreate from '@/Pages/Marketplace/Product/Create.vue';
+import MarketplaceProductEdit from '@/Pages/Marketplace/Product/Edit.vue';
 
 // Reports
 import ReportsIndex from '@/Pages/Farmer/Reports/Index.vue';
@@ -47,6 +53,9 @@ import SystemStats from '@/Pages/Admin/SystemStats.vue';
 import FinancialReports from '@/Pages/Reports/Financial.vue';
 import CropYieldReports from '@/Pages/Reports/CropYield.vue';
 import WeatherReports from '@/Pages/Reports/Weather.vue';
+
+// Financial
+import FinancialExpensesIndex from '@/Pages/Financial/Expenses/Index.vue';
 
 const routes = [
   {
@@ -87,6 +96,12 @@ const routes = [
   
   // Farm Management Routes (Rice-specific)
   {
+    path: '/fields',
+    name: 'fields',
+    component: FarmerFieldsIndex,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
     path: '/plantings',
     name: 'plantings',
     component: PlantingsIndex,
@@ -102,6 +117,18 @@ const routes = [
     path: '/tasks',
     name: 'tasks',
     component: TasksIndex,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/tasks/create',
+    name: 'tasks-create',
+    component: TasksCreate,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/harvests',
+    name: 'harvests',
+    component: HarvestsIndex,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {
@@ -158,6 +185,30 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/marketplace/product/create',
+    name: 'marketplace-product-create',
+    component: MarketplaceProductCreate,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/marketplace/product/:id/edit',
+    name: 'marketplace-product-edit',
+    component: MarketplaceProductEdit,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/marketplace/my-products',
+    name: 'marketplace-my-products',
+    component: MarketplaceProductsIndex,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/marketplace/orders',
+    name: 'marketplace-orders',
+    component: OrdersList,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
     path: '/marketplace/products/:id',
     name: 'product-detail',
     component: ProductDetail,
@@ -182,6 +233,14 @@ const routes = [
     meta: { requiresAuth: true }
   },
   
+  // Financial Routes
+  {
+    path: '/financial/expenses',
+    name: 'financial-expenses',
+    component: FinancialExpensesIndex,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+
   // Admin Routes
   {
     path: '/admin',

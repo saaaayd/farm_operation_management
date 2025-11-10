@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import { riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
+import { useAuthStore } from './auth';
 
 export const useMarketplaceStore = defineStore('marketplace', {
   state: () => ({
@@ -8,6 +10,8 @@ export const useMarketplaceStore = defineStore('marketplace', {
     cart: [],
     orders: [],
     sales: [],
+    farmerProducts: [],
+    riceVarieties: [],
     loading: false,
     error: null,
   }),
@@ -74,6 +78,113 @@ export const useMarketplaceStore = defineStore('marketplace', {
         throw error;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async fetchFarmerProducts(filters = {}) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const params = {
+          per_page: 50,
+          ...filters,
+        };
+
+        const response = await riceMarketplaceAPI.getProducts(params);
+        const products = response.data?.products?.data || response.data?.products || [];
+        const authStore = useAuthStore();
+        const farmerId = authStore.user?.id;
+
+        this.farmerProducts = farmerId
+          ? products.filter(product => product.farmer_id === farmerId)
+          : products;
+
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to fetch products';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchRiceVarieties() {
+      try {
+        const response = await riceVarietiesAPI.getAll();
+        this.riceVarieties = response.data?.data || response.data || [];
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch rice varieties:', error);
+        return [];
+      }
+    },
+
+    async createRiceProduct(productData) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await riceMarketplaceAPI.createProduct(productData);
+        const product = response.data?.product;
+        if (product) {
+          this.farmerProducts = [product, ...(this.farmerProducts || [])];
+        } else {
+          await this.fetchFarmerProducts();
+        }
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to create product';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updateRiceProduct(productId, productData) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await riceMarketplaceAPI.updateProduct(productId, productData);
+        const updated = response.data?.product;
+        if (updated) {
+          this.farmerProducts = (this.farmerProducts || []).map(product =>
+            product.id === updated.id ? updated : product
+          );
+        }
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to update product';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async deleteRiceProduct(productId) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await riceMarketplaceAPI.deleteProduct(productId);
+        this.farmerProducts = (this.farmerProducts || []).filter(product => product.id !== Number(productId));
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to delete product';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async getRiceProduct(productId) {
+      try {
+        const response = await riceMarketplaceAPI.getProduct(productId);
+        return response.data?.product || response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to load product';
+        throw error;
       }
     },
 

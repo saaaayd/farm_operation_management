@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Farm;
 
 use App\Http\Controllers\Controller;
-use App\Models\Planting;
 use App\Models\Field;
-use Illuminate\Http\Request;
+use App\Models\Planting;
+use App\Models\RiceVariety;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PlantingController extends Controller
@@ -40,15 +42,18 @@ class PlantingController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'field_id' => 'required|exists:fields,id',
-            'crop_name' => 'required|string|max:255',
-            'variety' => 'nullable|string|max:255',
+            'rice_variety_id' => 'nullable|exists:rice_varieties,id',
+            'crop_name' => 'nullable|string|max:255',
+            'crop_type' => 'nullable|string|max:255',
             'planting_date' => 'required|date',
-            'expected_harvest_date' => 'nullable|date|after:planting_date',
-            'seed_quantity' => 'required|numeric|min:0',
-            'seed_unit' => 'required|string|in:kg,grams,pounds,seeds',
-            'spacing' => 'nullable|array',
-            'spacing.row' => 'nullable|numeric|min:0',
-            'spacing.plant' => 'nullable|numeric|min:0',
+            'expected_harvest_date' => 'nullable|date|after_or_equal:planting_date',
+            'growth_duration' => 'nullable|integer|min:30|max:240',
+            'planting_method' => 'nullable|string|in:direct_seeding,transplanting,broadcasting,broadcast',
+            'seed_rate' => 'nullable|numeric|min:0',
+            'seed_quantity' => 'nullable|numeric|min:0',
+            'area_planted' => 'nullable|numeric|min:0',
+            'season' => 'nullable|string|in:wet,dry',
+            'status' => 'nullable|string|in:planted,growing,ready,harvested,failed',
             'notes' => 'nullable|string',
         ]);
 
@@ -69,21 +74,54 @@ class PlantingController extends Controller
             ], 403);
         }
 
+        $plantingDate = Carbon::parse($request->planting_date);
+
+        $expectedHarvest = $request->expected_harvest_date
+            ? Carbon::parse($request->expected_harvest_date)
+            : (clone $plantingDate)->addDays((int) $request->input('growth_duration', 120));
+
+        $varietyId = $request->input('rice_variety_id');
+        if (!$varietyId && $request->filled('variety')) {
+            $variety = RiceVariety::where('name', $request->input('variety'))->first();
+            if ($variety) {
+                $varietyId = $variety->id;
+            }
+        }
+        if (!$varietyId) {
+            $varietyId = RiceVariety::value('id');
+        }
+        if (!$varietyId) {
+            return response()->json([
+                'message' => 'No rice varieties available. Please add rice varieties first.'
+            ], 422);
+        }
+
+        $areaPlanted = $request->input('area_planted');
+        if (!$areaPlanted || $areaPlanted <= 0) {
+            $areaPlanted = $field->size ?? 1;
+        }
+
+        $seedRate = $request->input('seed_rate') ?? $request->input('seed_quantity');
+
+        $season = $request->input('season') ?? $this->determineSeasonFromDate($plantingDate);
+
         $planting = Planting::create([
             'field_id' => $request->field_id,
-            'crop_name' => $request->crop_name,
-            'variety' => $request->variety,
-            'planting_date' => $request->planting_date,
-            'expected_harvest_date' => $request->expected_harvest_date,
-            'seed_quantity' => $request->seed_quantity,
-            'seed_unit' => $request->seed_unit,
-            'spacing' => $request->spacing,
+            'rice_variety_id' => $varietyId,
+            'crop_type' => $request->input('crop_name') ?? $request->input('crop_type') ?? 'Rice',
+            'planting_date' => $plantingDate,
+            'expected_harvest_date' => $expectedHarvest,
+            'status' => $request->input('status', Planting::STATUS_PLANTED),
+            'planting_method' => $this->normalizePlantingMethod($request->input('planting_method')),
+            'seed_rate' => $seedRate,
+            'area_planted' => $areaPlanted,
+            'season' => $season,
             'notes' => $request->notes,
         ]);
 
         return response()->json([
             'message' => 'Planting created successfully',
-            'planting' => $planting->load(['field', 'crop'])
+            'planting' => $planting->load(['field', 'riceVariety'])
         ], 201);
     }
 
@@ -169,5 +207,25 @@ class PlantingController extends Controller
         return response()->json([
             'message' => 'Planting deleted successfully'
         ]);
+    }
+
+    private function normalizePlantingMethod(?string $method): string
+    {
+        return match ($method) {
+            'broadcast' => 'broadcasting',
+            'direct_seeding', 'transplanting', 'broadcasting' => $method,
+            default => 'transplanting',
+        };
+    }
+
+    private function determineSeasonFromDate(?Carbon $date): string
+    {
+        if (!$date) {
+            return 'wet';
+        }
+
+        $month = (int) $date->format('n');
+
+        return ($month >= 5 && $month <= 10) ? 'wet' : 'dry';
     }
 }

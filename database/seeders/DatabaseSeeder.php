@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Farm;
 use App\Models\Field;
 use App\Models\Planting;
 use App\Models\Task;
@@ -11,6 +12,7 @@ use App\Models\InventoryItem;
 use App\Models\WeatherLog;
 use App\Models\Harvest;
 use App\Models\Expense;
+use App\Models\RiceVariety;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -34,12 +36,20 @@ class DatabaseSeeder extends Seeder
         // Laborer::truncate();
         // User::truncate();
 
-        // Create admin user (or find existing)
-        $admin = User::firstOrCreate(
+        $userPasswords = [
+            'admin@farmops.com' => 'admin123',
+            'john@farmops.com' => 'john123',
+            'mary@farmops.com' => 'mary123',
+            'alice@farmops.com' => 'alice123',
+            'bob@farmops.com' => 'bob123',
+        ];
+
+        // Create admin user (or update existing)
+        $admin = User::updateOrCreate(
             ['email' => 'admin@farmops.com'],
             [
                 'name' => 'Admin User',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($userPasswords['admin@farmops.com']),
                 'role' => 'admin',
                 'phone' => '+1-555-0100',
                 'address' => [
@@ -54,11 +64,11 @@ class DatabaseSeeder extends Seeder
 
         
         // Create farmers
-        $farmer1 = User::firstOrCreate(
+        $farmer1 = User::updateOrCreate(
             ['email' => 'john@farmops.com'],
             [
                 'name' => 'John Farmer',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($userPasswords['john@farmops.com']),
                 'role' => 'farmer',
                 'phone' => '+1-555-0101',
                 'address' => [
@@ -71,11 +81,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $farmer2 = User::firstOrCreate(
+        $farmer2 = User::updateOrCreate(
             ['email' => 'mary@farmops.com'],
             [
                 'name' => 'Mary Grower',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($userPasswords['mary@farmops.com']),
                 'role' => 'farmer',
                 'phone' => '+1-555-0102',
                 'address' => [
@@ -88,32 +98,122 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $farm1 = \App\Models\Farm::create([
-            'user_id' => $farmer1->id,
-            'name' => "John's Farm",
-            'farm_coordinates' => json_encode([
-                'lat' => 40.7306,
-                'lon' => -73.9352,
-            ]),
-            'size' => 50.0
-        ]);
-        
-        $farm2 = \App\Models\Farm::create([
-            'user_id' => $farmer2->id,
-            'name' => "Mary's Farm",
-            'farm_coordinates' => json_encode([
-                'lat' => 50.7306,
-                'lon' => -83.9352,
-            ]),
-            'size' => 65.0
-        ]);
+        $varietyCorn = RiceVariety::updateOrCreate(
+            ['variety_code' => 'GEN-CORN'],
+            [
+                'name' => 'General Corn Hybrid',
+                'description' => 'Demo variety used for corn-based planting scenarios.',
+                'maturity_days' => 110,
+                'average_yield_per_hectare' => 5.20,
+                'season' => 'both',
+                'grain_type' => 'long',
+                'resistance_level' => 'medium',
+                'characteristics' => [
+                    'notes' => 'Suited for temperate climates',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietySoy = RiceVariety::updateOrCreate(
+            ['variety_code' => 'GEN-SOY'],
+            [
+                'name' => 'Versatile Soy Hybrid',
+                'description' => 'Demo variety supporting soybean rotations.',
+                'maturity_days' => 95,
+                'average_yield_per_hectare' => 3.80,
+                'season' => 'wet',
+                'grain_type' => 'medium',
+                'resistance_level' => 'high',
+                'characteristics' => [
+                    'notes' => 'High resistance to common pests',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietyWheat = RiceVariety::updateOrCreate(
+            ['variety_code' => 'GEN-WHEAT'],
+            [
+                'name' => 'Stable Wheat Variety',
+                'description' => 'Demo variety representing wheat operations.',
+                'maturity_days' => 120,
+                'average_yield_per_hectare' => 4.60,
+                'season' => 'dry',
+                'grain_type' => 'short',
+                'resistance_level' => 'medium',
+                'characteristics' => [
+                    'notes' => 'Performs well in cooler temperatures',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $varietyTomato = RiceVariety::updateOrCreate(
+            ['variety_code' => 'GEN-TOMA'],
+            [
+                'name' => 'Greenhouse Tomato Hybrid',
+                'description' => 'Demo variety covering tomato production.',
+                'maturity_days' => 85,
+                'average_yield_per_hectare' => 2.90,
+                'season' => 'both',
+                'grain_type' => 'medium',
+                'resistance_level' => 'high',
+                'characteristics' => [
+                    'notes' => 'Great for all-season greenhouse setups',
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        $farm1 = Farm::updateOrCreate(
+            [
+                'user_id' => $farmer1->id,
+                'name' => "John's Farm",
+            ],
+            [
+                'location' => 'Queens, NY',
+                'farm_coordinates' => [
+                    'lat' => 40.7306,
+                    'lon' => -73.9352,
+                ],
+                'total_area' => 50.0,
+                'cultivated_area' => 40.0,
+                'soil_type' => 'loam',
+                'soil_ph' => 6.4,
+                'water_source' => 'well',
+                'irrigation_type' => 'sprinkler',
+                'is_setup_complete' => true,
+            ]
+        );
+
+        $farm2 = Farm::updateOrCreate(
+            [
+                'user_id' => $farmer2->id,
+                'name' => "Mary's Farm",
+            ],
+            [
+                'location' => 'Farm Valley, IL',
+                'farm_coordinates' => [
+                    'lat' => 41.8781,
+                    'lon' => -87.6298,
+                ],
+                'total_area' => 65.0,
+                'cultivated_area' => 52.0,
+                'soil_type' => 'clay_loam',
+                'soil_ph' => 6.1,
+                'water_source' => 'river',
+                'irrigation_type' => 'drip',
+                'is_setup_complete' => true,
+            ]
+        );
 
         // Create buyers
-        $buyer1 = User::firstOrCreate(
+        $buyer1 = User::updateOrCreate(
             ['email' => 'alice@farmops.com'],
             [
                 'name' => 'Alice Buyer',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($userPasswords['alice@farmops.com']),
                 'role' => 'buyer',
                 'phone' => '+1-555-0201',
                 'address' => [
@@ -126,11 +226,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $buyer2 = User::firstOrCreate(
+        $buyer2 = User::updateOrCreate(
             ['email' => 'bob@farmops.com'],
             [
                 'name' => 'Bob Merchant',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($userPasswords['bob@farmops.com']),
                 'role' => 'buyer',
                 'phone' => '+1-555-0202',
                 'address' => [
@@ -146,98 +246,167 @@ class DatabaseSeeder extends Seeder
         // Skip if fields already exist for these users
         if (Field::where('user_id', $farmer1->id)->count() === 0) {
             // Create fields for farmers
-            $field1 = Field::create([
+            $field1 = Field::updateOrCreate([
                 'user_id' => $farmer1->id,
-                'farm_id' => $farm1->id, // ✅ added
+                'farm_id' => $farm1->id,
+                'name' => 'North Field',
+            ], [
                 'location' => [
                     'lat' => 40.7128,
                     'lon' => -74.0060,
                     'address' => "North Field, John's Farm"
                 ],
+                'field_coordinates' => [
+                    'lat' => 40.7128,
+                    'lon' => -74.0060,
+                ],
                 'soil_type' => 'Loamy',
-                'size' => 25.5
+                'size' => 25.5,
+                'water_access' => 'good',
+                'drainage_quality' => 'good',
             ]);
             
-            $field2 = Field::create([
+            $field2 = Field::updateOrCreate([
                 'user_id' => $farmer1->id,
                 'farm_id' => $farm1->id,
+                'name' => 'South Field',
+            ], [
                 'location' => [
                     'lat' => 40.7580,
                     'lon' => -73.9855,
                     'address' => "South Field, John's Farm"
                 ],
+                'field_coordinates' => [
+                    'lat' => 40.7580,
+                    'lon' => -73.9855,
+                ],
                 'soil_type' => 'Clay',
-                'size' => 18.2
+                'size' => 18.2,
+                'water_access' => 'moderate',
+                'drainage_quality' => 'moderate',
             ]);
             
-            $field3 = Field::create([
+            $field3 = Field::updateOrCreate([
                 'user_id' => $farmer2->id,
                 'farm_id' => $farm2->id,
+                'name' => 'East Field',
+            ], [
                 'location' => [
                     'lat' => 41.8781,
                     'lon' => -87.6298,
                     'address' => "East Field, Mary's Farm"
                 ],
+                'field_coordinates' => [
+                    'lat' => 41.8781,
+                    'lon' => -87.6298,
+                ],
                 'soil_type' => 'Sandy',
-                'size' => 32.0
+                'size' => 32.0,
+                'water_access' => 'good',
+                'drainage_quality' => 'good',
             ]);
             
 
             // Create laborers
-            $laborer1 = Laborer::create([
+            $laborer1 = Laborer::updateOrCreate([
+                'name' => 'Tom Worker',
+            ], [
                 'name' => 'Tom Worker',
                 'contact' => '+1-555-0301',
                 'hourly_rate' => 15.50
             ]);
 
-            $laborer2 = Laborer::create([
+            $laborer2 = Laborer::updateOrCreate([
+                'name' => 'Sarah Helper',
+            ], [
                 'name' => 'Sarah Helper',
                 'contact' => '+1-555-0302',
                 'hourly_rate' => 17.00
             ]);
 
-            $laborer3 = Laborer::create([
+            $laborer3 = Laborer::updateOrCreate([
+                'name' => 'Mike Laborer',
+            ], [
                 'name' => 'Mike Laborer',
                 'contact' => '+1-555-0303',
                 'hourly_rate' => 16.25
             ]);
 
             // Create plantings
-            $planting1 = Planting::create([
-                'field_id' => $field1->id,
-                'crop_type' => 'Corn',
-                'planting_date' => now()->subDays(45),
-                'expected_harvest_date' => now()->addDays(75),
-                'status' => 'growing'
-            ]);
+            $planting1 = Planting::updateOrCreate(
+                [
+                    'field_id' => $field1->id,
+                    'crop_type' => 'Corn',
+                ],
+                [
+                    'crop_type' => 'Corn',
+                    'rice_variety_id' => $varietyCorn->id,
+                    'planting_date' => now()->subDays(45),
+                    'expected_harvest_date' => now()->addDays(75),
+                    'status' => Planting::STATUS_GROWING,
+                    'planting_method' => 'transplanting',
+                    'area_planted' => 12.5,
+                    'season' => 'wet',
+                ]
+            );
 
-            $planting2 = Planting::create([
-                'field_id' => $field1->id,
-                'crop_type' => 'Soybeans',
-                'planting_date' => now()->subDays(30),
-                'expected_harvest_date' => now()->addDays(90),
-                'status' => 'growing'
-            ]);
+            $planting2 = Planting::updateOrCreate(
+                [
+                    'field_id' => $field1->id,
+                    'crop_type' => 'Soybeans',
+                ],
+                [
+                    'crop_type' => 'Soybeans',
+                    'rice_variety_id' => $varietySoy->id,
+                    'planting_date' => now()->subDays(30),
+                    'expected_harvest_date' => now()->addDays(90),
+                    'status' => Planting::STATUS_GROWING,
+                    'planting_method' => 'direct_seeding',
+                    'area_planted' => 9.8,
+                    'season' => 'wet',
+                ]
+            );
 
-            $planting3 = Planting::create([
-                'field_id' => $field2->id,
-                'crop_type' => 'Wheat',
-                'planting_date' => now()->subDays(60),
-                'expected_harvest_date' => now()->addDays(30),
-                'status' => 'ready'
-            ]);
+            $planting3 = Planting::updateOrCreate(
+                [
+                    'field_id' => $field2->id,
+                    'crop_type' => 'Wheat',
+                ],
+                [
+                    'crop_type' => 'Wheat',
+                    'rice_variety_id' => $varietyWheat->id,
+                    'planting_date' => now()->subDays(60),
+                    'expected_harvest_date' => now()->addDays(30),
+                    'status' => Planting::STATUS_READY,
+                    'planting_method' => 'direct_seeding',
+                    'area_planted' => 15.0,
+                    'season' => 'dry',
+                ]
+            );
 
-            $planting4 = Planting::create([
-                'field_id' => $field3->id,
-                'crop_type' => 'Tomatoes',
-                'planting_date' => now()->subDays(75),
-                'expected_harvest_date' => now()->subDays(5),
-                'status' => 'harvested'
-            ]);
+            $planting4 = Planting::updateOrCreate(
+                [
+                    'field_id' => $field3->id,
+                    'crop_type' => 'Tomatoes',
+                ],
+                [
+                    'crop_type' => 'Tomatoes',
+                    'rice_variety_id' => $varietyTomato->id,
+                    'planting_date' => now()->subDays(75),
+                    'expected_harvest_date' => now()->subDays(5),
+                    'actual_harvest_date' => now()->subDays(4),
+                    'status' => Planting::STATUS_HARVESTED,
+                    'planting_method' => 'transplanting',
+                    'area_planted' => 10.6,
+                    'season' => 'dry',
+                ]
+            );
 
             // Create tasks
-            Task::create([
+            Task::updateOrCreate([
                 'planting_id' => $planting1->id,
+                'task_type' => 'watering',
+            ], [
                 'task_type' => 'watering',
                 'due_date' => now()->addDays(2),
                 'description' => 'Water corn field - section A',
@@ -245,8 +414,10 @@ class DatabaseSeeder extends Seeder
                 'assigned_to' => $laborer1->id
             ]);
 
-            Task::create([
+            Task::updateOrCreate([
                 'planting_id' => $planting1->id,
+                'task_type' => 'fertilizing',
+            ], [
                 'task_type' => 'fertilizing',
                 'due_date' => now()->addDays(5),
                 'description' => 'Apply nitrogen fertilizer to corn',
@@ -254,8 +425,10 @@ class DatabaseSeeder extends Seeder
                 'assigned_to' => $laborer2->id
             ]);
 
-            Task::create([
+            Task::updateOrCreate([
                 'planting_id' => $planting2->id,
+                'task_type' => 'weeding',
+            ], [
                 'task_type' => 'weeding',
                 'due_date' => now()->addDays(1),
                 'description' => 'Remove weeds from soybean rows',
@@ -263,8 +436,10 @@ class DatabaseSeeder extends Seeder
                 'assigned_to' => $laborer1->id
             ]);
 
-            Task::create([
+            Task::updateOrCreate([
                 'planting_id' => $planting3->id,
+                'task_type' => 'harvesting',
+            ], [
                 'task_type' => 'harvesting',
                 'due_date' => now()->addDays(3),
                 'description' => 'Harvest wheat - ready for collection',
@@ -272,8 +447,10 @@ class DatabaseSeeder extends Seeder
                 'assigned_to' => $laborer3->id
             ]);
 
-            Task::create([
+            Task::updateOrCreate([
                 'planting_id' => $planting4->id,
+                'task_type' => 'harvesting',
+            ], [
                 'task_type' => 'harvesting',
                 'due_date' => now()->subDays(10),
                 'description' => 'Harvest tomatoes - completed',
@@ -282,7 +459,9 @@ class DatabaseSeeder extends Seeder
             ]);
 
             // Create inventory items
-            InventoryItem::create([
+            InventoryItem::updateOrCreate([
+                'name' => 'Corn Seeds',
+            ], [
                 'name' => 'Corn Seeds',
                 'category' => 'seeds',
                 'quantity' => 50.0,
@@ -291,7 +470,9 @@ class DatabaseSeeder extends Seeder
                 'min_stock' => 10.0
             ]);
 
-            InventoryItem::create([
+            InventoryItem::updateOrCreate([
+                'name' => 'Nitrogen Fertilizer',
+            ], [
                 'name' => 'Nitrogen Fertilizer',
                 'category' => 'fertilizer',
                 'quantity' => 8.0,
@@ -300,7 +481,9 @@ class DatabaseSeeder extends Seeder
                 'min_stock' => 5.0
             ]);
 
-            InventoryItem::create([
+            InventoryItem::updateOrCreate([
+                'name' => 'Pesticide Spray',
+            ], [
                 'name' => 'Pesticide Spray',
                 'category' => 'pesticide',
                 'quantity' => 3.0,
@@ -309,7 +492,9 @@ class DatabaseSeeder extends Seeder
                 'min_stock' => 2.0
             ]);
 
-            InventoryItem::create([
+            InventoryItem::updateOrCreate([
+                'name' => 'Fresh Tomatoes',
+            ], [
                 'name' => 'Fresh Tomatoes',
                 'category' => 'produce',
                 'quantity' => 150.0,
@@ -318,7 +503,9 @@ class DatabaseSeeder extends Seeder
                 'min_stock' => 0.0
             ]);
 
-            InventoryItem::create([
+            InventoryItem::updateOrCreate([
+                'name' => 'Organic Corn',
+            ], [
                 'name' => 'Organic Corn',
                 'category' => 'produce',
                 'quantity' => 200.0,
@@ -328,32 +515,39 @@ class DatabaseSeeder extends Seeder
             ]);
 
             // Create harvests
-            $harvest1 = Harvest::create([
+            $harvest1 = Harvest::updateOrCreate([
                 'planting_id' => $planting4->id,
+            ], [
                 'yield' => 125.5,
                 'harvest_date' => now()->subDays(7),
                 'quality' => 'excellent'
             ]);
 
             // Create expenses
-            Expense::create([
+            Expense::updateOrCreate([
                 'description' => 'Corn seeds purchase',
+                'planting_id' => $planting1->id,
+            ], [
                 'amount' => 125.00,
                 'category' => 'seeds',
                 'date' => now()->subDays(50),
                 'planting_id' => $planting1->id
             ]);
 
-            Expense::create([
+            Expense::updateOrCreate([
                 'description' => 'Fertilizer application',
+                'planting_id' => $planting1->id,
+            ], [
                 'amount' => 85.00,
                 'category' => 'fertilizer',
                 'date' => now()->subDays(35),
                 'planting_id' => $planting1->id
             ]);
 
-            Expense::create([
+            Expense::updateOrCreate([
                 'description' => 'Labor costs - weeding',
+                'planting_id' => $planting2->id,
+            ], [
                 'amount' => 120.00,
                 'category' => 'labor',
                 'date' => now()->subDays(20),
@@ -366,14 +560,20 @@ class DatabaseSeeder extends Seeder
             
             foreach ($fields as $field) {
                 for ($i = 0; $i < 7; $i++) {
-                    WeatherLog::create([
-                        'field_id' => $field->id,
-                        'temperature' => rand(15, 30) + (rand(0, 9) / 10),
-                        'humidity' => rand(40, 80),
-                        'wind_speed' => rand(5, 20) + (rand(0, 9) / 10),
-                        'conditions' => $conditions[array_rand($conditions)],
-                        'recorded_at' => now()->subDays($i)->setTime(rand(6, 18), 0, 0)
-                    ]);
+                    $recordedAt = now()->subDays($i)->setTime(8 + $i, 0, 0);
+
+                    WeatherLog::updateOrCreate(
+                        [
+                            'field_id' => $field->id,
+                            'recorded_at' => $recordedAt,
+                        ],
+                        [
+                            'temperature' => rand(15, 30) + (rand(0, 9) / 10),
+                            'humidity' => rand(40, 80),
+                            'wind_speed' => rand(5, 20) + (rand(0, 9) / 10),
+                            'conditions' => $conditions[array_rand($conditions)],
+                        ]
+                    );
                 }
             }
 
@@ -383,10 +583,8 @@ class DatabaseSeeder extends Seeder
         }
 
         echo "\nUsers available:\n";
-        echo "- Admin: admin@farmops.com (password: password)\n";
-        echo "- Farmer 1: john@farmops.com (password: password)\n";
-        echo "- Farmer 2: mary@farmops.com (password: password)\n";
-        echo "- Buyer 1: alice@farmops.com (password: password)\n";
-        echo "- Buyer 2: bob@farmops.com (password: password)\n";
+        foreach ($userPasswords as $email => $password) {
+            echo "- {$email} (password: {$password})\n";
+        }
     }
 }
