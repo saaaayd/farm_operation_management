@@ -112,10 +112,13 @@ export const useMarketplaceStore = defineStore('marketplace', {
     async fetchRiceVarieties() {
       try {
         const response = await riceVarietiesAPI.getAll();
-        this.riceVarieties = response.data?.data || response.data || [];
+        const payload = response?.data;
+        const varieties = payload?.data || payload?.varieties || payload || [];
+        this.riceVarieties = Array.isArray(varieties) ? varieties : [];
         return response.data;
       } catch (error) {
         console.error('Failed to fetch rice varieties:', error);
+        this.riceVarieties = [];
         return [];
       }
     },

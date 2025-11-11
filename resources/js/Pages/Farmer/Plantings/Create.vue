@@ -313,7 +313,7 @@ const form = reactive({
   planting_method: 'transplanting',
   season: '',
   notes: '',
-  status: 'planted'
+  status: 'planned'
 });
 
 const selectedField = computed(() =>
@@ -341,6 +341,15 @@ watch([() => form.planting_date, () => form.growth_duration], ([plantingDate, gr
 watch(() => form.planting_date, (plantingDate) => {
   if (plantingDate) {
     form.season = determineSeason(plantingDate);
+    const today = new Date();
+    const selected = new Date(plantingDate);
+    if (!Number.isNaN(selected.getTime())) {
+      if (selected > today && form.status === 'planted') {
+        form.status = 'planned';
+      } else if (selected <= today && form.status === 'planned') {
+        form.status = 'planted';
+      }
+    }
   }
 });
 
@@ -378,7 +387,7 @@ const submitPlanting = async () => {
       seed_rate: form.seed_rate ? Number(form.seed_rate) : null,
       area_planted: form.area_planted ? Number(form.area_planted) : (selectedField.value?.size ?? null),
       season: form.season || determineSeason(form.planting_date),
-      status: form.status || 'planted',
+      status: form.status || 'planned',
       notes: form.notes || null,
     };
 
@@ -409,7 +418,9 @@ const submitPlanting = async () => {
 const fetchRiceVarieties = async () => {
   try {
     const response = await riceVarietiesAPI.getAll();
-    riceVarieties.value = response.data?.data || response.data || [];
+    const payload = response?.data;
+    const varieties = payload?.data || payload?.varieties || payload || [];
+    riceVarieties.value = Array.isArray(varieties) ? varieties : [];
   } catch (err) {
     console.error('Failed to load rice varieties:', err);
     riceVarieties.value = [];

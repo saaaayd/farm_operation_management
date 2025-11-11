@@ -41,6 +41,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             >
               <option value="">All Status</option>
+              <option value="planned">Planned</option>
               <option value="planted">Planted</option>
               <option value="growing">Growing</option>
               <option value="ready">Ready</option>
@@ -112,7 +113,7 @@
                 :class="getStatusClass(planting.status)"
                 class="px-2 py-1 text-xs font-medium rounded-full"
               >
-                {{ planting.status }}
+                {{ formatLabel(planting.status) }}
               </span>
             </div>
 
@@ -237,6 +238,7 @@ const filteredPlantings = computed(() => {
 
 const getStatusClass = (status) => {
   const classes = {
+    planned: 'bg-indigo-100 text-indigo-800',
     planted: 'bg-blue-100 text-blue-800',
     growing: 'bg-green-100 text-green-800',
     ready: 'bg-yellow-100 text-yellow-800',
@@ -248,6 +250,7 @@ const getStatusClass = (status) => {
 
 const getProgressPercentage = (planting) => {
   const statusProgress = {
+    planned: 0,
     planted: 20,
     growing: 60,
     ready: 90,
@@ -259,6 +262,7 @@ const getProgressPercentage = (planting) => {
 
 const getProgressColor = (status) => {
   const colors = {
+    planned: 'bg-indigo-500',
     planted: 'bg-blue-500',
     growing: 'bg-green-500',
     ready: 'bg-yellow-500',
@@ -270,6 +274,15 @@ const getProgressColor = (status) => {
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString();
+};
+
+const formatLabel = (value) => {
+  if (!value) return 'Not set';
+  return value
+    .toString()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 };
 
 const clearFilters = () => {

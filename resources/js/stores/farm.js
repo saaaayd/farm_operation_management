@@ -169,6 +169,29 @@ export const useFarmStore = defineStore('farm', {
       }
     },
 
+    async updatePlanting(plantingId, plantingData) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await plantingsAPI.update(plantingId, plantingData);
+        const updated = response.data?.planting;
+
+        if (updated) {
+          this.plantings = (this.plantings || []).map(planting =>
+            Number(planting.id) === Number(plantingId) ? updated : planting
+          );
+        }
+
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to update planting';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async fetchTasks() {
       this.loading = true;
       this.error = null;
