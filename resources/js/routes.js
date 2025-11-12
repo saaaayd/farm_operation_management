@@ -191,6 +191,20 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   
+  // Buyer Routes
+  {
+    path: '/buyer/products',
+    name: 'buyer-products',
+    component: () => import('@/Pages/Buyer/Products.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
+    path: '/buyer/products/:id',
+    name: 'buyer-product-detail',
+    component: () => import('@/Pages/Buyer/ProductDetail.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+
   // Marketplace Routes
   {
     path: '/marketplace',

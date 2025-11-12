@@ -61,7 +61,7 @@
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-500">Net Profit</p>
-              <p class="text-2xl font-bold text-gray-900">${{ analytics.financial_analytics?.net_profit || 0 }}</p>
+              <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.financial_analytics?.net_profit || 0) }}</p>
               <p class="text-xs text-gray-500">{{ analytics.financial_analytics?.profit_margin || 0 }}% margin</p>
             </div>
           </div>
@@ -218,7 +218,7 @@
               <div v-if="analytics.market_performance.best_selling_product" class="p-3 border border-gray-200 rounded-lg">
                 <p class="text-sm font-medium text-gray-900">Best Seller</p>
                 <p class="text-xs text-gray-500">{{ analytics.market_performance.best_selling_product.product_name }}</p>
-                <p class="text-xs text-green-600 font-medium">${{ analytics.market_performance.best_selling_product.total_revenue }} revenue</p>
+                <p class="text-xs text-green-600 font-medium">{{ formatCurrency(analytics.market_performance.best_selling_product.total_revenue) }} revenue</p>
               </div>
             </div>
             <div v-else class="text-center py-8 text-gray-500">
@@ -336,6 +336,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { analyticsAPI } from '@/services/api';
+import { formatCurrency } from '@/utils/format';
 import {
   SparklesIcon,
   CurrencyDollarIcon,
@@ -409,17 +410,17 @@ const formatFinancialChartData = (monthlyTrends) => {
     labels: monthlyTrends.map(item => item.month),
     datasets: [
       {
-        label: 'Revenue ($)',
+        label: 'Revenue (₱)',
         data: monthlyTrends.map(item => item.revenue),
         backgroundColor: 'rgba(34, 197, 94, 0.8)',
       },
       {
-        label: 'Expenses ($)',
+        label: 'Expenses (₱)',
         data: monthlyTrends.map(item => item.expenses),
         backgroundColor: 'rgba(239, 68, 68, 0.8)',
       },
       {
-        label: 'Profit ($)',
+        label: 'Profit (₱)',
         data: monthlyTrends.map(item => item.profit),
         backgroundColor: 'rgba(59, 130, 246, 0.8)',
       },

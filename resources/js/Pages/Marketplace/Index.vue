@@ -138,7 +138,7 @@
             <div class="flex justify-between items-center mb-4">
               <div>
                 <span class="text-xl font-bold text-green-600">
-                  ${{ product.price }}/{{ product.unit }}
+                  {{ formatCurrency(product.price) }}/{{ product.unit }}
                 </span>
               </div>
               <div class="text-sm text-gray-500">
@@ -149,6 +149,7 @@
             <!-- Actions -->
             <div class="space-y-2">
               <button 
+                type="button"
                 @click="addToCart(product)"
                 :disabled="product.quantity <= 0"
                 class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -156,6 +157,7 @@
                 {{ product.quantity <= 0 ? 'Out of Stock' : 'Add to Cart' }}
               </button>
               <button 
+                type="button"
                 @click="viewProduct(product)"
                 class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
               >
@@ -174,6 +176,7 @@
         <h3 class="text-lg font-medium text-gray-900 mb-2">No products found</h3>
         <p class="text-gray-600 mb-4">Try adjusting your search or filters</p>
         <button 
+          type="button"
           @click="clearFilters"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
@@ -185,6 +188,7 @@
       <div v-if="filteredProducts.length > 0" class="mt-8 flex justify-center">
         <nav class="flex items-center space-x-2">
           <button 
+            type="button"
             @click="currentPage--"
             :disabled="currentPage === 1"
             class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -197,6 +201,7 @@
           </span>
           
           <button 
+            type="button"
             @click="currentPage++"
             :disabled="currentPage === totalPages"
             class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -213,6 +218,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMarketplaceStore } from '@/stores/marketplace';
+import { formatCurrency } from '@/utils/format';
 
 const router = useRouter();
 const marketplaceStore = useMarketplaceStore();
@@ -279,7 +285,7 @@ const addToCart = (product) => {
 };
 
 const viewProduct = (product) => {
-  router.push(`/marketplace/products/${product.id}`);
+  router.push(`/marketplace/product/${product.id}`);
 };
 
 const clearFilters = () => {

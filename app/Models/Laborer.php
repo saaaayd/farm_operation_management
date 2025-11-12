@@ -9,8 +9,18 @@ class Laborer extends Model
 
     protected $fillable = [
         'name',
+        'phone',
         'contact',
+        'email',
+        'address',
+        'skill_level',
+        'specialization',
         'hourly_rate',
+        'status',
+        'hire_date',
+        'emergency_contact',
+        'notes',
+        'user_id',
     ];
 
     protected $casts = [
@@ -31,6 +41,14 @@ class Laborer extends Model
      * Get the labor wages for this laborer
      */
     public function laborWages()
+    {
+        return $this->hasMany(LaborWage::class);
+    }
+
+    /**
+     * Alias for wages relationship expected by controllers
+     */
+    public function wages()
     {
         return $this->hasMany(LaborWage::class);
     }

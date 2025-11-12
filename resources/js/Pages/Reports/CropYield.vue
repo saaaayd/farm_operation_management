@@ -203,10 +203,10 @@
                     {{ crop.yieldPerAcre }} bu/acre
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${{ crop.marketPrice }}/bushel
+                    {{ formatCurrency(crop.marketPrice) }}/bushel
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                    ${{ crop.totalValue.toLocaleString() }}
+                    {{ formatCurrency(crop.totalValue) }}
                   </td>
                 </tr>
               </tbody>
@@ -280,6 +280,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { formatCurrency } from '@/utils/format'
 
 const selectedSeason = ref('2024')
 const selectedCrop = ref('')

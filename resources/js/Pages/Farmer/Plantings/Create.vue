@@ -41,6 +41,9 @@
                 {{ field.name }} - {{ field.size }} hectares ({{ field.soil_type }})
               </option>
             </select>
+            <p v-if="getFieldError('field_id')" class="mt-1 text-sm text-red-600">
+              {{ getFieldError('field_id') }}
+            </p>
             <p class="mt-1 text-sm text-gray-500">
               Select the field where you want to plant rice
             </p>
@@ -74,6 +77,9 @@
                     </span>
                   </option>
                 </select>
+              <p v-if="getFieldError('rice_variety_id')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('rice_variety_id') }}
+              </p>
               </template>
               <template v-else>
                 <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-600">
@@ -94,6 +100,9 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
                 placeholder="e.g. Rice (IR64)"
               />
+              <p v-if="getFieldError('crop_type')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('crop_type') }}
+              </p>
             </div>
 
             <div>
@@ -132,6 +141,9 @@
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
               />
+              <p v-if="getFieldError('planting_date')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('planting_date') }}
+              </p>
             </div>
 
             <div>
@@ -163,6 +175,9 @@
             />
             <p class="mt-1 text-sm text-gray-500">
               Calculated based on growth duration
+            </p>
+            <p v-if="getFieldError('expected_harvest_date')" class="mt-1 text-sm text-red-600">
+              {{ getFieldError('expected_harvest_date') }}
             </p>
           </div>
         </div>
@@ -200,6 +215,9 @@
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
               />
+              <p v-if="getFieldError('area_planted')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('area_planted') }}
+              </p>
             </div>
 
             <div>
@@ -215,6 +233,9 @@
                 <option value="wet">Wet Season</option>
                 <option value="dry">Dry Season</option>
               </select>
+              <p v-if="getFieldError('season')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('season') }}
+              </p>
             </div>
 
             <div>
@@ -231,6 +252,9 @@
                 <option value="transplanting">Transplanting</option>
                 <option value="broadcasting">Broadcasting</option>
               </select>
+              <p v-if="getFieldError('planting_method')" class="mt-1 text-sm text-red-600">
+                {{ getFieldError('planting_method') }}
+              </p>
             </div>
           </div>
 
@@ -245,20 +269,6 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Any additional information about this planting..."
             ></textarea>
-          </div>
-        </div>
-
-        <!-- Error Message -->
-        <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-red-800">{{ error }}</p>
-            </div>
           </div>
         </div>
 
@@ -292,12 +302,17 @@ import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
 import { riceVarietiesAPI } from '@/services/api';
+import FormAlert from '@/Components/UI/FormAlert.vue';
+import { extractFormErrors, resetFormErrors } from '@/utils/form';
 
 const router = useRouter();
 const farmStore = useFarmStore();
 
 const loading = ref(false);
-const error = ref('');
+const formError = reactive({
+  message: '',
+  fieldErrors: {},
+});
 const fields = ref([]);
 const riceVarieties = ref([]);
 
@@ -319,6 +334,14 @@ const form = reactive({
 const selectedField = computed(() =>
   fields.value.find(field => Number(field.id) === Number(form.field_id))
 );
+
+const getFieldError = (field) => {
+  const messages = formError.fieldErrors?.[field];
+  if (Array.isArray(messages)) {
+    return messages[0];
+  }
+  return messages || '';
+};
 
 function determineSeason(dateString) {
   const date = new Date(dateString);
@@ -373,7 +396,7 @@ watch(() => form.rice_variety_id, (id) => {
 
 const submitPlanting = async () => {
   loading.value = true;
-  error.value = '';
+  resetFormErrors(formError);
 
   try {
     const payload = {
@@ -407,9 +430,12 @@ const submitPlanting = async () => {
     }
 
     await farmStore.createPlanting(payload);
+    resetFormErrors(formError);
     router.push('/plantings');
   } catch (err) {
-    error.value = err.message || 'Failed to create planting. Please try again.';
+    const parsed = extractFormErrors(err);
+    formError.message = parsed.message;
+    formError.fieldErrors = parsed.fieldErrors;
   } finally {
     loading.value = false;
   }

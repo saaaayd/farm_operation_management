@@ -29,6 +29,8 @@ class RiceProduct extends Model
         'location',
         'is_organic',
         'is_available',
+        'production_status',
+        'available_from',
         'minimum_order_quantity',
         'packaging_options',
         'delivery_options',
@@ -44,6 +46,7 @@ class RiceProduct extends Model
         'purity_percentage' => 'decimal:2',
         'minimum_order_quantity' => 'decimal:2',
         'harvest_date' => 'date',
+        'available_from' => 'date',
         'images' => 'array',
         'location' => 'array',
         'packaging_options' => 'array',
@@ -78,6 +81,13 @@ class RiceProduct extends Model
     const UNIT_TONS = 'tons';
     const UNIT_BAGS = 'bags';
     const UNIT_SACKS = 'sacks';
+
+    /**
+     * Production status constants
+     */
+    const STATUS_AVAILABLE = 'available';
+    const STATUS_IN_PRODUCTION = 'in_production';
+    const STATUS_OUT_OF_STOCK = 'out_of_stock';
 
     /**
      * Get the farmer who owns this product
@@ -126,6 +136,41 @@ class RiceProduct extends Model
     {
         return $query->where('is_available', true)
                     ->where('quantity_available', '>', 0);
+    }
+
+    /**
+     * Scope to get products in production
+     */
+    public function scopeInProduction($query)
+    {
+        return $query->where('production_status', self::STATUS_IN_PRODUCTION);
+    }
+
+    /**
+     * Scope to get products that are available or can be pre-ordered
+     */
+    public function scopeAvailableOrPreOrder($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('production_status', self::STATUS_AVAILABLE)
+              ->orWhere('production_status', self::STATUS_IN_PRODUCTION);
+        });
+    }
+
+    /**
+     * Check if product is in production
+     */
+    public function isInProduction(): bool
+    {
+        return $this->production_status === self::STATUS_IN_PRODUCTION;
+    }
+
+    /**
+     * Check if product can be pre-ordered
+     */
+    public function canBePreOrdered(): bool
+    {
+        return $this->production_status === self::STATUS_IN_PRODUCTION && $this->available_from !== null;
     }
 
     /**

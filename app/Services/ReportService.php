@@ -350,8 +350,8 @@ class ReportService
     {
         return [
             'yield_per_hectare' => 4500, // kg per hectare for rice
-            'cost_per_hectare' => 1200, // USD per hectare
-            'revenue_per_hectare' => 1800, // USD per hectare
+            'cost_per_hectare' => 1200, // PHP per hectare (note: value kept as-is, adjust if you want currency-converted benchmarks)
+            'revenue_per_hectare' => 1800, // PHP per hectare (note: value kept as-is, adjust if you want currency-converted benchmarks)
             'profit_margin' => 25, // percentage
             'labor_efficiency' => 120, // hours per hectare
         ];

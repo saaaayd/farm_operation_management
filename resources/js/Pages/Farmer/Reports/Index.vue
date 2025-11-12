@@ -206,7 +206,7 @@
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                <p class="text-2xl font-semibold text-gray-900">${{ totalRevenue }}</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(totalRevenue) }}</p>
               </div>
             </div>
           </div>
@@ -222,7 +222,7 @@
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500">Total Expenses</p>
-                <p class="text-2xl font-semibold text-gray-900">${{ totalExpenses }}</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(totalExpenses) }}</p>
               </div>
             </div>
           </div>
@@ -238,7 +238,7 @@
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500">Net Profit</p>
-                <p class="text-2xl font-semibold text-gray-900">${{ netProfit }}</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(netProfit) }}</p>
               </div>
             </div>
           </div>
@@ -372,6 +372,7 @@ import { useWeatherStore } from '@/stores/weather';
 import LineChart from '@/Components/Charts/LineChart.vue';
 import BarChart from '@/Components/Charts/BarChart.vue';
 import PieChart from '@/Components/Charts/PieChart.vue';
+import { formatCurrency } from '@/utils/format';
 
 const farmStore = useFarmStore();
 const weatherStore = useWeatherStore();
@@ -610,25 +611,25 @@ const varietyChartData = computed(() => {
 // Financial Report Data
 const totalRevenue = computed(() => {
   const total = sales.value.reduce((sum, sale) => sum + (Number(sale?.total_amount) || 0), 0);
-  return total.toFixed(2);
+  return Number(total.toFixed(2));
 });
 
 const totalExpenses = computed(() => {
   const total = expensesList.value.reduce((sum, expense) => sum + (Number(expense?.amount) || 0), 0);
-  return total.toFixed(2);
+  return Number(total.toFixed(2));
 });
 
 const netProfit = computed(() => {
-  const profit = parseFloat(totalRevenue.value) - parseFloat(totalExpenses.value);
-  return profit.toFixed(2);
+  const profit = Number(totalRevenue.value) - Number(totalExpenses.value);
+  return Number(profit.toFixed(2));
 });
 
 const profitMargin = computed(() => {
-  const revenue = parseFloat(totalRevenue.value);
+  const revenue = Number(totalRevenue.value);
   if (revenue <= 0) {
     return '0.0';
   }
-  const profit = parseFloat(netProfit.value);
+  const profit = Number(netProfit.value);
   return ((profit / revenue) * 100).toFixed(1);
 });
 

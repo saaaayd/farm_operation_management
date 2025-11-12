@@ -77,7 +77,7 @@
                   <div class="flex-1 min-w-0">
                     <h4 class="text-lg font-medium text-gray-900">{{ item.name }}</h4>
                     <p class="text-sm text-gray-600">{{ item.farmer?.name || 'Local Farmer' }}</p>
-                    <p class="text-sm font-medium text-green-600">${{ item.price }}/{{ item.unit }}</p>
+                    <p class="text-sm font-medium text-green-600">{{ formatCurrency(item.price) }}/{{ item.unit }}</p>
                   </div>
 
                   <!-- Quantity Controls -->
@@ -108,7 +108,7 @@
                   <!-- Item Total -->
                   <div class="text-right">
                     <p class="text-lg font-semibold text-gray-900">
-                      ${{ (item.price * item.quantity).toFixed(2) }}
+                      {{ formatCurrency(item.price * item.quantity) }}
                     </p>
                     <button 
                       @click="removeItem(item.id)"
@@ -131,23 +131,23 @@
             <div class="space-y-3 mb-6">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600">Subtotal</span>
-                <span class="text-gray-900">${{ marketplaceStore.cartTotal.toFixed(2) }}</span>
+                <span class="text-gray-900">{{ formatCurrency(marketplaceStore.cartTotal) }}</span>
               </div>
               
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600">Shipping</span>
-                <span class="text-gray-900">${{ shippingCost.toFixed(2) }}</span>
+                <span class="text-gray-900">{{ formatCurrency(shippingCost) }}</span>
               </div>
               
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600">Tax</span>
-                <span class="text-gray-900">${{ taxAmount.toFixed(2) }}</span>
+                <span class="text-gray-900">{{ formatCurrency(taxAmount) }}</span>
               </div>
               
               <div class="border-t border-gray-200 pt-3">
                 <div class="flex justify-between text-lg font-semibold">
                   <span class="text-gray-900">Total</span>
-                  <span class="text-gray-900">${{ totalAmount.toFixed(2) }}</span>
+                  <span class="text-gray-900">{{ formatCurrency(totalAmount) }}</span>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Free shipping on orders over $50
+                  Free shipping on orders over {{ formatCurrency(50) }}
                 </div>
               </div>
             </div>
@@ -198,6 +198,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMarketplaceStore } from '@/stores/marketplace';
+import { formatCurrency } from '@/utils/format';
 
 const router = useRouter();
 const marketplaceStore = useMarketplaceStore();

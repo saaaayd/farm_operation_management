@@ -47,10 +47,14 @@ class InventoryItemController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'required|string|in:seeds,fertilizers,pesticides,equipment,tools,other',
-            'unit' => 'required|string|in:kg,grams,pounds,liters,gallons,pieces,packets',
-            'current_stock' => 'required|numeric|min:0',
-            'minimum_stock' => 'required|numeric|min:0',
+            // Loosen category/unit to avoid FE/BE mismatch; normalize below
+            'category' => 'required|string|max:255',
+            'unit' => 'required|string|max:50',
+            // Support legacy names by allowing either; normalize below
+            'current_stock' => 'nullable|numeric|min:0',
+            'quantity' => 'nullable|numeric|min:0',
+            'minimum_stock' => 'nullable|numeric|min:0',
+            'min_stock' => 'nullable|numeric|min:0',
             'unit_price' => 'nullable|numeric|min:0',
             'supplier' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
@@ -65,13 +69,31 @@ class InventoryItemController extends Controller
             ], 422);
         }
 
+        $category = strtolower($request->category);
+        // Normalize common variants
+        $category = match ($category) {
+            'fertilizer', 'fertilizers' => 'fertilizer',
+            'pesticide', 'pesticides' => 'pesticide',
+            'produce', 'harvest', 'harvested_rice' => 'produce',
+            default => $category,
+        };
+        $unit = strtolower($request->unit);
+        $unit = match ($unit) {
+            'lbs', 'pounds' => 'pounds',
+            'bag', 'bags', 'packet', 'packets' => 'packets',
+            'liter', 'liters' => 'liters',
+            default => $unit,
+        };
+        $currentStock = $request->input('current_stock', $request->input('quantity', 0));
+        $minimumStock = $request->input('minimum_stock', $request->input('min_stock', 0));
+
         $inventoryItem = InventoryItem::create([
             'name' => $request->name,
             'description' => $request->description,
-            'category' => $request->category,
-            'unit' => $request->unit,
-            'current_stock' => $request->current_stock,
-            'minimum_stock' => $request->minimum_stock,
+            'category' => $category,
+            'unit' => $unit,
+            'current_stock' => $currentStock,
+            'minimum_stock' => $minimumStock,
             'unit_price' => $request->unit_price,
             'supplier' => $request->supplier,
             'location' => $request->location,
@@ -120,10 +142,12 @@ class InventoryItemController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'sometimes|required|string|in:seeds,fertilizers,pesticides,equipment,tools,other',
-            'unit' => 'sometimes|required|string|in:kg,grams,pounds,liters,gallons,pieces,packets',
-            'current_stock' => 'sometimes|required|numeric|min:0',
-            'minimum_stock' => 'sometimes|required|numeric|min:0',
+            'category' => 'sometimes|required|string|max:255',
+            'unit' => 'sometimes|required|string|max:50',
+            'current_stock' => 'sometimes|numeric|min:0',
+            'quantity' => 'sometimes|numeric|min:0',
+            'minimum_stock' => 'sometimes|numeric|min:0',
+            'min_stock' => 'sometimes|numeric|min:0',
             'unit_price' => 'nullable|numeric|min:0',
             'supplier' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
@@ -138,11 +162,26 @@ class InventoryItemController extends Controller
             ], 422);
         }
 
-        $inventoryItem->update($request->only([
-            'name', 'description', 'category', 'unit', 'current_stock',
-            'minimum_stock', 'unit_price', 'supplier', 'location',
-            'expiry_date', 'notes'
-        ]));
+        $data = $request->only([
+            'name', 'description', 'unit',
+            'unit_price', 'supplier', 'location', 'expiry_date', 'notes'
+        ]);
+        if ($request->hasAny(['category'])) {
+            $data['category'] = match (strtolower($request->category)) {
+                'fertilizer', 'fertilizers' => 'fertilizer',
+                'pesticide', 'pesticides' => 'pesticide',
+                'produce', 'harvest', 'harvested_rice' => 'produce',
+                default => strtolower($request->category),
+            };
+        }
+        if ($request->hasAny(['current_stock', 'quantity'])) {
+            $data['current_stock'] = $request->input('current_stock', $request->input('quantity'));
+        }
+        if ($request->hasAny(['minimum_stock', 'min_stock'])) {
+            $data['minimum_stock'] = $request->input('minimum_stock', $request->input('min_stock'));
+        }
+
+        $inventoryItem->update($data);
 
         return response()->json([
             'message' => 'Inventory item updated successfully',
@@ -218,6 +257,52 @@ class InventoryItemController extends Controller
         return response()->json([
             'message' => 'Stock updated successfully',
             'inventory_item' => $inventoryItem
+        ]);
+    }
+
+    /**
+     * Add stock (POST /inventory/{item}/add-stock)
+     */
+    public function addStock(Request $request, InventoryItem $item): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        $validator = Validator::make($request->all(), [
+            'quantity' => 'required|numeric|min:0.01'
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+        $item->current_stock = ($item->current_stock ?? 0) + (float)$request->quantity;
+        $item->save();
+        return response()->json([
+            'message' => 'Stock added successfully',
+            'inventory_item' => $item
+        ]);
+    }
+
+    /**
+     * Remove stock (POST /inventory/{item}/remove-stock)
+     */
+    public function removeStock(Request $request, InventoryItem $item): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        $validator = Validator::make($request->all(), [
+            'quantity' => 'required|numeric|min:0.01'
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+        $item->current_stock = max(0, ($item->current_stock ?? 0) - (float)$request->quantity);
+        $item->save();
+        return response()->json([
+            'message' => 'Stock removed successfully',
+            'inventory_item' => $item
         ]);
     }
 

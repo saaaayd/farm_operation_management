@@ -37,7 +37,8 @@ class TaskController extends Controller
         }
         
         if ($request->has('laborer_id')) {
-            $query->where('laborer_id', $request->laborer_id);
+            // tasks table uses `assigned_to` as the FK to laborers — accept `laborer_id` as a filter param
+            $query->where('assigned_to', $request->laborer_id);
         }
         
         if ($request->has('date_from')) {
@@ -62,18 +63,14 @@ class TaskController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Accept the payload sent by the frontend (task_type, planting_id, assigned_to)
         $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'laborer_id' => 'required|exists:laborers,id',
-            'priority' => 'required|string|in:low,medium,high,urgent',
-            'status' => 'required|string|in:pending,in_progress,completed,cancelled',
+            'task_type' => 'required|string|in:watering,fertilizing,weeding,pest_control,harvesting,maintenance',
+            'planting_id' => 'required|exists:plantings,id',
             'due_date' => 'required|date',
-            'estimated_hours' => 'nullable|numeric|min:0',
-            'hours_worked' => 'nullable|numeric|min:0',
-            'related_entity_type' => 'nullable|string|in:field,planting,harvest',
-            'related_entity_id' => 'nullable|integer',
-            'notes' => 'nullable|string',
+            'description' => 'nullable|string',
+            'assigned_to' => 'nullable|exists:laborers,id',
+            'status' => 'nullable|string|in:pending,in_progress,completed,cancelled',
         ]);
 
         if ($validator->fails()) {
@@ -83,29 +80,26 @@ class TaskController extends Controller
             ], 422);
         }
 
-        // Check if user owns the laborer
-        $laborer = Laborer::findOrFail($request->laborer_id);
         $user = $request->user();
-        
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Unauthorized access to laborer'
-            ], 403);
+
+        // If an assigned laborer was provided, ensure current user owns that laborer (unless admin)
+        if ($request->filled('assigned_to')) {
+            $laborer = Laborer::findOrFail($request->assigned_to);
+            if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access to laborer'
+                ], 403);
+            }
         }
 
+        // Create task using the fields present in the DB/migration and frontend payload
         $task = Task::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'laborer_id' => $request->laborer_id,
-            'priority' => $request->priority,
-            'status' => $request->status,
+            'planting_id' => $request->planting_id,
+            'task_type' => $request->task_type,
             'due_date' => $request->due_date,
-            'estimated_hours' => $request->estimated_hours,
-            'hours_worked' => $request->hours_worked,
-            'related_entity_type' => $request->related_entity_type,
-            'related_entity_id' => $request->related_entity_id,
-            'notes' => $request->notes,
-            'user_id' => $user->id,
+            'description' => $request->description,
+            'assigned_to' => $request->assigned_to ?? null,
+            'status' => $request->status ?? Task::STATUS_PENDING,
         ]);
 
         return response()->json([
@@ -121,10 +115,14 @@ class TaskController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $task->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Unauthorized access'
-            ], 403);
+        // Authorize access: tasks are owned via the laborer->user_id relationship (if assigned)
+        if (!$user->isAdmin()) {
+            $ownerId = optional($task->laborer)->user_id;
+            if ($ownerId !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
         }
 
         $task->load(['laborer', 'relatedEntity']);
@@ -141,24 +139,22 @@ class TaskController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $task->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Unauthorized access'
-            ], 403);
+        if (!$user->isAdmin()) {
+            $ownerId = optional($task->laborer)->user_id;
+            if ($ownerId !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
         }
 
         $validator = Validator::make($request->all(), [
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'laborer_id' => 'sometimes|required|exists:laborers,id',
-            'priority' => 'sometimes|required|string|in:low,medium,high,urgent',
-            'status' => 'sometimes|required|string|in:pending,in_progress,completed,cancelled',
+            'task_type' => 'sometimes|required|string|in:watering,fertilizing,weeding,pest_control,harvesting,maintenance',
+            'planting_id' => 'sometimes|required|exists:plantings,id',
             'due_date' => 'sometimes|required|date',
-            'estimated_hours' => 'nullable|numeric|min:0',
-            'hours_worked' => 'nullable|numeric|min:0',
-            'related_entity_type' => 'nullable|string|in:field,planting,harvest',
-            'related_entity_id' => 'nullable|integer',
-            'notes' => 'nullable|string',
+            'description' => 'nullable|string',
+            'assigned_to' => 'sometimes|nullable|exists:laborers,id',
+            'status' => 'sometimes|required|string|in:pending,in_progress,completed,cancelled',
         ]);
 
         if ($validator->fails()) {
@@ -169,9 +165,8 @@ class TaskController extends Controller
         }
 
         $task->update($request->only([
-            'title', 'description', 'laborer_id', 'priority', 'status',
-            'due_date', 'estimated_hours', 'hours_worked',
-            'related_entity_type', 'related_entity_id', 'notes'
+            'planting_id', 'task_type', 'description', 'assigned_to', 'status',
+            'due_date'
         ]));
 
         return response()->json([
@@ -187,10 +182,13 @@ class TaskController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $task->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Unauthorized access'
-            ], 403);
+        if (!$user->isAdmin()) {
+            $ownerId = optional($task->laborer)->user_id;
+            if ($ownerId !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
         }
 
         $task->delete();
@@ -207,10 +205,13 @@ class TaskController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $task->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Unauthorized access'
-            ], 403);
+        if (!$user->isAdmin()) {
+            $ownerId = optional($task->laborer)->user_id;
+            if ($ownerId !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
         }
 
         $validator = Validator::make($request->all(), [
@@ -232,6 +233,30 @@ class TaskController extends Controller
 
         return response()->json([
             'message' => 'Task status updated successfully',
+            'task' => $task->load(['laborer', 'relatedEntity'])
+        ]);
+    }
+
+    /**
+     * Mark a task as completed (route: POST /tasks/{task}/complete)
+     */
+    public function markCompleted(Request $request, Task $task): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->isAdmin()) {
+            $ownerId = optional($task->laborer)->user_id;
+            if ($ownerId !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+        }
+
+        $task->update(['status' => Task::STATUS_COMPLETED]);
+
+        return response()->json([
+            'message' => 'Task marked as completed',
             'task' => $task->load(['laborer', 'relatedEntity'])
         ]);
     }

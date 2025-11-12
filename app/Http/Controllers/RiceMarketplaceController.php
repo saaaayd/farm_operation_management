@@ -7,6 +7,7 @@ use App\Models\RiceOrder;
 use App\Models\ProductReview;
 use App\Models\RiceVariety;
 use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,8 +20,9 @@ class RiceMarketplaceController extends Controller
     public function getProducts(Request $request)
     {
         try {
+            // For buyers, show available products and products in production (for pre-order)
             $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews'])
-                ->available();
+                ->availableOrPreOrder();
 
             // Apply filters
             if ($request->has('variety_id')) {
@@ -33,6 +35,10 @@ class RiceMarketplaceController extends Controller
 
             if ($request->has('organic') && $request->organic) {
                 $query->organic();
+            }
+
+            if ($request->has('production_status')) {
+                $query->where('production_status', $request->production_status);
             }
 
             if ($request->has('min_price') && $request->has('max_price')) {
@@ -75,6 +81,9 @@ class RiceMarketplaceController extends Controller
                 case 'harvest_date':
                     $query->orderBy('harvest_date', $sortOrder);
                     break;
+                case 'available_from':
+                    $query->orderBy('available_from', $sortOrder);
+                    break;
                 default:
                     $query->orderBy('created_at', $sortOrder);
             }
@@ -88,6 +97,7 @@ class RiceMarketplaceController extends Controller
                 $product->freshness_indicator = $product->getFreshnessIndicator();
                 $product->average_rating = $product->average_rating;
                 $product->reviews_count = $product->reviews_count;
+                $product->can_pre_order = $product->canBePreOrdered();
                 return $product;
             });
 
@@ -106,6 +116,11 @@ class RiceMarketplaceController extends Controller
                         RiceProduct::PROCESSING_BROWN => 'Brown Rice',
                         RiceProduct::PROCESSING_PARBOILED => 'Parboiled',
                         RiceProduct::PROCESSING_ORGANIC => 'Organic',
+                    ],
+                    'production_statuses' => [
+                        RiceProduct::STATUS_AVAILABLE => 'Available',
+                        RiceProduct::STATUS_IN_PRODUCTION => 'In Production',
+                        RiceProduct::STATUS_OUT_OF_STOCK => 'Out of Stock',
                     ],
                 ]
             ]);
@@ -139,6 +154,7 @@ class RiceMarketplaceController extends Controller
             $product->freshness_indicator = $product->getFreshnessIndicator();
             $product->average_rating = $product->average_rating;
             $product->reviews_count = $product->reviews_count;
+            $product->can_pre_order = $product->canBePreOrdered();
 
             // Get estimated delivery time if user location is available
             $user = auth()->user();
@@ -220,7 +236,8 @@ class RiceMarketplaceController extends Controller
                 return response()->json(['message' => 'Only farmers can create rice products'], 403);
             }
 
-            $product = RiceProduct::create(array_merge($request->validated(), [
+            $validated = $validator->validated();
+            $product = RiceProduct::create(array_merge($validated, [
                 'farmer_id' => $user->id,
                 'is_available' => true,
             ]));
@@ -282,7 +299,7 @@ class RiceMarketplaceController extends Controller
                 ], 422);
             }
 
-            $product->update($request->validated());
+            $product->update($validator->validated());
 
             return response()->json([
                 'message' => 'Rice product updated successfully',
@@ -374,17 +391,22 @@ class RiceMarketplaceController extends Controller
 
             $product = RiceProduct::findOrFail($request->rice_product_id);
 
-            // Check if product is available
-            if (!$product->is_available) {
-                return response()->json(['message' => 'Product is not available'], 400);
+            // Check if product is available or can be pre-ordered
+            if (!$product->is_available && !$product->canBePreOrdered()) {
+                return response()->json(['message' => 'Product is not available for order'], 400);
             }
 
-            // Check if sufficient quantity is available
-            if (!$product->hasSufficientQuantity($request->quantity)) {
-                return response()->json([
-                    'message' => 'Insufficient quantity available',
-                    'available_quantity' => $product->quantity_available
-                ], 400);
+            $isPreOrder = $product->isInProduction();
+
+            // For available products, check quantity
+            if (!$isPreOrder) {
+                // Check if sufficient quantity is available
+                if (!$product->hasSufficientQuantity($request->quantity)) {
+                    return response()->json([
+                        'message' => 'Insufficient quantity available',
+                        'available_quantity' => $product->quantity_available
+                    ], 400);
+                }
             }
 
             // Check minimum order quantity
@@ -398,6 +420,9 @@ class RiceMarketplaceController extends Controller
             // Calculate total amount
             $totalAmount = $request->quantity * $product->price_per_unit;
 
+            // Determine available date for pre-orders
+            $availableDate = $isPreOrder ? $product->available_from : null;
+
             // Create the order
             $order = RiceOrder::create([
                 'buyer_id' => $user->id,
@@ -406,6 +431,8 @@ class RiceMarketplaceController extends Controller
                 'unit_price' => $product->price_per_unit,
                 'total_amount' => $totalAmount,
                 'status' => RiceOrder::STATUS_PENDING,
+                'is_pre_order' => $isPreOrder,
+                'available_date' => $availableDate,
                 'delivery_address' => $request->delivery_address,
                 'delivery_method' => $request->delivery_method,
                 'payment_method' => $request->payment_method,
@@ -417,8 +444,9 @@ class RiceMarketplaceController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Order created successfully',
+                'message' => $isPreOrder ? 'Pre-order created successfully' : 'Order created successfully',
                 'order' => $order->load(['riceProduct.riceVariety', 'riceProduct.farmer']),
+                'is_pre_order' => $isPreOrder,
             ], 201);
 
         } catch (\Exception $e) {

@@ -76,7 +76,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">${{ financialSummary.totalRevenue.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-gray-900">{{ formatCurrency(financialSummary.totalRevenue) }}</div>
               <div class="text-sm text-gray-600">Total Revenue</div>
             </div>
           </div>
@@ -90,7 +90,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">${{ financialSummary.totalExpenses.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-gray-900">{{ formatCurrency(financialSummary.totalExpenses) }}</div>
               <div class="text-sm text-gray-600">Total Expenses</div>
             </div>
           </div>
@@ -104,7 +104,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">${{ financialSummary.netProfit.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-gray-900">{{ formatCurrency(financialSummary.netProfit) }}</div>
               <div class="text-sm text-gray-600">Net Profit</div>
             </div>
           </div>
@@ -148,7 +148,7 @@
                 <span class="text-gray-700">{{ expense.category }}</span>
               </div>
               <div class="text-right">
-                <div class="font-medium">${{ expense.amount.toLocaleString() }}</div>
+                <div class="font-medium">{{ formatCurrency(expense.amount) }}</div>
                 <div class="text-sm text-gray-600">{{ expense.percentage }}%</div>
               </div>
             </div>
@@ -192,7 +192,7 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium"
                       :class="transaction.type === 'income' ? 'text-green-600' : 'text-red-600'">
-                    {{ transaction.type === 'income' ? '+' : '-' }}${{ Math.abs(transaction.amount).toLocaleString() }}
+                    {{ transaction.type === 'income' ? '+' : '-' }}{{ formatCurrency(Math.abs(transaction.amount)) }}
                   </td>
                 </tr>
               </tbody>
@@ -206,6 +206,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { formatCurrency } from '@/utils/format'
 
 const startDate = ref('2024-01-01')
 const endDate = ref('2024-12-31')

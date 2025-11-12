@@ -41,7 +41,7 @@
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">Total Spent</p>
-            <p class="text-2xl font-bold text-gray-900">${{ stats.total_spent || 0 }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.total_spent || 0) }}</p>
             <p class="text-xs text-gray-500">This year</p>
           </div>
         </div>
@@ -108,7 +108,7 @@
                   
                   <div class="flex items-center justify-between">
                     <div>
-                      <p class="text-lg font-bold text-green-600">${{ product.price_per_unit }}</p>
+                      <p class="text-lg font-bold text-green-600">{{ formatCurrency(product.price_per_unit) }}</p>
                       <p class="text-xs text-gray-500">per {{ product.unit }}</p>
                     </div>
                     
@@ -190,7 +190,7 @@
                       {{ formatOrderStatus(order.status) }}
                     </span>
                     <p class="text-sm font-medium text-gray-900 mt-1">
-                      ${{ order.total_amount }}
+                      {{ formatCurrency(order.total_amount) }}
                     </p>
                   </div>
                 </div>
@@ -312,6 +312,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { formatCurrency } from '@/utils/format';
 import {
   ShoppingCartIcon,
   HeartIcon,
@@ -375,7 +376,7 @@ const formatOrderStatus = (status) => {
 };
 
 const viewProduct = (productId) => {
-  router.push(`/marketplace/products/${productId}`);
+  router.push(`/marketplace/product/${productId}`);
 };
 
 const viewOrder = (orderId) => {
