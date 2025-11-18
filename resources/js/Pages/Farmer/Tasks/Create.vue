@@ -39,11 +39,11 @@
               >
                 <option value="">Select task type</option>
                 <option
-                  v-for="(label, value) in taskTypes"
-                  :key="value"
-                  :value="value"
+                  v-for="option in taskTypeOptions"
+                  :key="option.value"
+                  :value="option.value"
                 >
-                  {{ label }}
+                  {{ option.label }}
                 </option>
               </select>
               <p v-if="errors.task_type" class="form-error">{{ errors.task_type[0] }}</p>
@@ -159,6 +159,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
+import { buildTaskTypeOptions } from '@/utils/taskTypes'
 
 const router = useRouter()
 const farmStore = useFarmStore()
@@ -175,15 +176,9 @@ const form = reactive({
 })
 
 const plantings = computed(() => farmStore.plantings || [])
-
-const taskTypes = {
-  watering: 'Watering',
-  fertilizing: 'Fertilizing',
-  weeding: 'Weeding',
-  pest_control: 'Pest Control',
-  harvesting: 'Harvesting',
-  maintenance: 'Maintenance'
-}
+const taskTypeOptions = computed(() =>
+  buildTaskTypeOptions(farmStore.tasks || [], { includeBase: true })
+)
 
 const formatPlantingOption = (planting) => {
   const crop = planting.crop_type || 'Planting'
@@ -229,12 +224,24 @@ const submitTask = async () => {
 }
 
 onMounted(async () => {
+  const loaders = []
+
   if (!plantings.value.length) {
-    try {
-      await farmStore.fetchPlantings()
-    } catch (error) {
-      console.error('Failed to load plantings for task creation:', error)
-    }
+    loaders.push(farmStore.fetchPlantings())
+  }
+
+  if (!(farmStore.tasks && farmStore.tasks.length)) {
+    loaders.push(farmStore.fetchTasks())
+  }
+
+  if (!loaders.length) {
+    return
+  }
+
+  try {
+    await Promise.all(loaders)
+  } catch (error) {
+    console.error('Failed to load data for task creation:', error)
   }
 })
 </script>

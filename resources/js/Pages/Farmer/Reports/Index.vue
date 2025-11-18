@@ -28,7 +28,8 @@
             </select>
             <button 
               @click="exportReport"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+              :disabled="loading || !!loadError"
+              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -852,8 +853,40 @@ const pieChartOptions = {
 };
 
 const exportReport = () => {
-  // In a real app, this would generate and download a PDF/Excel report
-  console.log('Exporting report...');
+  if (loading.value || loadError.value) {
+    return;
+  }
+
+  const payload = {
+    generated_at: new Date().toISOString(),
+    period: selectedPeriod.value,
+    totals: {
+      yield_kg: Number(totalYield.value) || 0,
+      average_yield_per_hectare: Number(averageYieldPerHectare.value) || 0,
+      best_variety: bestVariety.value,
+      harvest_count: totalHarvests.value,
+      revenue: Number(totalRevenue.value) || 0,
+      expenses: Number(totalExpenses.value) || 0,
+      net_profit: Number(netProfit.value) || 0,
+      profit_margin: Number(profitMargin.value) || 0,
+    },
+    weather: {
+      average_rainfall_mm: Number(averageRainfall.value) || 0,
+      average_temperature_c: Number(averageTemperature.value) || 0,
+      favorable_conditions_percent: Number(weatherImpact.value) || 0,
+    },
+    generated_from: 'FarmerReportsIndex',
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `farmer-report-${selectedPeriod.value}-${Date.now()}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 };
 
 watch(selectedPeriod, () => {

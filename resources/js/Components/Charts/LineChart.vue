@@ -6,29 +6,10 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue';
-import {
-  Chart,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
+import { Chart, registerables } from 'chart.js';
 
-// Register Chart.js components
-Chart.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+// Register all Chart.js components (controllers, elements, plugins, scales)
+Chart.register(...registerables);
 
 const props = defineProps({
   data: {

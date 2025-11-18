@@ -442,8 +442,15 @@ const refreshWeather = async () => {
 }
 
 const viewForecast = () => {
-  // Navigate to detailed forecast page
-  console.log('View forecast')
+  const defaultField = fieldWeather.value?.[0]?.id
+  if (defaultField) {
+    router.push({
+      path: '/weather/analytics',
+      query: { field: defaultField }
+    })
+  } else {
+    router.push('/weather/analytics')
+  }
 }
 
 const viewFieldWeather = (fieldId) => {
