@@ -141,6 +141,23 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Weather Widget -->
         <div class="lg:col-span-1">
+          <!-- Field Selector Dropdown -->
+          <div v-if="fieldsWithCoordinates.length > 1" class="mb-4">
+            <label for="field-selector" class="block text-sm font-medium text-gray-700 mb-2">
+              Select Field for Weather
+            </label>
+            <select
+              id="field-selector"
+              v-model="selectedFieldId"
+              @change="onFieldChange"
+              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white text-sm"
+            >
+              <option v-for="field in fieldsWithCoordinates" :key="field.id" :value="field.id">
+                {{ field.name }} {{ field.location?.address ? `(${field.location.address})` : '' }}
+              </option>
+            </select>
+          </div>
+          
           <!-- Show weather if we have a field with valid coordinates -->
           <CurrentWeather 
             v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)" 
@@ -302,7 +319,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onErrorCaptured } from 'vue';
+import { ref, computed, onMounted, onErrorCaptured, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useFarmStore } from '@/stores/farm';
@@ -458,68 +475,6 @@ const pendingOrders = computed(() => {
   }
 });
 
-const primaryField = computed(() => {
-  try {
-    if (!farmStore || !farmStore.fields || !Array.isArray(farmStore.fields)) {
-      return null;
-    }
-    
-    if (farmStore.fields.length === 0) {
-      return null;
-    }
-    
-    // Find a field with valid location coordinates
-    // First, try to find a field with valid location.lat and location.lon
-    const fieldWithValidLocation = farmStore.fields.find(field => {
-      if (!field || !field.location) return false;
-      
-      // Check if location has lat and lon
-      const hasLocationCoords = 
-        typeof field.location === 'object' &&
-        field.location !== null &&
-        typeof field.location.lat === 'number' &&
-        typeof field.location.lon === 'number' &&
-        !isNaN(field.location.lat) &&
-        !isNaN(field.location.lon);
-      
-      return hasLocationCoords;
-    });
-    
-    // If we found a field with valid coordinates, use it
-    if (fieldWithValidLocation) {
-      return fieldWithValidLocation;
-    }
-    
-    // Fallback: try field_coordinates if location doesn't have coords
-    const fieldWithFieldCoordinates = farmStore.fields.find(field => {
-      if (!field || !field.field_coordinates) return false;
-      
-      const hasFieldCoords = 
-        typeof field.field_coordinates === 'object' &&
-        field.field_coordinates !== null &&
-        typeof field.field_coordinates.lat === 'number' &&
-        typeof field.field_coordinates.lon === 'number' &&
-        !isNaN(field.field_coordinates.lat) &&
-        !isNaN(field.field_coordinates.lon);
-      
-      return hasFieldCoords;
-    });
-    
-    // If we found a field with field_coordinates, use it
-    // The backend will handle using field_coordinates as fallback
-    if (fieldWithFieldCoordinates) {
-      return fieldWithFieldCoordinates;
-    }
-    
-    // Last resort: return first field (but it might not have valid coordinates)
-    // This allows us to show a message about needing coordinates
-    return farmStore.fields[0];
-  } catch (error) {
-    console.warn('Error getting primary field:', error);
-    return null;
-  }
-});
-
 // Helper function to check if a field has valid coordinates
 const hasValidCoordinates = (field) => {
   if (!field) return false;
@@ -546,6 +501,123 @@ const hasValidCoordinates = (field) => {
   
   return false;
 };
+
+// Get all fields with valid coordinates
+const fieldsWithCoordinates = computed(() => {
+  try {
+    if (!farmStore || !farmStore.fields || !Array.isArray(farmStore.fields)) {
+      return [];
+    }
+    
+    return farmStore.fields.filter(field => hasValidCoordinates(field));
+  } catch (error) {
+    console.warn('Error getting fields with coordinates:', error);
+    return [];
+  }
+});
+
+// Selected field ID (stored in localStorage for persistence)
+const selectedFieldId = ref(null);
+
+// Initialize selected field from localStorage or use first valid field
+const initializeSelectedField = () => {
+  const savedFieldId = localStorage.getItem('selectedFieldId');
+  if (savedFieldId && fieldsWithCoordinates.value.some(f => f.id == savedFieldId)) {
+    selectedFieldId.value = savedFieldId;
+  } else if (fieldsWithCoordinates.value.length > 0) {
+    selectedFieldId.value = fieldsWithCoordinates.value[0].id;
+    localStorage.setItem('selectedFieldId', selectedFieldId.value);
+  }
+};
+
+// Handle field selection change
+const onFieldChange = () => {
+  if (selectedFieldId.value) {
+    localStorage.setItem('selectedFieldId', selectedFieldId.value);
+  }
+};
+
+// Watch for fields loading and initialize selection
+watch(() => farmStore.fields, () => {
+  if (fieldsWithCoordinates.value.length > 0 && !selectedFieldId.value) {
+    initializeSelectedField();
+  }
+}, { immediate: true, deep: true });
+
+const primaryField = computed(() => {
+  try {
+    if (!farmStore || !farmStore.fields || !Array.isArray(farmStore.fields)) {
+      return null;
+    }
+    
+    if (farmStore.fields.length === 0) {
+      return null;
+    }
+    
+    // If user has selected a field, use that
+    if (selectedFieldId.value) {
+      const selectedField = farmStore.fields.find(f => f.id == selectedFieldId.value);
+      if (selectedField && hasValidCoordinates(selectedField)) {
+        return selectedField;
+      }
+    }
+    
+    // Otherwise, find a field with valid location coordinates
+    // First, try to find a field with valid location.lat and location.lon
+    const fieldWithValidLocation = farmStore.fields.find(field => {
+      if (!field || !field.location) return false;
+      
+      // Check if location has lat and lon
+      const hasLocationCoords = 
+        typeof field.location === 'object' &&
+        field.location !== null &&
+        typeof field.location.lat === 'number' &&
+        typeof field.location.lon === 'number' &&
+        !isNaN(field.location.lat) &&
+        !isNaN(field.location.lon);
+      
+      return hasLocationCoords;
+    });
+    
+    // If we found a field with valid coordinates, use it
+    if (fieldWithValidLocation) {
+      // Save it as selected
+      selectedFieldId.value = fieldWithValidLocation.id;
+      localStorage.setItem('selectedFieldId', selectedFieldId.value);
+      return fieldWithValidLocation;
+    }
+    
+    // Fallback: try field_coordinates if location doesn't have coords
+    const fieldWithFieldCoordinates = farmStore.fields.find(field => {
+      if (!field || !field.field_coordinates) return false;
+      
+      const hasFieldCoords = 
+        typeof field.field_coordinates === 'object' &&
+        field.field_coordinates !== null &&
+        typeof field.field_coordinates.lat === 'number' &&
+        typeof field.field_coordinates.lon === 'number' &&
+        !isNaN(field.field_coordinates.lat) &&
+        !isNaN(field.field_coordinates.lon);
+      
+      return hasFieldCoords;
+    });
+    
+    // If we found a field with field_coordinates, use it
+    if (fieldWithFieldCoordinates) {
+      // Save it as selected
+      selectedFieldId.value = fieldWithFieldCoordinates.id;
+      localStorage.setItem('selectedFieldId', selectedFieldId.value);
+      return fieldWithFieldCoordinates;
+    }
+    
+    // Last resort: return first field (but it might not have valid coordinates)
+    // This allows us to show a message about needing coordinates
+    return farmStore.fields[0];
+  } catch (error) {
+    console.warn('Error getting primary field:', error);
+    return null;
+  }
+});
 
 const getTaskPriorityColor = (priority) => {
   const colors = {
@@ -617,6 +689,9 @@ const navigateTo = async (path) => {
 };
 
 onMounted(async () => {
+  // Initialize field selection
+  initializeSelectedField();
+  
   // Load data with improved error handling and retry logic
   const loadData = async () => {
     const loadingStates = {
