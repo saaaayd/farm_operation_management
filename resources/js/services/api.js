@@ -323,9 +323,9 @@ export const laborAPI = {
 // Dashboard API
 export const dashboardAPI = {
   getStats: () => api.get('/dashboard'),
-  getFarmerStats: () => api.get('/dashboard/farmer'),
-  getBuyerStats: () => api.get('/dashboard/buyer'),
-  getAdminStats: () => api.get('/dashboard/admin'),
+  getFarmerStats: () => api.get('/dashboard'),
+  getBuyerStats: () => api.get('/dashboard'),
+  getAdminStats: () => api.get('/dashboard'),
 };
 
 // Analytics API

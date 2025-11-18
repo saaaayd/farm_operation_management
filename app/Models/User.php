@@ -118,6 +118,6 @@ class User extends Authenticatable
      */
     public function sales()
     {
-        return $this->hasMany(Sale::class, 'buyer_id');
+        return $this->hasMany(Sale::class, 'user_id');
     }
 }

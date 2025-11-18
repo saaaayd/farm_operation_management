@@ -299,20 +299,86 @@ class WeatherAnalyticsController extends Controller
         $field = Field::findOrFail($fieldId);
         $this->authorize('view', $field);
 
-        $format = $request->format;
-        $reportType = $request->report_type;
+        $format = $request->format ?? 'json';
+        $reportType = $request->report_type ?? 'summary';
         $periodDays = $request->period_days ?? 30;
 
-        // This would generate and return the actual file
-        // For now, returning a placeholder response
-        return response()->json([
-            'message' => 'Weather analytics report export functionality would be implemented here',
-            'field' => $field,
-            'export_format' => $format,
-            'report_type' => $reportType,
+        // Get weather analytics data
+        $weatherService = app(\App\Services\WeatherService::class);
+        $analytics = $weatherService->getRiceWeatherAnalytics($field, $periodDays);
+        
+        $weatherLogs = \App\Models\WeatherLog::where('field_id', $field->id)
+            ->where('recorded_at', '>=', now()->subDays($periodDays))
+            ->orderBy('recorded_at', 'desc')
+            ->get();
+
+        $reportData = [
+            'field' => [
+                'id' => $field->id,
+                'name' => $field->name,
+            ],
+            'analytics' => $analytics,
+            'weather_logs' => $weatherLogs->map(function ($log) {
+                return [
+                    'date' => $log->recorded_at,
+                    'temperature' => $log->temperature,
+                    'humidity' => $log->humidity,
+                    'rainfall' => $log->rainfall ?? 0,
+                    'conditions' => $log->conditions,
+                ];
+            }),
             'period_days' => $periodDays,
-            'status' => 'not_implemented',
-        ]);
+            'generated_at' => now(),
+        ];
+
+        // Return based on format
+        if ($format === 'csv') {
+            return $this->exportWeatherDataToCsv($reportData, $field->name);
+        } elseif ($format === 'json') {
+            return response()->json([
+                'message' => 'Weather analytics report',
+                'data' => $reportData,
+                'status' => 'success',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Unsupported export format. Use json or csv.',
+            'data' => $reportData,
+            'status' => 'error',
+        ], 400);
+    }
+
+    private function exportWeatherDataToCsv($data, $fieldName)
+    {
+        $filename = 'weather-report-' . $fieldName . '-' . now()->format('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            
+            // Write header row
+            fputcsv($file, ['Date', 'Temperature (°C)', 'Humidity (%)', 'Rainfall (mm)', 'Conditions']);
+            
+            // Write data rows
+            foreach ($data['weather_logs'] as $log) {
+                fputcsv($file, [
+                    $log['date'],
+                    $log['temperature'],
+                    $log['humidity'],
+                    $log['rainfall'],
+                    $log['conditions'],
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**

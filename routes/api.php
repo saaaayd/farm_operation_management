@@ -52,7 +52,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rice Farm Profile routes
     Route::prefix('farmer')->group(function () {
+        Route::get('/profile', [RiceFarmProfileController::class, 'getProfile']);
         Route::post('/profile', [RiceFarmProfileController::class, 'createRiceFarmProfile']);
+        Route::put('/profile', [RiceFarmProfileController::class, 'updateProfile']);
     });    
 
     // Rice Varieties routes

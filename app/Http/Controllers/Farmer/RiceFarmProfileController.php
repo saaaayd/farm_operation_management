@@ -280,4 +280,211 @@ class RiceFarmProfileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get the current farmer's profile
+     */
+    public function getProfile()
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->isFarmer()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            $farm = Farm::where('user_id', $user->id)->first();
+            $fields = Field::where('user_id', $user->id)->with(['farm', 'plantings.riceVariety'])->get();
+
+            $profileData = [
+                'user' => $user,
+                'farm' => $farm,
+                'fields' => $fields,
+                'user_profile' => $user->address,
+            ];
+
+            // If farm exists, add analysis for the first field
+            if ($farm && $fields->count() > 0) {
+                $primaryField = $fields->first();
+                $profileData['analysis'] = [
+                    'suitability_score' => $primaryField->getProductivityScore(),
+                    'soil_fertility' => $primaryField->getSoilFertilityStatus(),
+                    'recommendations' => $primaryField->getPreparationRecommendations(),
+                    'recommended_varieties' => $primaryField->getRecommendedRiceVarieties(),
+                    'is_suitable_for_rice' => $primaryField->isSuitableForRice(),
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Profile retrieved successfully',
+                'farmProfile' => $profileData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to retrieve profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the farmer's profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            // Basic Information
+            'farm_name' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'total_area' => 'nullable|numeric|min:0',
+            'rice_area' => 'nullable|numeric|min:0',
+            'farming_experience' => 'nullable|integer|min:0',
+            'farm_description' => 'nullable|string|max:1000',
+            
+            // Soil Information
+            'soil_type' => 'nullable|string|in:clay,loam,sandy,silt,clay_loam,sandy_loam,silty_clay,silty_loam',
+            'soil_ph' => 'nullable|numeric|between:3.0,10.0',
+            'organic_matter_content' => 'nullable|numeric|between:0,20',
+            'nitrogen_level' => 'nullable|numeric|min:0',
+            'phosphorus_level' => 'nullable|numeric|min:0',
+            'potassium_level' => 'nullable|numeric|min:0',
+            'elevation' => 'nullable|numeric|min:0',
+            
+            // Water Management
+            'water_source' => 'nullable|string|in:irrigation_canal,river,well,shallow_well,pond,rainfall,spring',
+            'irrigation_type' => 'nullable|string|in:flood,furrow,sprinkler,drip,manual,none',
+            'water_access' => 'nullable|string|in:excellent,good,moderate,poor,very_poor',
+            'drainage_quality' => 'nullable|string|in:excellent,good,moderate,poor',
+            
+            // Rice Varieties and Practices
+            'preferred_varieties' => 'nullable|array',
+            'preferred_varieties.*' => 'string',
+            'planting_method' => 'nullable|string|in:direct_seeding,transplanting,broadcasting,drilling',
+            'previous_yield' => 'nullable|numeric|min:0',
+            'target_yield' => 'nullable|numeric|min:0',
+            'cropping_seasons' => 'nullable|string|in:1,2,3',
+            'farming_challenges' => 'nullable|array',
+            'farming_challenges.*' => 'string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $user = auth()->user();
+
+            if (!$user->isFarmer()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            // Update farm if farm_name or location provided
+            if ($request->has('farm_name') || $request->has('location')) {
+                $farm = Farm::updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'name' => $request->farm_name ?? null,
+                        'location' => $request->location ?? null,
+                        'description' => $request->farm_description ?? null,
+                    ]
+                );
+            } else {
+                $farm = Farm::where('user_id', $user->id)->first();
+            }
+
+            // Update main field if field-related data provided
+            if ($farm && ($request->has('soil_type') || $request->has('rice_area'))) {
+                $field = Field::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'farm_id' => $farm->id,
+                        'name' => 'Main Rice Field'
+                    ],
+                    array_filter([
+                        'location' => $request->location ? ['address' => $request->location] : null,
+                        'soil_type' => $request->soil_type ?? null,
+                        'soil_ph' => $request->soil_ph ?? null,
+                        'organic_matter_content' => $request->organic_matter_content ?? null,
+                        'nitrogen_level' => $request->nitrogen_level ?? null,
+                        'phosphorus_level' => $request->phosphorus_level ?? null,
+                        'potassium_level' => $request->potassium_level ?? null,
+                        'size' => $request->rice_area ?? null,
+                        'water_access' => $request->water_access ?? null,
+                        'water_source' => $request->water_source ?? null,
+                        'irrigation_type' => $request->irrigation_type ?? null,
+                        'drainage_quality' => $request->drainage_quality ?? null,
+                        'elevation' => $request->elevation ?? null,
+                        'notes' => $request->hasAny(['farming_experience', 'previous_yield', 'target_yield', 'preferred_varieties', 'planting_method', 'cropping_seasons', 'farming_challenges']) 
+                            ? $this->generateFieldNotes($request) 
+                            : null,
+                    ], function($value) {
+                        return $value !== null;
+                    })
+                );
+            }
+
+            // Update user profile
+            $addressData = $user->address ?? [];
+            if ($request->has('location')) {
+                $addressData['farm_location'] = $request->location;
+            }
+            if ($request->has('total_area')) {
+                $addressData['total_area'] = $request->total_area;
+            }
+            if ($request->has('rice_area')) {
+                $addressData['rice_area'] = $request->rice_area;
+            }
+            if ($request->has('farming_experience')) {
+                $addressData['farming_experience'] = $request->farming_experience;
+            }
+            if ($request->has('preferred_varieties')) {
+                $addressData['preferred_varieties'] = $request->preferred_varieties;
+            }
+            if ($request->has('planting_method')) {
+                $addressData['planting_method'] = $request->planting_method;
+            }
+            if ($request->has('previous_yield')) {
+                $addressData['previous_yield'] = $request->previous_yield;
+            }
+            if ($request->has('target_yield')) {
+                $addressData['target_yield'] = $request->target_yield;
+            }
+            if ($request->has('cropping_seasons')) {
+                $addressData['cropping_seasons'] = $request->cropping_seasons;
+            }
+            if ($request->has('farming_challenges')) {
+                $addressData['farming_challenges'] = $request->farming_challenges;
+            }
+
+            $user->update(['address' => $addressData]);
+
+            DB::commit();
+
+            // Get updated data
+            $farm = Farm::where('user_id', $user->id)->first();
+            $fields = Field::where('user_id', $user->id)->get();
+
+            return response()->json([
+                'message' => 'Profile updated successfully',
+                'farmProfile' => [
+                    'farm' => $farm,
+                    'fields' => $fields,
+                    'user_profile' => $user->address,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            return response()->json([
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
