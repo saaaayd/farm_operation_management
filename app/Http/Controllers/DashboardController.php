@@ -23,7 +23,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isFarmer() && !$user->isAdmin()) {
+        if (!$user->isFarmer()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -109,7 +109,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isBuyer() && !$user->isAdmin()) {
+        if (!$user->isBuyer()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

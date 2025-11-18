@@ -103,67 +103,67 @@ const routes = [
     path: '/fields',
     name: 'fields',
     component: FarmerFieldsIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/plantings',
     name: 'plantings',
     component: PlantingsIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/plantings/create',
     name: 'plantings-create',
     component: PlantingsCreate,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/plantings/:id',
     name: 'plantings-show',
     component: PlantingsShow,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/plantings/:id/edit',
     name: 'plantings-edit',
     component: PlantingsEdit,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/tasks',
     name: 'tasks',
     component: TasksIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/tasks/create',
     name: 'tasks-create',
     component: TasksCreate,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/tasks/:id',
     name: 'tasks-show',
     component: TasksShow,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/tasks/calendar',
     name: 'tasks-calendar',
     component: TasksCalendar,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/harvests',
     name: 'harvests',
     component: HarvestsIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/harvests/create',
     name: 'harvests-create',
     component: HarvestsCreate,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   
   // Weather Routes
@@ -171,13 +171,13 @@ const routes = [
     path: '/weather',
     name: 'weather',
     component: WeatherDashboard,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/weather/analytics',
     name: 'weather-analytics',
     component: WeatherAnalytics,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   
   
@@ -186,7 +186,7 @@ const routes = [
     path: '/reports',
     name: 'reports',
     component: ReportsIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   
   // Inventory Routes
@@ -194,13 +194,13 @@ const routes = [
     path: '/inventory',
     name: 'inventory',
     component: InventoryList,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/inventory/:id',
     name: 'inventory-detail',
     component: InventoryDetail,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   
   // Weather Routes  
@@ -208,7 +208,7 @@ const routes = [
     path: '/weather/fields/:id',
     name: 'field-weather',
     component: FieldWeather,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   
   // Buyer Routes
@@ -236,25 +236,25 @@ const routes = [
     path: '/marketplace/product/create',
     name: 'marketplace-product-create',
     component: MarketplaceProductCreate,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/marketplace/product/:id/edit',
     name: 'marketplace-product-edit',
     component: MarketplaceProductEdit,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/marketplace/my-products',
     name: 'marketplace-my-products',
     component: MarketplaceProductsIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/marketplace/orders',
     name: 'marketplace-orders',
     component: OrdersList,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/marketplace/products/:id',
@@ -286,7 +286,7 @@ const routes = [
     path: '/financial/expenses',
     name: 'financial-expenses',
     component: FinancialExpensesIndex,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
 
   // Admin Routes
@@ -350,19 +350,19 @@ const routes = [
     path: '/reports/financial',
     name: 'financial-reports',
     component: FinancialReports,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/reports/crop-yield',
     name: 'crop-yield-reports',
     component: CropYieldReports,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
     path: '/reports/weather',
     name: 'weather-reports',
     component: WeatherReports,
-    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+    meta: { requiresAuth: true, roles: ['farmer'] }
   },
 ];
 
