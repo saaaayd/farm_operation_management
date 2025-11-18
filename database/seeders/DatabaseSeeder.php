@@ -434,7 +434,6 @@ class DatabaseSeeder extends Seeder
                     'season' => 'wet',
                 ]
             );
-
             $planting3 = Planting::updateOrCreate(
                 [
                     'field_id' => $field2->id,
