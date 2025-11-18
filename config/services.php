@@ -40,4 +40,23 @@ return [
         'base_url' => env('OPENWEATHER_BASE_URL', 'https://api.openweathermap.org/data/2.5'),
     ],
 
+    'sms' => [
+        'provider' => env('SMS_PROVIDER', 'custom'), // twilio, nexmo, custom
+        'default_country_code' => env('SMS_DEFAULT_COUNTRY_CODE', '+63'),
+        'twilio' => [
+            'account_sid' => env('TWILIO_ACCOUNT_SID'),
+            'auth_token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_FROM'),
+        ],
+        'nexmo' => [
+            'api_key' => env('NEXMO_API_KEY'),
+            'api_secret' => env('NEXMO_API_SECRET'),
+            'from' => env('NEXMO_FROM'),
+        ],
+        'custom' => [
+            'url' => env('SMS_CUSTOM_URL'),
+            'api_key' => env('SMS_CUSTOM_API_KEY'),
+        ],
+    ],
+
 ];

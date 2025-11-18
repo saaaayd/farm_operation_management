@@ -82,7 +82,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">${{ metrics.totalRevenue.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-gray-900">{{ formatCurrency(metrics.totalRevenue) }}</div>
               <div class="text-sm text-gray-600">Total Revenue</div>
             </div>
           </div>
@@ -336,7 +336,7 @@ const recentActivity = ref([
     id: 2,
     type: 'order',
     title: 'New order placed',
-    description: 'Order #ORD-001 for $450.00',
+    description: 'Order #ORD-001 for ₱450.00',
     date: '2024-03-25T09:30:00Z'
   },
   {
@@ -430,7 +430,7 @@ const exportData = () => {
       ['Total Users', metrics.value.totalUsers],
       ['Total Fields', metrics.value.totalFields],
       ['Total Orders', metrics.value.totalOrders],
-      ['Total Revenue', `$${metrics.value.totalRevenue}`],
+      ['Total Revenue', formatCurrency(metrics.value.totalRevenue)],
       ['Active Users', metrics.value.activeUsers]
     ]
     

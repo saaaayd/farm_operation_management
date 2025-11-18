@@ -40,11 +40,11 @@
                 <div class="text-sm text-gray-600">Current Stock</div>
               </div>
               <div class="text-center">
-                <div class="text-2xl font-bold text-green-600">${{ item.unit_price }}</div>
+                <div class="text-2xl font-bold text-green-600">{{ formatCurrency(item.unit_price) }}</div>
                 <div class="text-sm text-gray-600">Unit Price</div>
               </div>
               <div class="text-center">
-                <div class="text-2xl font-bold text-yellow-600">${{ totalValue.toFixed(2) }}</div>
+                <div class="text-2xl font-bold text-yellow-600">{{ formatCurrency(totalValue) }}</div>
                 <div class="text-sm text-gray-600">Total Value</div>
               </div>
               <div class="text-center">
@@ -231,7 +231,7 @@
               >
                 <div class="font-medium text-gray-900">{{ supplier.name }}</div>
                 <div class="text-sm text-gray-600">{{ supplier.contact }}</div>
-                <div class="text-sm text-gray-600">${{ supplier.price }} per {{ item.unit }}</div>
+                <div class="text-sm text-gray-600">{{ formatCurrency(supplier.price) }} per {{ item.unit }}</div>
               </div>
             </div>
           </div>
@@ -244,9 +244,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { formatCurrency } from '@/utils/format'
+import { useInventoryStore } from '@/stores/inventory'
+import api from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
+const inventoryStore = useInventoryStore()
+const loading = computed(() => inventoryStore.loading)
+const error = ref('')
 
 const item = ref({
   id: null,
@@ -362,7 +368,7 @@ const formatDate = (date) => {
 }
 
 const editItem = () => {
-  // Navigate to edit page or show edit modal
+  // Could navigate to a dedicated edit route; keeping inline for now
   console.log('Edit item')
 }
 
@@ -371,14 +377,28 @@ const adjustStock = () => {
   console.log('Adjust stock')
 }
 
-const addStock = () => {
-  // Show add stock modal
-  console.log('Add stock')
+const addStock = async () => {
+  const quantity = Number(prompt('Enter quantity to add:', '1'))
+  if (!quantity || Number.isNaN(quantity) || quantity <= 0) return
+  try {
+    await inventoryStore.addStock(item.value.id, quantity)
+    await reloadFromStore()
+  } catch (e) {
+    console.error('Failed to add stock', e)
+    error.value = e.userMessage || e.response?.data?.message || 'Failed to add stock'
+  }
 }
 
-const removeStock = () => {
-  // Show remove stock modal
-  console.log('Remove stock')
+const removeStock = async () => {
+  const quantity = Number(prompt('Enter quantity to remove:', '1'))
+  if (!quantity || Number.isNaN(quantity) || quantity <= 0) return
+  try {
+    await inventoryStore.removeStock(item.value.id, quantity)
+    await reloadFromStore()
+  } catch (e) {
+    console.error('Failed to remove stock', e)
+    error.value = e.userMessage || e.response?.data?.message || 'Failed to remove stock'
+  }
 }
 
 const setReorderPoint = () => {
@@ -391,32 +411,35 @@ const viewSuppliers = () => {
   console.log('View suppliers')
 }
 
-onMounted(() => {
-  const itemId = route.params.id
-  // Load item data from API
-  loadItemData(itemId)
+onMounted(async () => {
+  const itemId = Number(route.params.id)
+  await loadItemData(itemId)
 })
 
 const loadItemData = async (id) => {
   try {
-    // API call to load item data
-    // For now, using mock data
-    item.value = {
-      id: id,
-      name: 'Corn Seeds - Pioneer 1234',
-      description: 'High-yield corn seeds for spring planting',
-      category: 'seeds',
-      quantity: 50,
-      unit: 'bags',
-      unit_price: 180.00,
-      min_stock: 10,
-      max_stock: 100,
-      status: 'in_stock',
-      sku: 'CS-P1234',
-      updated_at: '2024-03-25T10:00:00Z'
+    // Attempt to find in store first
+    if (!inventoryStore.items.length) {
+      await inventoryStore.fetchItems()
     }
-  } catch (error) {
-    console.error('Error loading item data:', error)
+    const found = inventoryStore.items.find(it => Number(it.id) === Number(id))
+    if (found) {
+      item.value = found
+      return
+    }
+    // Fallback to direct API call
+    const resp = await api.get(`/inventory/${id}`)
+    const payload = resp?.data
+    const entity = payload?.inventory_item || payload?.item || payload
+    if (entity && entity.id) {
+      item.value = entity
+      return
+    }
+    console.warn('Item not found on server, going back to list')
+    router.push('/inventory')
+  } catch (e) {
+    console.error('Error loading item data:', e)
+    error.value = e.userMessage || e.response?.data?.message || 'Unable to load item'
   }
 }
 </script>

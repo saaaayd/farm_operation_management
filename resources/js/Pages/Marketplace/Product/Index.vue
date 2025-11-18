@@ -11,6 +11,7 @@
           </div>
           <div class="flex items-center gap-3">
             <button
+              type="button"
               @click="refresh"
               :disabled="marketplaceStore.loading"
               class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
@@ -26,6 +27,7 @@
               Refresh
             </button>
             <button
+              type="button"
               @click="router.push('/marketplace/product/create')"
               class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
             >
@@ -47,6 +49,7 @@
           <div class="ml-3">
             <p class="text-sm text-red-700">{{ marketplaceStore.error }}</p>
             <button
+              type="button"
               @click="refresh"
               class="mt-2 text-sm font-medium text-red-700 hover:text-red-800"
             >
@@ -75,6 +78,7 @@
           Publish your first rice product to reach marketplace buyers.
         </p>
         <button
+          type="button"
           @click="router.push('/marketplace/product/create')"
           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
         >
@@ -120,12 +124,14 @@
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex items-center justify-end gap-2">
                     <button
+                      type="button"
                       @click="router.push(`/marketplace/product/${product.id}/edit`)"
                       class="text-green-600 hover:text-green-900"
                     >
                       Edit
                     </button>
                     <button
+                      type="button"
                       @click="removeProduct(product)"
                       class="text-red-600 hover:text-red-900"
                     >

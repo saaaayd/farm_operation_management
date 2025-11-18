@@ -9,17 +9,23 @@ class InventoryItem extends Model
 
     protected $fillable = [
         'name',
+        'description',
         'category',
-        'quantity',
-        'price',
         'unit',
-        'min_stock',
+        'current_stock',
+        'minimum_stock',
+        'unit_price',
+        'supplier',
+        'location',
+        'expiry_date',
+        'notes',
+        'user_id',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:2',
-        'price' => 'decimal:2',
-        'min_stock' => 'decimal:2',
+        'current_stock' => 'decimal:2',
+        'unit_price' => 'decimal:2',
+        'minimum_stock' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -46,7 +52,7 @@ class InventoryItem extends Model
      */
     public function isLowStock(): bool
     {
-        return $this->quantity <= $this->min_stock;
+        return ($this->current_stock ?? 0) <= ($this->minimum_stock ?? 0);
     }
 
     /**
@@ -54,7 +60,7 @@ class InventoryItem extends Model
      */
     public function isOutOfStock(): bool
     {
-        return $this->quantity <= 0;
+        return ($this->current_stock ?? 0) <= 0;
     }
 
     /**
@@ -62,7 +68,7 @@ class InventoryItem extends Model
      */
     public function addStock($quantity)
     {
-        $this->increment('quantity', $quantity);
+        $this->increment('current_stock', $quantity);
     }
 
     /**
@@ -70,8 +76,8 @@ class InventoryItem extends Model
      */
     public function removeStock($quantity)
     {
-        if ($this->quantity >= $quantity) {
-            $this->decrement('quantity', $quantity);
+        if (($this->current_stock ?? 0) >= $quantity) {
+            $this->decrement('current_stock', $quantity);
             return true;
         }
         return false;

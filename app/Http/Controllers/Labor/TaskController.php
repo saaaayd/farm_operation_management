@@ -60,6 +60,7 @@ class TaskController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Accept the payload sent by the frontend (task_type, planting_id, assigned_to)
         $validator = Validator::make($request->all(), [
             'planting_id' => ['required', 'exists:plantings,id'],
             'task_type' => ['required', 'string', Rule::in($this->taskTypeOptions())],
@@ -67,15 +68,6 @@ class TaskController extends Controller
             'description' => ['required', 'string'],
             'status' => ['nullable', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $planting = Planting::with('field')->findOrFail($request->planting_id);
         $user = $request->user();
 
@@ -85,6 +77,7 @@ class TaskController extends Controller
             ], 403);
         }
 
+        // Create task using the fields present in the DB/migration and frontend payload
         $task = Task::create([
             'planting_id' => $planting->id,
             'task_type' => $request->task_type,

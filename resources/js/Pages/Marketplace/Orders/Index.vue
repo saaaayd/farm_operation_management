@@ -107,7 +107,7 @@
               <p class="text-gray-600 text-sm">{{ formatDate(order.date) }}</p>
             </div>
             <div class="text-right">
-              <div class="text-lg font-bold text-gray-900">${{ order.total.toFixed(2) }}</div>
+              <div class="text-lg font-bold text-gray-900">{{ formatCurrency(order.total) }}</div>
               <span
                 :class="getStatusBadgeClass(order.status)"
                 class="px-2 py-1 text-xs font-medium rounded-full"
@@ -131,7 +131,7 @@
                 <p class="text-sm text-gray-600">{{ item.seller_name }}</p>
               </div>
               <div class="text-right">
-                <div class="font-medium">${{ item.price.toFixed(2) }}</div>
+                <div class="font-medium">{{ formatCurrency(item.price) }}</div>
                 <div class="text-sm text-gray-600">Qty: {{ item.quantity }}</div>
               </div>
             </div>
@@ -191,6 +191,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { formatCurrency } from '@/utils/format'
 
 const router = useRouter()
 const activeTab = ref('purchases')

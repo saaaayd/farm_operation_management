@@ -22,6 +22,12 @@
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="bg-white rounded-lg shadow p-6">
         <form @submit.prevent="submit" class="space-y-6">
+          <FormAlert
+            :visible="!!formError.message"
+            :message="formError.message"
+            :field-errors="formError.fieldErrors"
+          />
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="form-label">Product Name *</label>
@@ -278,6 +284,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketplaceStore } from '@/stores/marketplace'
 import { useFarmStore } from '@/stores/farm'
+import FormAlert from '@/Components/UI/FormAlert.vue'
+import { extractFormErrors, resetFormErrors } from '@/utils/form'
 
 const router = useRouter()
 const marketplaceStore = useMarketplaceStore()
@@ -285,6 +293,10 @@ const farmStore = useFarmStore()
 
 const submitting = ref(false)
 const errors = ref({})
+const formError = reactive({
+  message: '',
+  fieldErrors: {},
+})
 
 const form = reactive({
   rice_variety_id: '',
@@ -332,6 +344,7 @@ const formatHarvestOption = (harvest) => {
 const submit = async () => {
   submitting.value = true
   errors.value = {}
+  resetFormErrors(formError)
 
   try {
     const payload = {
@@ -356,11 +369,13 @@ const submit = async () => {
     if (!payload.notes) delete payload.notes
 
     await marketplaceStore.createRiceProduct(payload)
+    resetFormErrors(formError)
     router.push('/marketplace/my-products')
   } catch (error) {
-    if (error.response?.data?.errors) {
-      errors.value = error.response.data.errors
-    }
+    const parsed = extractFormErrors(error)
+    formError.message = parsed.message
+    formError.fieldErrors = parsed.fieldErrors
+    errors.value = parsed.fieldErrors
   } finally {
     submitting.value = false
   }

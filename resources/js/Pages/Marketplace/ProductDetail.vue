@@ -14,12 +14,14 @@
         </div>
         <div class="flex space-x-3">
           <button
+            type="button"
             @click="addToCart"
             class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             Add to Cart
           </button>
           <button
+            type="button"
             @click="contactSeller"
             class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -110,7 +112,7 @@
         <div class="lg:col-span-1 space-y-6">
           <!-- Price and Purchase -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="text-3xl font-bold text-green-600 mb-2">${{ product.price }}</div>
+            <div class="text-3xl font-bold text-green-600 mb-2">{{ formatCurrency(product.price) }}</div>
             <div class="text-gray-600 mb-4">{{ product.unit }}</div>
             
             <div class="space-y-4">
@@ -118,6 +120,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                 <div class="flex items-center space-x-2">
                   <button
+                    type="button"
                     @click="decreaseQuantity"
                     class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
                   >
@@ -131,6 +134,7 @@
                     class="w-16 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
+                    type="button"
                     @click="increaseQuantity"
                     class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
                   >
@@ -144,10 +148,11 @@
               </div>
               
               <div class="text-lg font-semibold">
-                Total: ${{ (product.price * quantity).toFixed(2) }}
+                Total: {{ formatCurrency(product.price * quantity) }}
               </div>
               
               <button
+                type="button"
                 @click="addToCart"
                 class="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
@@ -198,7 +203,7 @@
             <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <span class="text-gray-600">Shipping:</span>
-                <span class="text-sm font-medium">{{ product.shipping_cost === 0 ? 'Free' : `$${product.shipping_cost}` }}</span>
+                <span class="text-sm font-medium">{{ product.shipping_cost === 0 ? 'Free' : formatCurrency(product.shipping_cost) }}</span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-gray-600">Delivery:</span>
@@ -226,7 +231,7 @@
                 </div>
                 <div class="flex-1">
                   <div class="font-medium text-gray-900 text-sm">{{ related.name }}</div>
-                  <div class="text-green-600 font-medium text-sm">${{ related.price }}</div>
+                  <div class="text-green-600 font-medium text-sm">{{ formatCurrency(related.price) }}</div>
                 </div>
               </div>
             </div>
@@ -240,6 +245,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { formatCurrency } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -331,7 +337,7 @@ const contactSeller = () => {
 }
 
 const viewProduct = (id) => {
-  router.push(`/marketplace/products/${id}`)
+  router.push(`/marketplace/product/${id}`)
 }
 
 onMounted(() => {

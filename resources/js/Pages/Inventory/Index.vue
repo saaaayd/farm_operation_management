@@ -8,12 +8,19 @@
           <p class="text-gray-600 mt-2">Manage your farm supplies and equipment</p>
         </div>
         <button
+          type="button"
           @click="showCreateModal = true"
           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Add New Item
         </button>
       </div>
+
+      <FormAlert
+        :visible="!!inventoryError"
+        :message="inventoryError"
+        class="mb-6"
+      />
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -114,6 +121,7 @@
           </div>
           <div class="flex items-end">
             <button
+              type="button"
               @click="clearFilters"
               class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
@@ -152,11 +160,11 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Unit Price:</span>
-                <span class="font-medium">${{ item.unit_price }}</span>
+                <span class="font-medium">{{ formatCurrency(item.unit_price) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Total Value:</span>
-                <span class="font-medium">${{ (item.quantity * item.unit_price).toFixed(2) }}</span>
+                <span class="font-medium">{{ formatCurrency(item.quantity * item.unit_price) }}</span>
               </div>
             </div>
 
@@ -177,12 +185,14 @@
 
             <div class="flex space-x-2">
               <button
+                type="button"
                 @click="viewItem(item.id)"
                 class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 View Details
               </button>
               <button
+                type="button"
                 @click="editItem(item.id)"
                 class="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
               >
@@ -199,6 +209,7 @@
         <h3 class="text-xl font-medium text-gray-900 mb-2">No inventory items found</h3>
         <p class="text-gray-600 mb-6">Get started by adding your first inventory item</p>
         <button
+          type="button"
           @click="showCreateModal = true"
           class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
@@ -212,6 +223,11 @@
           <h2 class="text-xl font-semibold mb-4">Add New Inventory Item</h2>
           
           <form @submit.prevent="createItem" class="space-y-4">
+            <FormAlert
+              :visible="!!formError.message"
+              :message="formError.message"
+              :field-errors="formError.fieldErrors"
+            />
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
               <input
@@ -220,6 +236,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+              <p v-if="fieldError('name')" class="mt-1 text-xs text-red-600">{{ fieldError('name') }}</p>
             </div>
             
             <div>
@@ -236,6 +253,7 @@
                 <option value="equipment">Equipment</option>
                 <option value="tools">Tools</option>
               </select>
+              <p v-if="fieldError('category')" class="mt-1 text-xs text-red-600">{{ fieldError('category') }}</p>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
@@ -249,6 +267,9 @@
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+                <p v-if="fieldError('quantity') || fieldError('current_stock')" class="mt-1 text-xs text-red-600">
+                  {{ fieldError('quantity') || fieldError('current_stock') }}
+                </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
@@ -264,6 +285,7 @@
                   <option value="pieces">Pieces</option>
                   <option value="tons">Tons</option>
                 </select>
+                <p v-if="fieldError('unit')" class="mt-1 text-xs text-red-600">{{ fieldError('unit') }}</p>
               </div>
             </div>
             
@@ -277,6 +299,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+              <p v-if="fieldError('unit_price')" class="mt-1 text-xs text-red-600">{{ fieldError('unit_price') }}</p>
             </div>
             
             <div>
@@ -286,6 +309,7 @@
                 rows="3"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               ></textarea>
+              <p v-if="fieldError('description')" class="mt-1 text-xs text-red-600">{{ fieldError('description') }}</p>
             </div>
 
             <div class="flex justify-end space-x-3">
@@ -312,66 +336,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useInventoryStore } from '@/stores/inventory'
+import FormAlert from '@/Components/UI/FormAlert.vue'
+import { extractFormErrors, resetFormErrors } from '@/utils/form'
 
 const router = useRouter()
-const loading = ref(false)
+const inventoryStore = useInventoryStore()
+const loading = computed(() => inventoryStore.loading)
 const showCreateModal = ref(false)
 const searchQuery = ref('')
 const categoryFilter = ref('')
 const statusFilter = ref('')
 
-const items = ref([
-  {
-    id: 1,
-    name: 'Corn Seeds - Pioneer 1234',
-    category: 'seeds',
-    quantity: 50,
-    unit: 'bags',
-    unit_price: 180.00,
-    description: 'High-yield corn seeds for spring planting',
-    min_stock: 10,
-    max_stock: 100,
-    status: 'in_stock'
-  },
-  {
-    id: 2,
-    name: 'Nitrogen Fertilizer',
-    category: 'fertilizer',
-    quantity: 5,
-    unit: 'tons',
-    unit_price: 450.00,
-    description: 'High-grade nitrogen fertilizer',
-    min_stock: 2,
-    max_stock: 20,
-    status: 'low_stock'
-  },
-  {
-    id: 3,
-    name: 'Herbicide - Roundup',
-    category: 'pesticides',
-    quantity: 0,
-    unit: 'gallons',
-    unit_price: 25.00,
-    description: 'Broad-spectrum herbicide',
-    min_stock: 5,
-    max_stock: 50,
-    status: 'out_of_stock'
-  },
-  {
-    id: 4,
-    name: 'Tractor Fuel',
-    category: 'equipment',
-    quantity: 200,
-    unit: 'gallons',
-    unit_price: 3.50,
-    description: 'Diesel fuel for farm equipment',
-    min_stock: 50,
-    max_stock: 500,
-    status: 'in_stock'
-  }
-])
+const items = computed(() => inventoryStore.items || [])
+const inventoryError = computed(() => inventoryStore.error)
 
 const newItem = ref({
   name: '',
@@ -382,8 +362,23 @@ const newItem = ref({
   description: ''
 })
 
+const formError = reactive({
+  message: '',
+  fieldErrors: {},
+})
+
+const fieldErrors = computed(() => formError.fieldErrors || {})
+
+const fieldError = (field) => {
+  const messages = fieldErrors.value?.[field]
+  if (Array.isArray(messages)) {
+    return messages[0]
+  }
+  return messages || ''
+}
+
 const filteredItems = computed(() => {
-  return items.value.filter(item => {
+  return (items.value || []).filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesCategory = !categoryFilter.value || item.category === categoryFilter.value
@@ -429,19 +424,35 @@ const editItem = (id) => {
 }
 
 const createItem = async () => {
-  loading.value = true
+  resetFormErrors(formError)
   try {
-    const item = {
-      id: Date.now(),
-      ...newItem.value,
-      quantity: parseFloat(newItem.value.quantity),
-      unit_price: parseFloat(newItem.value.unit_price),
-      min_stock: 0,
-      max_stock: 100,
-      status: 'in_stock'
+    const mapCategory = (c) => {
+      const v = String(c || '').toLowerCase()
+      if (v === 'fertilizer' || v === 'fertilizers') return 'fertilizer'
+      if (v === 'pesticide' || v === 'pesticides') return 'pesticide'
+      if (v === 'produce') return 'produce'
+      return v
     }
-    items.value.push(item)
-    
+    const mapUnit = (u) => {
+      const v = String(u || '').toLowerCase()
+      if (v === 'lbs' || v === 'pounds') return 'pounds'
+      if (v === 'bag' || v === 'bags' || v === 'packet' || v === 'packets') return 'packets'
+      if (v === 'liter' || v === 'liters') return 'liters'
+      return v
+    }
+    const payload = {
+      name: newItem.value.name,
+      category: mapCategory(newItem.value.category),
+      // Backend expects current_stock/minimum_stock; send both and legacy names for robustness
+      current_stock: Number(newItem.value.quantity),
+      quantity: Number(newItem.value.quantity),
+      minimum_stock: 0,
+      min_stock: 0,
+      unit: mapUnit(newItem.value.unit),
+      unit_price: Number(newItem.value.unit_price),
+      description: newItem.value.description || null,
+    }
+    await inventoryStore.createItem(payload)
     // Reset form
     newItem.value = {
       name: '',
@@ -453,9 +464,9 @@ const createItem = async () => {
     }
     showCreateModal.value = false
   } catch (error) {
-    console.error('Error creating item:', error)
-  } finally {
-    loading.value = false
+    const parsed = extractFormErrors(error)
+    formError.message = parsed.message
+    formError.fieldErrors = parsed.fieldErrors
   }
 }
 
@@ -465,8 +476,14 @@ const clearFilters = () => {
   statusFilter.value = ''
 }
 
-onMounted(() => {
-  // Load inventory from API
+onMounted(async () => {
+  if (!items.value.length) {
+    try {
+      await inventoryStore.fetchItems()
+    } catch (e) {
+      // handled by store
+    }
+  }
 })
 </script>
 

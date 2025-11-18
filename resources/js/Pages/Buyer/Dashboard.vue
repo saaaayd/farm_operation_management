@@ -24,7 +24,8 @@
               class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
               </svg>
               <span 
                 v-if="marketplaceStore.cartItemsCount > 0"
@@ -49,6 +50,60 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Quick Actions -->
+      <section class="mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <router-link 
+            to="/buyer/products"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-900">Browse Rice Products</p>
+          </router-link>
+
+          <router-link 
+            to="/cart"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-900">View Cart</p>
+          </router-link>
+
+          <router-link 
+            to="/orders"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-900">Order History</p>
+          </router-link>
+
+          <router-link 
+            to="/profile"
+            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-900">Profile</p>
+          </router-link>
+        </div>
+      </section>
+
       <!-- Welcome Section -->
       <div class="mb-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-2">
@@ -60,8 +115,16 @@
       </div>
 
       <!-- Featured Products -->
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Featured Products</h3>
+      <div class="mb-10">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Available Products</h3>
+          <router-link 
+            to="/marketplace"
+            class="text-green-600 hover:text-green-700 text-sm font-medium"
+          >
+            View marketplace
+          </router-link>
+        </div>
         <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div v-for="n in 4" :key="n" class="bg-white rounded-lg shadow p-6 animate-pulse">
             <div class="h-32 bg-gray-200 rounded mb-4"></div>
@@ -70,7 +133,7 @@
           </div>
         </div>
         
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div v-else-if="featuredProducts.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div 
             v-for="product in featuredProducts" 
             :key="product.id"
@@ -84,13 +147,13 @@
                 </svg>
               </div>
               <h4 class="font-semibold text-gray-900 mb-2">{{ product.name }}</h4>
-              <p class="text-sm text-gray-600 mb-3">{{ product.description || 'Premium rice variety' }}</p>
+              <p class="text-sm text-gray-600 mb-3">{{ getProductDescription(product) }}</p>
               <div class="flex justify-between items-center">
                 <span class="text-lg font-bold text-green-600">
-                  ${{ product.price }}/{{ product.unit }}
+                  {{ formatCurrency(getProductPrice(product)) }}/{{ getProductUnit(product) }}
                 </span>
                 <span class="text-sm text-gray-500">
-                  {{ product.quantity }} available
+                  {{ getProductQuantity(product) }} available
                 </span>
               </div>
               <button 
@@ -101,6 +164,19 @@
               </button>
             </div>
           </div>
+        </div>
+        <div v-else class="bg-white rounded-lg shadow p-8 text-center">
+          <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V7a2 2 0 00-2-2h-3.5a3.5 3.5 0 00-7 0H4a2 2 0 00-2 2v6" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 13h20l-1.5 7.5a2 2 0 01-2 1.5H5.5a2 2 0 01-2-1.5L2 13z" />
+          </svg>
+          <p class="text-gray-600 mb-4">No products available yet. Check back soon!</p>
+          <router-link 
+            to="/marketplace"
+            class="text-green-600 hover:text-green-700 font-medium"
+          >
+            Explore marketplace
+          </router-link>
         </div>
       </div>
 
@@ -143,7 +219,7 @@
                     {{ order.status }}
                   </span>
                   <p class="text-sm font-medium text-gray-900 mt-1">
-                    ${{ order.total_amount }}
+                    {{ formatCurrency(order.total_amount) }}
                   </p>
                 </div>
               </div>
@@ -165,59 +241,6 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <router-link 
-            to="/marketplace"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
-          >
-            <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <p class="text-sm font-medium text-gray-900">Browse Products</p>
-          </router-link>
-
-          <router-link 
-            to="/cart"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
-          >
-            <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-              </svg>
-            </div>
-            <p class="text-sm font-medium text-gray-900">View Cart</p>
-          </router-link>
-
-          <router-link 
-            to="/orders"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
-          >
-            <div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <p class="text-sm font-medium text-gray-900">Order History</p>
-          </router-link>
-
-          <router-link 
-            to="/profile"
-            class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
-          >
-            <div class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <p class="text-sm font-medium text-gray-900">Profile</p>
-          </router-link>
-        </div>
-      </div>
     </main>
   </div>
 </template>
@@ -227,6 +250,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useMarketplaceStore } from '@/stores/marketplace';
+import { formatCurrency } from '@/utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -234,7 +258,26 @@ const marketplaceStore = useMarketplaceStore();
 
 const loading = ref(false);
 
-const featuredProducts = computed(() => marketplaceStore.riceProducts.slice(0, 4));
+const deriveProducts = (source) => {
+  if (!source) return [];
+  if (Array.isArray(source?.data)) {
+    return source.data;
+  }
+  return Array.isArray(source) ? source : [];
+};
+
+const availableProducts = computed(() => {
+  const primary = deriveProducts(marketplaceStore.products);
+  if (primary.length) return primary;
+  return marketplaceStore.farmerProducts || [];
+});
+
+const featuredProducts = computed(() => {
+  const list = availableProducts.value;
+  if (list.length) return list.slice(0, 8);
+  const fallback = marketplaceStore.riceProducts || [];
+  return fallback.slice(0, 8);
+});
 const recentOrders = computed(() => marketplaceStore.orders);
 
 const addToCart = (product) => {
@@ -243,7 +286,7 @@ const addToCart = (product) => {
 };
 
 const viewProduct = (product) => {
-  router.push(`/marketplace/products/${product.id}`);
+  router.push(`/marketplace/product/${product.id}`);
 };
 
 const getOrderStatusClass = (status) => {
@@ -260,6 +303,22 @@ const getOrderStatusClass = (status) => {
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString();
+};
+
+const getProductPrice = (product) => {
+  return product.price_per_unit ?? product.price ?? product.unit_price ?? 0;
+};
+
+const getProductQuantity = (product) => {
+  return product.quantity_available ?? product.quantity ?? product.available_quantity ?? 0;
+};
+
+const getProductUnit = (product) => {
+  return product.unit ?? product.unit_type ?? 'unit';
+};
+
+const getProductDescription = (product) => {
+  return product.description || product.summary || 'Premium rice variety';
 };
 
 const logout = async () => {

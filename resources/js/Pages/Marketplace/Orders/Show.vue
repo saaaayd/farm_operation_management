@@ -92,9 +92,9 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="font-medium">${{ item.price.toFixed(2) }}</div>
+                  <div class="font-medium">{{ formatCurrency(item.price) }}</div>
                   <div class="text-sm text-gray-600">Qty: {{ item.quantity }}</div>
-                  <div class="font-medium text-green-600">${{ (item.price * item.quantity).toFixed(2) }}</div>
+                  <div class="font-medium text-green-600">{{ formatCurrency(item.price * item.quantity) }}</div>
                 </div>
               </div>
             </div>
@@ -122,7 +122,7 @@
                   </div>
                   <div class="flex justify-between">
                     <span>Cost:</span>
-                    <span>${{ order.shipping_cost.toFixed(2) }}</span>
+                    <span>{{ formatCurrency(order.shipping_cost) }}</span>
                   </div>
                   <div v-if="order.tracking_number" class="flex justify-between">
                     <span>Tracking:</span>
@@ -166,23 +166,23 @@
           <!-- Order Summary -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Order Summary</h3>
-            <div class="space-y-3">
+              <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Subtotal:</span>
-                <span class="font-medium">${{ order.subtotal.toFixed(2) }}</span>
+                <span class="font-medium">{{ formatCurrency(order.subtotal) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Shipping:</span>
-                <span class="font-medium">${{ order.shipping_cost.toFixed(2) }}</span>
+                <span class="font-medium">{{ formatCurrency(order.shipping_cost) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Tax:</span>
-                <span class="font-medium">${{ order.tax.toFixed(2) }}</span>
+                <span class="font-medium">{{ formatCurrency(order.tax) }}</span>
               </div>
               <div class="border-t border-gray-200 pt-3">
                 <div class="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>${{ order.total.toFixed(2) }}</span>
+                  <span>{{ formatCurrency(order.total) }}</span>
                 </div>
               </div>
             </div>
@@ -252,6 +252,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { formatCurrency } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()

@@ -89,7 +89,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">Monthly Expenses</p>
-            <p class="text-2xl font-bold text-gray-900">${{ stats.monthly_expenses || 0 }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.monthly_expenses || 0) }}</p>
             <p class="text-xs text-red-600">This month</p>
           </div>
           <CurrencyDollarIcon class="h-8 w-8 text-red-500" />
@@ -521,7 +521,7 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-sm text-gray-600">This Month Sales</span>
-                <span class="text-sm font-medium text-green-600">${{ Math.floor(Math.random() * 5000 + 1000) }}</span>
+                <span class="text-sm font-medium text-green-600">{{ formatCurrency(Math.floor(Math.random() * 5000 + 1000)) }}</span>
               </div>
             </div>
             <div class="mt-4">
@@ -547,15 +547,15 @@
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-sm text-gray-600">Monthly Expenses</span>
-                <span class="text-sm font-medium text-red-600">${{ stats.monthly_expenses || 0 }}</span>
+                <span class="text-sm font-medium text-red-600">{{ formatCurrency(stats.monthly_expenses || 0) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-sm text-gray-600">Monthly Revenue</span>
-                <span class="text-sm font-medium text-green-600">${{ Math.floor((stats.monthly_expenses || 0) * 1.3) }}</span>
+                <span class="text-sm font-medium text-green-600">{{ formatCurrency(Math.floor((stats.monthly_expenses || 0) * 1.3)) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-sm text-gray-600">Net Profit</span>
-                <span class="text-sm font-medium text-blue-600">${{ Math.floor((stats.monthly_expenses || 0) * 0.3) }}</span>
+                <span class="text-sm font-medium text-blue-600">{{ formatCurrency(Math.floor((stats.monthly_expenses || 0) * 0.3)) }}</span>
               </div>
             </div>
             <div class="mt-4">
@@ -576,6 +576,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { formatCurrency } from '@/utils/format';
 import { 
   riceFarmingAPI, 
   fieldsAPI, 
