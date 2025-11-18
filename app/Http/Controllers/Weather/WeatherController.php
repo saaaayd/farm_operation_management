@@ -31,17 +31,27 @@ class WeatherController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if (!isset($field->location['lat']) || !isset($field->location['lon'])) {
+        // Get coordinates from location or fallback to field_coordinates
+        $lat = null;
+        $lon = null;
+        
+        if (isset($field->location['lat']) && isset($field->location['lon'])) {
+            $lat = (float) $field->location['lat'];
+            $lon = (float) $field->location['lon'];
+        } elseif (isset($field->field_coordinates['lat']) && isset($field->field_coordinates['lon'])) {
+            // Fallback to field_coordinates if location doesn't have coordinates
+            $lat = (float) $field->field_coordinates['lat'];
+            $lon = (float) $field->field_coordinates['lon'];
+        }
+        
+        if ($lat === null || $lon === null) {
             return response()->json([
                 'message' => 'Field location coordinates are required'
             ], 400);
         }
 
         try {
-            $weatherData = $this->weatherService->getCurrentWeather(
-                (float) $field->location['lat'],
-                (float) $field->location['lon']
-            );
+            $weatherData = $this->weatherService->getCurrentWeather($lat, $lon);
         } catch (WeatherServiceException $e) {
             return response()->json([
                 'message' => $e->getMessage()
@@ -85,7 +95,20 @@ class WeatherController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if (!isset($field->location['lat']) || !isset($field->location['lon'])) {
+        // Get coordinates from location or fallback to field_coordinates
+        $lat = null;
+        $lon = null;
+        
+        if (isset($field->location['lat']) && isset($field->location['lon'])) {
+            $lat = (float) $field->location['lat'];
+            $lon = (float) $field->location['lon'];
+        } elseif (isset($field->field_coordinates['lat']) && isset($field->field_coordinates['lon'])) {
+            // Fallback to field_coordinates if location doesn't have coordinates
+            $lat = (float) $field->field_coordinates['lat'];
+            $lon = (float) $field->field_coordinates['lon'];
+        }
+        
+        if ($lat === null || $lon === null) {
             return response()->json([
                 'message' => 'Field location coordinates are required'
             ], 400);
@@ -94,11 +117,7 @@ class WeatherController extends Controller
         $days = $request->get('days', 5);
         if ($days > 5) $days = 5; // API limitation
 
-        $forecastData = $this->weatherService->getForecast(
-            $field->location['lat'],
-            $field->location['lon'],
-            $days
-        );
+        $forecastData = $this->weatherService->getForecast($lat, $lon, $days);
 
         if (!$forecastData) {
             return response()->json([

@@ -23,7 +23,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label for="farm_name" class="block text-sm font-medium text-gray-700">Farm Name</label>
+                <label for="farm_name" class="block text-sm font-medium text-gray-700">Farm Name *</label>
                 <input
                 id="farm_name"
                 v-model="form.farm_name"
@@ -35,10 +35,10 @@
               </div>
               
               <div>
-                <label for="farm_size" class="block text-sm font-medium text-gray-700">Total Farm Size (hectares)</label>
+                <label for="total_area" class="block text-sm font-medium text-gray-700">Total Farm Area (hectares) *</label>
                 <input
-                id="farm_size"
-                v-model="form.farm_size"
+                id="total_area"
+                v-model="form.total_area"
                 type="number"
                 step="0.01"
                 min="0"
@@ -47,6 +47,49 @@
                 placeholder="0.00"
                 />
               </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label for="rice_area" class="block text-sm font-medium text-gray-700">Rice Cultivation Area (hectares) *</label>
+                <input
+                id="rice_area"
+                v-model="form.rice_area"
+                type="number"
+                step="0.01"
+                min="0"
+                :max="form.total_area"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                placeholder="0.00"
+                />
+                <p v-if="form.rice_area && parseFloat(form.rice_area) > parseFloat(form.total_area || 0)" class="mt-1 text-xs text-red-600">
+                  Rice area cannot exceed total farm area
+                </p>
+              </div>
+
+              <div>
+                <label for="farming_experience" class="block text-sm font-medium text-gray-700">Years of Rice Farming Experience</label>
+                <input
+                id="farming_experience"
+                v-model="form.farming_experience"
+                type="number"
+                min="0"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <label for="farm_description" class="block text-sm font-medium text-gray-700">Farm Description</label>
+              <textarea
+              id="farm_description"
+              v-model="form.farm_description"
+              rows="3"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+              placeholder="Brief description of your farm..."
+              ></textarea>
             </div>
           </div>
           
@@ -110,16 +153,19 @@
         <p class="text-sm text-gray-700">
           <span class="font-medium">Selected Address:</span> {{ form.address }}
         </p>
+        <p class="mt-1 text-xs text-gray-500">
+          Location will be automatically converted to coordinates for weather data
+        </p>
       </div>
     </div>
     
-    <!-- Field Details -->
+    <!-- Field and Soil Information -->
     <div class="border-b border-gray-200 pb-6">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Field Details</h3>
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Field and Soil Information</h3>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label for="soil_type" class="block text-sm font-medium text-gray-700">Primary Soil Type</label>
+          <label for="soil_type" class="block text-sm font-medium text-gray-700">Primary Soil Type *</label>
           <select
           id="soil_type"
           v-model="form.soil_type"
@@ -133,11 +179,105 @@
           <option value="silt">Silt</option>
           <option value="clay_loam">Clay Loam</option>
           <option value="sandy_loam">Sandy Loam</option>
+          <option value="silty_clay">Silty Clay</option>
+          <option value="silty_loam">Silty Loam</option>
         </select>
       </div>
       
       <div>
-        <label for="water_source" class="block text-sm font-medium text-gray-700">Water Source</label>
+        <label for="soil_ph" class="block text-sm font-medium text-gray-700">Soil pH Level</label>
+        <input
+        id="soil_ph"
+        v-model="form.soil_ph"
+        type="number"
+        step="0.1"
+        min="3.0"
+        max="10.0"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="6.5"
+        />
+        <p class="mt-1 text-xs text-gray-500">Optimal pH for rice: 5.5 - 7.0</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div>
+        <label for="organic_matter_content" class="block text-sm font-medium text-gray-700">Organic Matter Content (%)</label>
+        <input
+        id="organic_matter_content"
+        v-model="form.organic_matter_content"
+        type="number"
+        step="0.1"
+        min="0"
+        max="20"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="2.5"
+        />
+      </div>
+
+      <div>
+        <label for="nitrogen_level" class="block text-sm font-medium text-gray-700">Nitrogen Level (ppm)</label>
+        <input
+        id="nitrogen_level"
+        v-model="form.nitrogen_level"
+        type="number"
+        step="0.1"
+        min="0"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="20"
+        />
+      </div>
+
+      <div>
+        <label for="phosphorus_level" class="block text-sm font-medium text-gray-700">Phosphorus Level (ppm)</label>
+        <input
+        id="phosphorus_level"
+        v-model="form.phosphorus_level"
+        type="number"
+        step="0.1"
+        min="0"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="15"
+        />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      <div>
+        <label for="potassium_level" class="block text-sm font-medium text-gray-700">Potassium Level (ppm)</label>
+        <input
+        id="potassium_level"
+        v-model="form.potassium_level"
+        type="number"
+        step="0.1"
+        min="0"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="25"
+        />
+      </div>
+
+      <div>
+        <label for="elevation" class="block text-sm font-medium text-gray-700">Field Elevation (meters above sea level)</label>
+        <input
+        id="elevation"
+        v-model="form.elevation"
+        type="number"
+        step="0.1"
+        min="0"
+        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+        placeholder="100"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Water Management -->
+  <div class="border-b border-gray-200 pb-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Water Management</h3>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label for="water_source" class="block text-sm font-medium text-gray-700">Primary Water Source *</label>
         <select
         id="water_source"
         v-model="form.water_source"
@@ -145,16 +285,18 @@
         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
         >
         <option value="">Select water source</option>
-        <option value="irrigation_canal">Irrigation System</option> <option value="rainfall">Rainfall Dependent</option>
-        <option value="well">Well Water</option>
-        <option value="shallow_well">Shallow Well</option> <option value="river">River Water</option>
-        <option value="pond">Pond/Lake</option>
-        <option value="spring">Spring</option>
+        <option value="irrigation_canal">Irrigation Canal</option>
+        <option value="river">River</option>
+        <option value="well">Deep Well</option>
+        <option value="shallow_well">Shallow Well</option>
+        <option value="pond">Farm Pond</option>
+        <option value="rainfall">Rainfall Dependent</option>
+        <option value="spring">Natural Spring</option>
       </select>
     </div>
     
     <div>
-      <label for="irrigation_type" class="block text-sm font-medium text-gray-700">Irrigation Type</label>
+      <label for="irrigation_type" class="block text-sm font-medium text-gray-700">Irrigation System *</label>
       <select
       id="irrigation_type"
       v-model="form.irrigation_type"
@@ -162,56 +304,94 @@
       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
       >
       <option value="">Select irrigation type</option>
-      <option value="manual">Manual</option>
-      <option value="sprinkler">Sprinkler</option>
-      <option value="drip">Drip</option>
-      <option value="flood">Flood</option>
+      <option value="flood">Flood Irrigation</option>
+      <option value="furrow">Furrow Irrigation</option>
+      <option value="sprinkler">Sprinkler System</option>
+      <option value="drip">Drip Irrigation</option>
+      <option value="manual">Manual Watering</option>
+      <option value="none">No Irrigation System</option>
+    </select>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div>
+      <label for="water_access" class="block text-sm font-medium text-gray-700">Water Access Quality *</label>
+      <select
+      id="water_access"
+      v-model="form.water_access"
+      required
+      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+      >
+      <option value="">Select water access quality</option>
+      <option value="excellent">Excellent - Always available</option>
+      <option value="good">Good - Usually available</option>
+      <option value="moderate">Moderate - Sometimes limited</option>
+      <option value="poor">Poor - Often limited</option>
+      <option value="very_poor">Very Poor - Rarely available</option>
     </select>
   </div>
   
   <div>
-    <label for="water_access" class="block text-sm font-medium text-gray-700">Water Access</label>
+    <label for="drainage_quality" class="block text-sm font-medium text-gray-700">Field Drainage Quality *</label>
     <select
-    id="water_access"
-    v-model="form.water_access"
+    id="drainage_quality"
+    v-model="form.drainage_quality"
     required
     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
     >
-    <option value="">Select water access</option>
-    <option value="good">Good/Easy Access</option>
-    <option value="moderate">Fair/Moderate Access</option> 
-    <option value="poor">Poor/Difficult Access</option>
+    <option value="">Select drainage quality</option>
+    <option value="excellent">Excellent - Quick drainage</option>
+    <option value="good">Good - Adequate drainage</option>
+    <option value="moderate">Moderate - Slow drainage</option>
+    <option value="poor">Poor - Water logging issues</option>
   </select>
 </div>
 </div>
 </div>
+</div>
 
-<!-- Rice Varietal Preferences -->
+<!-- Rice Varieties and Farming Practices -->
 <div class="border-b border-gray-200 pb-6">
-  <h3 class="text-lg font-medium text-gray-900 mb-4">Rice Varietal Preferences</h3>
+  <h3 class="text-lg font-medium text-gray-900 mb-4">Rice Varieties and Farming Practices</h3>
   
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <div>
-      <label for="preferred_variety" class="block text-sm font-medium text-gray-700">Preferred Rice Variety</label>
+      <label for="preferred_varieties" class="block text-sm font-medium text-gray-700">Preferred Rice Varieties</label>
+      <div class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3">
+        <div v-for="variety in riceVarieties" :key="variety.value" class="flex items-center">
+          <input
+            :id="variety.value"
+            v-model="form.preferred_varieties"
+            :value="variety.value"
+            type="checkbox"
+            class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+          />
+          <label :for="variety.value" class="ml-2 text-sm text-gray-700">
+            {{ variety.label }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label for="planting_method" class="block text-sm font-medium text-gray-700">Preferred Planting Method</label>
       <select
-      id="preferred_variety"
-      v-model="form.preferred_variety"
-      required
+      id="planting_method"
+      v-model="form.planting_method"
       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
       >
-      <option value="">Select rice variety</option>
-      <option value="IR64">IR64</option>
-      <option value="Jasmine">Jasmine Rice</option>
-      <option value="Basmati">Basmati Rice</option>
-      <option value="Arborio">Arborio Rice</option>
-      <option value="Brown Rice">Brown Rice</option>
-      <option value="Sticky Rice">Sticky Rice</option>
-      <option value="Wild Rice">Wild Rice</option>
+      <option value="">Select planting method</option>
+      <option value="direct_seeding">Direct Seeding</option>
+      <option value="transplanting">Transplanting</option>
+      <option value="broadcasting">Broadcasting</option>
+      <option value="drilling">Drilling</option>
     </select>
   </div>
-  
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
   <div>
-    <label for="previous_yield" class="block text-sm font-medium text-gray-700">Previous Average Yield (kg/ha)</label>
+    <label for="previous_yield" class="block text-sm font-medium text-gray-700">Previous Average Yield (tons/ha)</label>
     <input
     id="previous_yield"
     v-model="form.previous_yield"
@@ -219,8 +399,53 @@
     step="0.1"
     min="0"
     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-    placeholder="0.0"
+    placeholder="3.5"
     />
+  </div>
+
+  <div>
+    <label for="target_yield" class="block text-sm font-medium text-gray-700">Target Yield (tons/ha)</label>
+    <input
+    id="target_yield"
+    v-model="form.target_yield"
+    type="number"
+    step="0.1"
+    min="0"
+    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+    placeholder="4.0"
+    />
+  </div>
+
+  <div>
+    <label for="cropping_seasons" class="block text-sm font-medium text-gray-700">Cropping Seasons per Year</label>
+    <select
+    id="cropping_seasons"
+    v-model="form.cropping_seasons"
+    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+    >
+    <option value="">Select seasons</option>
+    <option value="1">1 Season (Wet or Dry)</option>
+    <option value="2">2 Seasons (Wet & Dry)</option>
+    <option value="3">3 Seasons (Continuous)</option>
+  </select>
+</div>
+</div>
+
+<div class="mt-6">
+  <label for="farming_challenges" class="block text-sm font-medium text-gray-700 mb-2">Main Farming Challenges (select all that apply)</label>
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+    <div v-for="challenge in farmingChallenges" :key="challenge.value" class="flex items-center">
+      <input
+        :id="challenge.value"
+        v-model="form.farming_challenges"
+        :value="challenge.value"
+        type="checkbox"
+        class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+      />
+      <label :for="challenge.value" class="ml-2 text-sm text-gray-700">
+        {{ challenge.label }}
+      </label>
+    </div>
   </div>
 </div>
 </div>
@@ -229,29 +454,15 @@
 <div>
   <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
   
-  <div class="space-y-6">
-    <div>
-      <label for="farming_experience" class="block text-sm font-medium text-gray-700">Years of Farming Experience</label>
-      <input
-      id="farming_experience"
-      v-model="form.farming_experience"
-      type="number"
-      min="0"
-      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-      placeholder="0"
-      />
-    </div>
-    
-    <div>
-      <label for="notes" class="block text-sm font-medium text-gray-700">Additional Notes</label>
-      <textarea
-      id="notes"
-      v-model="form.notes"
-      rows="3"
-      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-      placeholder="Any additional information about your farm..."
-      ></textarea>
-    </div>
+  <div>
+    <label for="notes" class="block text-sm font-medium text-gray-700">Additional Notes</label>
+    <textarea
+    id="notes"
+    v-model="form.notes"
+    rows="3"
+    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+    placeholder="Any additional information about your farm..."
+    ></textarea>
   </div>
 </div>
 </div>
@@ -310,21 +521,69 @@ const cities = ref([]);
 const barangays = ref([]);
 
 const form = reactive({
+  // Basic Information
   farm_name: '',
-  farm_size: '',
+  total_area: '',
+  rice_area: '',
+  farming_experience: '',
+  farm_description: '',
+  
+  // Location (Philippine system)
   provinceCode: '',
   cityCode: '',
   barangayCode: '',
   address: '',
+  
+  // Soil Information
   soil_type: '',
+  soil_ph: '',
+  organic_matter_content: '',
+  nitrogen_level: '',
+  phosphorus_level: '',
+  potassium_level: '',
+  elevation: '',
+  
+  // Water Management
   water_source: '',
   irrigation_type: '',
   water_access: '',
-  preferred_variety: '',
+  drainage_quality: '',
+  
+  // Rice Varieties and Practices
+  preferred_varieties: [],
+  planting_method: '',
   previous_yield: '',
-  farming_experience: '',
+  target_yield: '',
+  cropping_seasons: '',
+  farming_challenges: [],
+  
+  // Additional
   notes: '',
 });
+
+const riceVarieties = [
+  { value: 'ir64', label: 'IR64 - High yielding variety' },
+  { value: 'jasmine', label: 'Jasmine Rice - Aromatic' },
+  { value: 'basmati', label: 'Basmati - Premium aromatic' },
+  { value: 'brown_rice', label: 'Brown Rice - Nutritious' },
+  { value: 'glutinous', label: 'Glutinous Rice - Sticky' },
+  { value: 'red_rice', label: 'Red Rice - Antioxidant rich' },
+  { value: 'black_rice', label: 'Black Rice - Superfood' },
+  { value: 'local_variety', label: 'Local Traditional Variety' }
+];
+
+const farmingChallenges = [
+  { value: 'pests', label: 'Pest Management' },
+  { value: 'diseases', label: 'Disease Control' },
+  { value: 'water_shortage', label: 'Water Shortage' },
+  { value: 'flooding', label: 'Flooding Issues' },
+  { value: 'soil_fertility', label: 'Soil Fertility' },
+  { value: 'weather', label: 'Weather Variability' },
+  { value: 'labor', label: 'Labor Shortage' },
+  { value: 'market_access', label: 'Market Access' },
+  { value: 'input_costs', label: 'High Input Costs' },
+  { value: 'storage', label: 'Storage Facilities' }
+];
 
 // Load provinces on mount
 onMounted(async () => {
@@ -373,11 +632,66 @@ const setAddress = () => {
 };
 
 const submitProfile = async () => {
+  // Validate form
+  if (!form.farm_name || !form.total_area || !form.rice_area || !form.address) {
+    error.value = 'Please fill in all required fields.';
+    return;
+  }
+  
+  if (parseFloat(form.rice_area) > parseFloat(form.total_area)) {
+    error.value = 'Rice cultivation area cannot exceed total farm area.';
+    return;
+  }
+  
+  if (!form.soil_type) {
+    error.value = 'Please select your soil type.';
+    return;
+  }
+  
+  if (!form.water_source || !form.irrigation_type || !form.water_access || !form.drainage_quality) {
+    error.value = 'Please fill in all water management fields.';
+    return;
+  }
+  
   loading.value = true;
   error.value = '';
   
   try {
-    await farmStore.createFarmProfile(form);
+    // Map form data to match backend expectations
+    // Use address as location for geocoding
+    const profileData = {
+      farm_name: form.farm_name,
+      farm_location: form.address, // Use Philippine address as location string for geocoding
+      total_area: form.total_area,
+      rice_area: form.rice_area,
+      farming_experience: form.farming_experience || null,
+      farm_description: form.farm_description || null,
+      
+      // Soil Information
+      soil_type: form.soil_type,
+      soil_ph: form.soil_ph || null,
+      organic_matter_content: form.organic_matter_content || null,
+      nitrogen_level: form.nitrogen_level || null,
+      phosphorus_level: form.phosphorus_level || null,
+      potassium_level: form.potassium_level || null,
+      elevation: form.elevation || null,
+      
+      // Water Management
+      water_source: form.water_source,
+      irrigation_type: form.irrigation_type,
+      water_access: form.water_access,
+      drainage_quality: form.drainage_quality,
+      
+      // Rice Varieties and Practices
+      preferred_varieties: form.preferred_varieties || [],
+      planting_method: form.planting_method || null,
+      previous_yield: form.previous_yield || null,
+      target_yield: form.target_yield || null,
+      cropping_seasons: form.cropping_seasons || null,
+      farming_challenges: form.farming_challenges || [],
+    };
+    
+    await farmStore.createRiceFarmProfile(profileData);
     
     // Update user data to reflect farm profile completion
     await authStore.fetchUser();

@@ -141,16 +141,6 @@ export const farmProfileAPI = {
 
   create: (data) => {
     // Map frontend values to backend expected values
-    // const waterAccessMapping = {
-    //   'easy': 'good',       // 'good' is valid
-    //   'moderate': 'moderate',  // <-- This is the main fix
-    //   'difficult': 'poor',     // 'poor' is valid
-      
-    //   // You may want to add these if your form supports them:
-    //   'very_easy': 'excellent',
-    //   'very_difficult': 'very_poor'
-    // };
-
     const payload = {
       farm_name: data.farm_name,
       location: data.address || data.farm_location || data.location,
@@ -158,34 +148,60 @@ export const farmProfileAPI = {
       rice_area: parseFloat(data.farm_size),
       water_source: data.water_source || 'irrigation_canal',
       irrigation_type: data.irrigation_type || 'flood',
-      water_access: data.water_access || 'good', // We fixed this
+      water_access: data.water_access || 'good',
       drainage_quality: data.drainage_quality || 'good',
       soil_type: data.soil_type,
-      
-      // 👇 This is the fix 👇
-      // The backend expects 'preferred_varieties' (plural) as an array.
-      // We will take the singular 'preferred_variety' from the form
-      // and put it into an array for the backend.
       preferred_varieties: data.preferred_variety ? [data.preferred_variety] : [],
-      
       previous_yield: data.previous_yield ? parseFloat(data.previous_yield) : null,
       farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
-      notes: data.notes || null, // This is for the 'notes' field in the payload
-      
-      // These are other fields your controller uses.
-      // They are nullable, but it's good to send them.
-      farm_description: data.notes || null, // Re-using notes as description
+      notes: data.notes || null,
+      farm_description: data.notes || null,
       planting_method: data.planting_method || null,
       target_yield: data.target_yield ? parseFloat(data.target_yield) : null,
       cropping_seasons: data.cropping_seasons || null,
       farming_challenges: data.farming_challenges || [],
     };
-  
-    // We are now sending the correct payload, but your Vue form
-    // doesn't collect all these fields. This is the next thing
-    // you will need to fix.
     
     console.log("📦 Sending payload to /api/farmer/profile:", payload);
+    return api.post('/farmer/profile', payload);
+  },
+
+  createRiceFarm: (data) => {
+    // Map onboarding form data to backend expected format
+    const payload = {
+      // Basic Information
+      farm_name: data.farm_name,
+      location: data.farm_location || data.location, // Map farm_location to location
+      total_area: parseFloat(data.total_area) || 0,
+      rice_area: parseFloat(data.rice_area) || 0,
+      farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
+      farm_description: data.farm_description || null,
+      
+      // Soil Information
+      soil_type: data.soil_type,
+      soil_ph: data.soil_ph ? parseFloat(data.soil_ph) : null,
+      organic_matter_content: data.organic_matter_content ? parseFloat(data.organic_matter_content) : null,
+      nitrogen_level: data.nitrogen_level ? parseFloat(data.nitrogen_level) : null,
+      phosphorus_level: data.phosphorus_level ? parseFloat(data.phosphorus_level) : null,
+      potassium_level: data.potassium_level ? parseFloat(data.potassium_level) : null,
+      elevation: data.elevation ? parseFloat(data.elevation) : null,
+      
+      // Water Management
+      water_source: data.water_source,
+      irrigation_type: data.irrigation_type,
+      water_access: data.water_access,
+      drainage_quality: data.drainage_quality,
+      
+      // Rice Varieties and Practices
+      preferred_varieties: Array.isArray(data.preferred_varieties) ? data.preferred_varieties : [],
+      planting_method: data.planting_method || null,
+      previous_yield: data.previous_yield ? parseFloat(data.previous_yield) : null,
+      target_yield: data.target_yield ? parseFloat(data.target_yield) : null,
+      cropping_seasons: data.cropping_seasons || null,
+      farming_challenges: Array.isArray(data.farming_challenges) ? data.farming_challenges : [],
+    };
+    
+    console.log("📦 Sending rice farm profile data to API:", payload);
     return api.post('/farmer/profile', payload);
   },
   

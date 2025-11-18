@@ -141,10 +141,32 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Weather Widget -->
         <div class="lg:col-span-1">
+          <!-- Show weather if we have a field with valid coordinates -->
           <CurrentWeather 
-            v-if="primaryField && primaryField.id" 
+            v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)" 
             :field-id="primaryField.id" 
           />
+          <!-- Show message if field exists but lacks coordinates -->
+          <div v-else-if="primaryField && primaryField.id && !hasValidCoordinates(primaryField)" class="bg-white rounded-lg shadow-lg p-6">
+            <div class="text-center text-gray-500">
+              <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <p class="text-sm font-medium text-gray-700 mb-2">Location coordinates needed</p>
+              <p class="text-xs text-gray-500 mb-4">
+                Your field "{{ primaryField.name }}" needs location coordinates to display weather data.
+              </p>
+              <button 
+                @click="navigateTo('/fields')" 
+                :disabled="isNavigating"
+                class="text-green-600 hover:text-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Update field location
+              </button>
+            </div>
+          </div>
+          <!-- Show message if no fields exist -->
           <div v-else class="bg-white rounded-lg shadow-lg p-6">
             <div class="text-center text-gray-500">
               <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,12 +463,89 @@ const primaryField = computed(() => {
     if (!farmStore || !farmStore.fields || !Array.isArray(farmStore.fields)) {
       return null;
     }
-    return farmStore.fields.length > 0 ? farmStore.fields[0] : null;
+    
+    if (farmStore.fields.length === 0) {
+      return null;
+    }
+    
+    // Find a field with valid location coordinates
+    // First, try to find a field with valid location.lat and location.lon
+    const fieldWithValidLocation = farmStore.fields.find(field => {
+      if (!field || !field.location) return false;
+      
+      // Check if location has lat and lon
+      const hasLocationCoords = 
+        typeof field.location === 'object' &&
+        field.location !== null &&
+        typeof field.location.lat === 'number' &&
+        typeof field.location.lon === 'number' &&
+        !isNaN(field.location.lat) &&
+        !isNaN(field.location.lon);
+      
+      return hasLocationCoords;
+    });
+    
+    // If we found a field with valid coordinates, use it
+    if (fieldWithValidLocation) {
+      return fieldWithValidLocation;
+    }
+    
+    // Fallback: try field_coordinates if location doesn't have coords
+    const fieldWithFieldCoordinates = farmStore.fields.find(field => {
+      if (!field || !field.field_coordinates) return false;
+      
+      const hasFieldCoords = 
+        typeof field.field_coordinates === 'object' &&
+        field.field_coordinates !== null &&
+        typeof field.field_coordinates.lat === 'number' &&
+        typeof field.field_coordinates.lon === 'number' &&
+        !isNaN(field.field_coordinates.lat) &&
+        !isNaN(field.field_coordinates.lon);
+      
+      return hasFieldCoords;
+    });
+    
+    // If we found a field with field_coordinates, use it
+    // The backend will handle using field_coordinates as fallback
+    if (fieldWithFieldCoordinates) {
+      return fieldWithFieldCoordinates;
+    }
+    
+    // Last resort: return first field (but it might not have valid coordinates)
+    // This allows us to show a message about needing coordinates
+    return farmStore.fields[0];
   } catch (error) {
     console.warn('Error getting primary field:', error);
     return null;
   }
 });
+
+// Helper function to check if a field has valid coordinates
+const hasValidCoordinates = (field) => {
+  if (!field) return false;
+  
+  // Check location coordinates
+  if (field.location && 
+      typeof field.location === 'object' &&
+      typeof field.location.lat === 'number' &&
+      typeof field.location.lon === 'number' &&
+      !isNaN(field.location.lat) &&
+      !isNaN(field.location.lon)) {
+    return true;
+  }
+  
+  // Check field_coordinates
+  if (field.field_coordinates &&
+      typeof field.field_coordinates === 'object' &&
+      typeof field.field_coordinates.lat === 'number' &&
+      typeof field.field_coordinates.lon === 'number' &&
+      !isNaN(field.field_coordinates.lat) &&
+      !isNaN(field.field_coordinates.lon)) {
+    return true;
+  }
+  
+  return false;
+};
 
 const getTaskPriorityColor = (priority) => {
   const colors = {

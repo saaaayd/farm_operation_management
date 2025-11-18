@@ -22,9 +22,15 @@ class TaskController extends Controller
 
         $query = Task::query()->with(['planting.field', 'laborer']);
 
+        // Only include tasks that have a planting (planting_id is not null)
+        $query->whereNotNull('planting_id');
+
         if (!$user->isAdmin()) {
-            $query->whereHas('planting.field', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+            // Only get tasks that have a planting with a field owned by the user
+            $query->whereHas('planting', function ($q) use ($user) {
+                $q->whereHas('field', function ($fieldQuery) use ($user) {
+                    $fieldQuery->where('user_id', $user->id);
+                });
             });
         }
 
@@ -68,6 +74,15 @@ class TaskController extends Controller
             'description' => ['required', 'string'],
             'status' => ['nullable', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         $planting = Planting::with('field')->findOrFail($request->planting_id);
         $user = $request->user();
 

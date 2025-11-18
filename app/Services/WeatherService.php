@@ -144,16 +144,26 @@ class WeatherService
      */
     public function updateFieldWeather(Field $field, ?array $weatherData = null): ?WeatherLog
     {
-        if (!isset($field->location['lat']) || !isset($field->location['lon'])) {
+        // Get coordinates from location or fallback to field_coordinates
+        $lat = null;
+        $lon = null;
+        
+        if (isset($field->location['lat']) && isset($field->location['lon'])) {
+            $lat = (float) $field->location['lat'];
+            $lon = (float) $field->location['lon'];
+        } elseif (isset($field->field_coordinates['lat']) && isset($field->field_coordinates['lon'])) {
+            // Fallback to field_coordinates if location doesn't have coordinates
+            $lat = (float) $field->field_coordinates['lat'];
+            $lon = (float) $field->field_coordinates['lon'];
+        }
+        
+        if ($lat === null || $lon === null) {
             Log::warning('Field location coordinates missing', ['field_id' => $field->id]);
             return null;
         }
 
         if ($weatherData === null) {
-            $weatherData = $this->getCurrentWeather(
-                (float) $field->location['lat'],
-                (float) $field->location['lon']
-            );
+            $weatherData = $this->getCurrentWeather($lat, $lon);
         }
 
         if (!$weatherData) {

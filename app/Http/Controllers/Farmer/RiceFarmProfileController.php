@@ -6,10 +6,12 @@ use App\Models\User;
 use App\Models\Farm;
 use App\Models\Field;
 use App\Models\RiceVariety;
+use App\Services\OpenWeatherAPIService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class RiceFarmProfileController extends Controller
 {
@@ -75,6 +77,16 @@ class RiceFarmProfileController extends Controller
                 ]
             );
 
+            // Geocode the location to get coordinates for weather data
+            $coordinates = $this->geocodeLocation($request->location);
+            
+            // Prepare location data with coordinates if available
+            $locationData = ['address' => $request->location];
+            if ($coordinates) {
+                $locationData['lat'] = $coordinates['latitude'];
+                $locationData['lon'] = $coordinates['longitude'];
+            }
+            
             // Create main rice field with comprehensive data
             $field = Field::updateOrCreate(
                 [
@@ -83,8 +95,11 @@ class RiceFarmProfileController extends Controller
                     'name' => 'Main Rice Field'
                 ],
                 [
-                    'location' => ['address' => $request->location],
-                    'field_coordinates' => null, // Can be added later
+                    'location' => $locationData,
+                    'field_coordinates' => $coordinates ? [
+                        'lat' => $coordinates['latitude'],
+                        'lon' => $coordinates['longitude']
+                    ] : null,
                     'soil_type' => $request->soil_type,
                     'soil_ph' => $request->soil_ph,
                     'organic_matter_content' => $request->organic_matter_content,
@@ -398,7 +413,20 @@ class RiceFarmProfileController extends Controller
             }
 
             // Update main field if field-related data provided
-            if ($farm && ($request->has('soil_type') || $request->has('rice_area'))) {
+            if ($farm && ($request->has('soil_type') || $request->has('rice_area') || $request->has('location'))) {
+                // Geocode location if provided
+                $coordinates = null;
+                $locationData = null;
+                
+                if ($request->has('location') && $request->location) {
+                    $coordinates = $this->geocodeLocation($request->location);
+                    $locationData = ['address' => $request->location];
+                    if ($coordinates) {
+                        $locationData['lat'] = $coordinates['latitude'];
+                        $locationData['lon'] = $coordinates['longitude'];
+                    }
+                }
+                
                 $field = Field::updateOrCreate(
                     [
                         'user_id' => $user->id,
@@ -406,7 +434,11 @@ class RiceFarmProfileController extends Controller
                         'name' => 'Main Rice Field'
                     ],
                     array_filter([
-                        'location' => $request->location ? ['address' => $request->location] : null,
+                        'location' => $locationData,
+                        'field_coordinates' => $coordinates ? [
+                            'lat' => $coordinates['latitude'],
+                            'lon' => $coordinates['longitude']
+                        ] : null,
                         'soil_type' => $request->soil_type ?? null,
                         'soil_ph' => $request->soil_ph ?? null,
                         'organic_matter_content' => $request->organic_matter_content ?? null,
@@ -485,6 +517,34 @@ class RiceFarmProfileController extends Controller
                 'message' => 'Failed to update profile',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Geocode a location string to get coordinates
+     */
+    private function geocodeLocation(string $location): ?array
+    {
+        try {
+            $weatherService = app(OpenWeatherAPIService::class);
+            $coordinates = $weatherService->getCoordinates($location);
+            
+            if ($coordinates) {
+                Log::info('Geocoded location', [
+                    'location' => $location,
+                    'coordinates' => $coordinates
+                ]);
+                return $coordinates;
+            }
+            
+            Log::warning('Failed to geocode location', ['location' => $location]);
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Geocoding error', [
+                'location' => $location,
+                'error' => $e->getMessage()
+            ]);
+            return null;
         }
     }
 }
