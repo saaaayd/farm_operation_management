@@ -48,15 +48,15 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Approval Status</label>
             <select
               v-model="statusFilter"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
           <div class="flex items-end">
@@ -72,7 +72,11 @@
 
       <!-- Users Table -->
       <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
+        <div v-if="loading" class="p-8 text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p class="mt-2 text-gray-600">Loading users...</p>
+        </div>
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -83,7 +87,7 @@
                   Role
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Approval Status
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Login
@@ -121,17 +125,20 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
-                    :class="getStatusBadgeClass(user.status)"
+                    :class="getApprovalStatusBadgeClass(user.approval_status)"
                     class="px-2 py-1 text-xs font-medium rounded-full"
                   >
-                    {{ user.status }}
+                    {{ user.approval_status || 'pending' }}
                   </span>
+                  <p v-if="user.rejection_reason" class="text-xs text-red-600 mt-1 max-w-xs">
+                    {{ user.rejection_reason }}
+                  </p>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatDate(user.last_login) }}
+                  {{ user.last_login ? formatDate(user.last_login) : 'Never' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatDate(user.joined) }}
+                  {{ formatDate(user.created_at || user.joined) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-2">
@@ -147,12 +154,6 @@
                     >
                       Edit
                     </button>
-                    <button
-                      @click="toggleUserStatus(user.id)"
-                      :class="user.status === 'active' ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'"
-                    >
-                      {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -162,7 +163,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-if="filteredUsers.length === 0" class="text-center py-12">
+      <div v-if="!loading && filteredUsers.length === 0" class="text-center py-12">
         <div class="text-gray-400 text-6xl mb-4">👥</div>
         <h3 class="text-xl font-medium text-gray-900 mb-2">No users found</h3>
         <p class="text-gray-600 mb-6">Try adjusting your search or filters</p>
@@ -201,8 +202,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { adminAPI } from '@/services/api'
 
 const router = useRouter()
 const searchQuery = ref('')
@@ -210,54 +212,9 @@ const roleFilter = ref('')
 const statusFilter = ref('')
 const currentPage = ref(1)
 const itemsPerPage = 10
+const loading = ref(false)
 
-const users = ref([
-  {
-    id: 1,
-    name: 'John Smith',
-    email: 'john.smith@example.com',
-    role: 'farmer',
-    status: 'active',
-    last_login: '2024-03-25T10:00:00Z',
-    joined: '2024-01-15T09:00:00Z'
-  },
-  {
-    id: 2,
-    name: 'Sarah Wilson',
-    email: 'sarah.wilson@example.com',
-    role: 'buyer',
-    status: 'active',
-    last_login: '2024-03-24T14:30:00Z',
-    joined: '2024-02-20T11:30:00Z'
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    email: 'mike.johnson@example.com',
-    role: 'farmer',
-    status: 'active',
-    last_login: '2024-03-24T09:15:00Z',
-    joined: '2024-01-10T08:45:00Z'
-  },
-  {
-    id: 4,
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'admin',
-    status: 'active',
-    last_login: '2024-03-25T08:00:00Z',
-    joined: '2023-12-01T00:00:00Z'
-  },
-  {
-    id: 5,
-    name: 'Jane Doe',
-    email: 'jane.doe@example.com',
-    role: 'buyer',
-    status: 'inactive',
-    last_login: '2024-03-20T16:20:00Z',
-    joined: '2024-03-01T10:00:00Z'
-  }
-])
+const users = ref([])
 
 const filteredUsers = computed(() => {
   let filtered = users.value
@@ -276,9 +233,9 @@ const filteredUsers = computed(() => {
     filtered = filtered.filter(user => user.role === roleFilter.value)
   }
 
-  // Filter by status
+  // Filter by approval status
   if (statusFilter.value) {
-    filtered = filtered.filter(user => user.status === statusFilter.value)
+    filtered = filtered.filter(user => (user.approval_status || 'pending') === statusFilter.value)
   }
 
   // Pagination
@@ -288,7 +245,28 @@ const filteredUsers = computed(() => {
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(users.value.length / itemsPerPage)
+  return Math.ceil(filteredUsers.value.length / itemsPerPage)
+})
+
+const loadUsers = async () => {
+  loading.value = true
+  try {
+    const response = await adminAPI.getUsers({ per_page: 100 }) // Get all users for now
+    if (response.data && response.data.data) {
+      users.value = response.data.data
+    } else if (Array.isArray(response.data)) {
+      users.value = response.data
+    }
+  } catch (error) {
+    console.error('Error loading users:', error)
+    alert('Failed to load users. Please try again.')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadUsers()
 })
 
 const getRoleBadgeClass = (role) => {
@@ -300,11 +278,11 @@ const getRoleBadgeClass = (role) => {
   return classes[role] || 'bg-gray-100 text-gray-800'
 }
 
-const getStatusBadgeClass = (status) => {
+const getApprovalStatusBadgeClass = (status) => {
   const classes = {
-    active: 'bg-green-100 text-green-800',
-    inactive: 'bg-gray-100 text-gray-800',
-    suspended: 'bg-red-100 text-red-800'
+    approved: 'bg-green-100 text-green-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    rejected: 'bg-red-100 text-red-800'
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
@@ -319,13 +297,6 @@ const viewUser = (id) => {
 
 const editUser = (id) => {
   router.push(`/admin/users/${id}/edit`)
-}
-
-const toggleUserStatus = (id) => {
-  const user = users.value.find(u => u.id === id)
-  if (user) {
-    user.status = user.status === 'active' ? 'suspended' : 'active'
-  }
 }
 
 const addUser = () => {

@@ -119,11 +119,11 @@ class AdminDashboardController extends Controller
             ->where('role', '!=', 'admin')
             ->count();
 
-        $dailyCounts = User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+        $dailyCounts = User::selectRaw('DATE(created_at)::text as date, COUNT(*) as count')
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
             ->where('role', '!=', 'admin')
-            ->groupBy('date')
+            ->groupByRaw('DATE(created_at)')
             ->orderBy('date', 'asc')
             ->get()
             ->mapWithKeys(function ($item) {
@@ -160,10 +160,10 @@ class AdminDashboardController extends Controller
         $startDate = Carbon::now()->subMonths($months)->startOfMonth();
         $endDate = Carbon::now()->endOfMonth();
 
-        $monthlySales = Sale::selectRaw('YEAR(sale_date) as year, MONTH(sale_date) as month, SUM(total_amount) as total')
+        $monthlySales = Sale::selectRaw('EXTRACT(YEAR FROM sale_date)::integer as year, EXTRACT(MONTH FROM sale_date)::integer as month, SUM(total_amount) as total')
             ->where('sale_date', '>=', $startDate)
             ->where('sale_date', '<=', $endDate)
-            ->groupBy('year', 'month')
+            ->groupByRaw('EXTRACT(YEAR FROM sale_date), EXTRACT(MONTH FROM sale_date)')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
             ->get();
@@ -193,10 +193,10 @@ class AdminDashboardController extends Controller
         $startDate = Carbon::now()->subMonths($months)->startOfMonth();
         $endDate = Carbon::now()->endOfMonth();
 
-        $monthlyExpenses = Expense::selectRaw('YEAR(date) as year, MONTH(date) as month, SUM(amount) as total')
+        $monthlyExpenses = Expense::selectRaw('EXTRACT(YEAR FROM date)::integer as year, EXTRACT(MONTH FROM date)::integer as month, SUM(amount) as total')
             ->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate)
-            ->groupBy('year', 'month')
+            ->groupByRaw('EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
             ->get();

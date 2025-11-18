@@ -58,7 +58,10 @@ class DatabaseSeeder extends Seeder
                     'state' => 'AC',
                     'country' => 'USA',
                     'postal_code' => '12345'
-                ]
+                ],
+                'approval_status' => 'approved', // Admins are auto-approved
+                'approved_by' => null,
+                'approved_at' => now(),
             ]
         );
 
@@ -77,7 +80,10 @@ class DatabaseSeeder extends Seeder
                     'state' => 'RT',
                     'country' => 'USA',
                     'postal_code' => '54321'
-                ]
+                ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
             ]
         );
 
@@ -94,7 +100,10 @@ class DatabaseSeeder extends Seeder
                     'state' => 'FV',
                     'country' => 'USA',
                     'postal_code' => '67890'
-                ]
+                ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
             ]
         );
 
@@ -290,7 +299,10 @@ class DatabaseSeeder extends Seeder
                     'state' => 'CC',
                     'country' => 'USA',
                     'postal_code' => '13579'
-                ]
+                ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
             ]
         );
 
@@ -307,7 +319,10 @@ class DatabaseSeeder extends Seeder
                     'state' => 'BT',
                     'country' => 'USA',
                     'postal_code' => '24680'
-                ]
+                ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
             ]
         );
 

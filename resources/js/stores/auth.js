@@ -68,7 +68,15 @@ export const useAuthStore = defineStore('auth', {
         
         return response.data;
       } catch (error) {
-        this.error = error.response?.data?.message || 'Registration failed';
+        // Handle validation errors
+        if (error.response?.status === 422 && error.response?.data?.errors) {
+          // Format validation errors for display
+          const errors = error.response.data.errors;
+          const errorMessages = Object.values(errors).flat().join(', ');
+          this.error = error.response.data.message + ': ' + errorMessages;
+        } else {
+          this.error = error.response?.data?.message || 'Registration failed';
+        }
         throw error;
       } finally {
         this.loading = false;

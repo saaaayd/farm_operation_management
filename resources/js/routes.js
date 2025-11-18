@@ -409,8 +409,14 @@ export const setupRouterGuards = (router) => {
       // Handle root path redirect
       if (to.path === '/') {
         if (authStore.isAuthenticated) {
-          console.log('Router: Redirecting authenticated user to dashboard');
-          next('/dashboard');
+          // Redirect based on user role
+          if (authStore.isAdmin) {
+            console.log('Router: Redirecting admin user to admin dashboard');
+            next('/admin');
+          } else {
+            console.log('Router: Redirecting authenticated user to dashboard');
+            next('/dashboard');
+          }
         } else {
           console.log('Router: Redirecting unauthenticated user to login');
           next('/login');
@@ -427,8 +433,14 @@ export const setupRouterGuards = (router) => {
       
       // Check if route requires guest (not authenticated)
       if (to.meta.requiresGuest && authStore.isAuthenticated) {
-        console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
-        next('/dashboard');
+        // Redirect based on user role
+        if (authStore.isAdmin) {
+          console.log('Router: Guest route accessed by admin, redirecting to admin dashboard');
+          next('/admin');
+        } else {
+          console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
+          next('/dashboard');
+        }
         return;
       }
       
@@ -452,8 +464,14 @@ export const setupRouterGuards = (router) => {
 
       // Check if user is ALREADY onboarded but tries to go back to /onboarding
       if (to.meta.requiresOnboarding && !userHasNoFarm) {
-        console.log('Router: User is already onboarded, redirecting from /onboarding');
-        next('/dashboard');
+        // Redirect based on user role
+        if (authStore.isAdmin) {
+          console.log('Router: Admin user is already onboarded, redirecting from /onboarding to /admin');
+          next('/admin');
+        } else {
+          console.log('Router: User is already onboarded, redirecting from /onboarding');
+          next('/dashboard');
+        }
         return;
       }
       
@@ -462,8 +480,14 @@ export const setupRouterGuards = (router) => {
       // Check role-based access
       if (to.meta.roles && authStore.user) {
         if (!to.meta.roles.includes(authStore.user.role)) {
-          console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
-          next('/dashboard'); // Redirect to dashboard if role not allowed
+          // Redirect based on user role
+          if (authStore.isAdmin) {
+            console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to admin dashboard`);
+            next('/admin');
+          } else {
+            console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
+            next('/dashboard');
+          }
           return;
         }
       }

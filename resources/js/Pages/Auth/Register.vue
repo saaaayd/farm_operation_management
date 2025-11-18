@@ -104,8 +104,17 @@
           </div>
         </div>
 
-        <div v-if="authStore.error" class="text-red-600 text-sm text-center">
-          {{ authStore.error }}
+        <div v-if="authStore.error" class="rounded-md bg-red-50 border border-red-200 px-4 py-3 mb-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800">{{ authStore.error }}</p>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -152,6 +161,30 @@ const form = ref({
 });
 
 const handleRegister = async () => {
+  // Clear previous errors
+  authStore.error = null;
+  
+  // Basic client-side validation
+  if (!form.value.name || !form.value.email || !form.value.role || !form.value.password) {
+    authStore.error = 'Please fill in all required fields.';
+    return;
+  }
+  
+  if (form.value.password.length < 8) {
+    authStore.error = 'Password must be at least 8 characters long.';
+    return;
+  }
+  
+  if (form.value.password !== form.value.password_confirmation) {
+    authStore.error = 'Passwords do not match.';
+    return;
+  }
+  
+  if (!['farmer', 'buyer'].includes(form.value.role)) {
+    authStore.error = 'Please select a valid account type.';
+    return;
+  }
+  
   try {
     await authStore.register(form.value);
     // Let the router guard handle the redirect based on auth state
@@ -159,6 +192,10 @@ const handleRegister = async () => {
   } catch (error) {
     // Error is handled in the store
     console.error('Registration error:', error);
+    // Log the full error response for debugging
+    if (error.response?.data) {
+      console.error('Error response:', error.response.data);
+    }
   }
 };
 </script>
