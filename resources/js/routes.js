@@ -20,6 +20,8 @@ import PlantingsShow from '@/Pages/Farmer/Plantings/Show.vue';
 import PlantingsEdit from '@/Pages/Farmer/Plantings/Edit.vue';
 import TasksIndex from '@/Pages/Farmer/Tasks/Index.vue';
 import TasksCreate from '@/Pages/Farmer/Tasks/Create.vue';
+import TasksShow from '@/Pages/Farmer/Tasks/Show.vue';
+import TasksCalendar from '@/Pages/Farmer/Tasks/Calendar.vue';
 import HarvestsIndex from '@/Pages/Farmer/Harvests/Index.vue';
 import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
 
@@ -140,6 +142,18 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   {
+    path: '/tasks/:id',
+    name: 'tasks-show',
+    component: TasksShow,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/tasks/calendar',
+    name: 'tasks-calendar',
+    component: TasksCalendar,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
     path: '/harvests',
     name: 'harvests',
     component: HarvestsIndex,
@@ -157,6 +171,12 @@ const routes = [
     path: '/weather',
     name: 'weather',
     component: WeatherDashboard,
+    meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
+  },
+  {
+    path: '/weather/analytics',
+    name: 'weather-analytics',
+    component: WeatherAnalytics,
     meta: { requiresAuth: true, roles: ['farmer', 'admin'] }
   },
   

@@ -55,7 +55,36 @@
               @click="refreshPlantings"
               class="mt-2 text-sm font-medium text-red-700 hover:text-red-800"
             >
-              Try again
+              <option :value="null">All Varieties</option>
+              <option 
+                v-for="option in varietyOptions" 
+                :key="option.key" 
+                :value="option"
+              >
+                {{ option.label }}
+              </option>
+            </button>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Field</label>
+            <select 
+              v-model="filters.field" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">All Fields</option>
+              <option v-for="field in fields" :key="field.id" :value="field.id">
+                {{ field.name }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="flex items-end">
+            <button 
+              @click="clearFilters"
+              class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Clear Filters
             </button>
           </div>
         </div>
@@ -185,29 +214,172 @@ import { useFarmStore } from '@/stores/farm'
 const router = useRouter()
 const farmStore = useFarmStore()
 
-const loading = ref(true)
-const error = ref('')
+const loading = ref(false);
+const filters = ref({
+  status: '',
+  variety: null,
+  field: ''
+});
+const error = ref(null);
 
-const plantings = computed(() => farmStore.plantings || [])
+const plantings = computed(() => farmStore.plantings);
+const fields = computed(() => farmStore.fields);
+const varietyOptions = computed(() => {
+  const options = [];
+  const seen = new Set();
 
-// --- Data Fetching ---
-const refreshPlantings = async () => {
-  loading.value = true
-  error.value = ''
-  try {
-    await farmStore.fetchPlantings()
-  } catch (err) {
-    console.error('Failed to load plantings:', err)
-    error.value = err.userMessage || err.response?.data?.message || 'Unable to load plantings.'
-  } finally {
-    loading.value = false
+  plantings.value.forEach((planting) => {
+    if (planting?.rice_variety) {
+      const varietyId = planting.rice_variety.id ?? planting.rice_variety_id;
+      if (varietyId) {
+        const key = `variety-${varietyId}`;
+        if (!seen.has(key)) {
+          options.push({
+            key,
+            label: planting.rice_variety.name || planting.crop_type || 'Rice Variety',
+            type: 'variety',
+            id: varietyId,
+          });
+          seen.add(key);
+        }
+      }
+    } else if (planting?.rice_variety_id) {
+      const key = `variety-${planting.rice_variety_id}`;
+      if (!seen.has(key)) {
+        options.push({
+          key,
+          label: planting.crop_type || `Variety #${planting.rice_variety_id}`,
+          type: 'variety',
+          id: planting.rice_variety_id,
+        });
+        seen.add(key);
+      }
+    }
+
+    if (planting?.crop_type) {
+      const normalized = planting.crop_type.trim();
+      const key = `crop-${normalized.toLowerCase()}`;
+      if (!seen.has(key)) {
+        options.push({
+          key,
+          label: normalized,
+          type: 'crop',
+          value: normalized.toLowerCase(),
+        });
+        seen.add(key);
+      }
+    }
+  });
+
+  return options.sort((a, b) => a.label.localeCompare(b.label));
+});
+
+const filteredPlantings = computed(() => {
+  let filtered = plantings.value;
+
+  if (filters.value.status) {
+    filtered = filtered.filter(p => p.status === filters.value.status);
   }
-}
+
+  if (filters.value.variety) {
+    const { type, id, value } = filters.value.variety;
+    filtered = filtered.filter((planting) => {
+      if (type === 'variety') {
+        const plantingVarietyId = planting.rice_variety_id ?? planting.rice_variety?.id;
+        return plantingVarietyId && Number(plantingVarietyId) === Number(id);
+      }
+      const cropType = planting.crop_type ? planting.crop_type.toLowerCase() : '';
+      return cropType === (value || '');
+    });
+  }
+
+  if (filters.value.field) {
+    filtered = filtered.filter(p => p.field_id === parseInt(filters.value.field));
+  }
+
+  return filtered;
+});
+
+const getStatusClass = (status) => {
+  const classes = {
+    planned: 'bg-indigo-100 text-indigo-800',
+    planted: 'bg-blue-100 text-blue-800',
+    growing: 'bg-green-100 text-green-800',
+    ready: 'bg-yellow-100 text-yellow-800',
+    harvested: 'bg-gray-100 text-gray-800',
+    failed: 'bg-red-100 text-red-800'
+  };
+  return classes[status] || 'bg-gray-100 text-gray-800';
+};
+
+const getProgressPercentage = (planting) => {
+  const statusProgress = {
+    planned: 0,
+    planted: 20,
+    growing: 60,
+    ready: 90,
+    harvested: 100,
+    failed: 0
+  };
+  return statusProgress[planting.status] || 0;
+};
+const getProgressColor = (status) => {
+  const colors = {
+    planned: 'bg-indigo-500',
+    planted: 'bg-blue-500',
+    growing: 'bg-green-500',
+    ready: 'bg-yellow-500',
+    harvested: 'bg-gray-500',
+    failed: 'bg-red-500'
+  };
+  return colors[status] || 'bg-gray-500';
+};
+
+// detailed formatDate implementation provided later
+
+const formatLabel = (value) => {
+  if (!value) return 'Not set';
+  return value
+    .toString()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+};
+
+
+const clearFilters = () => {
+  filters.value = {
+    status: '',
+    variety: null,
+    field: ''
+  };
+};
+
+const viewPlanting = (planting) => {
+  router.push(`/plantings/${planting.id}`);
+};
+
+const editPlanting = (planting) => {
+  router.push(`/plantings/${planting.id}/edit`);
+};
+
+const refreshPlantings = async () => {
+  loading.value = true;
+  error.value = null;
+  try {
+    await farmStore.fetchPlantings();
+  } catch (err) {
+    console.error('Failed to load plantings:', err);
+    error.value = err.userMessage || err.response?.data?.message || 'Unable to load plantings.';
+  } finally {
+    loading.value = false;
+  }
+};
 
 // --- Navigation ---
 const goToCreate = () => {
-  router.push('/plantings/create')
-}
+  router.push('/plantings/create');
+};
 
 const goToDetails = (id) => {
   router.push(`/plantings/${id}`)

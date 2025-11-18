@@ -15,7 +15,14 @@ export const useWeatherStore = defineStore('weather', {
     hasWeatherData: (state) => !!state.currentWeather,
     criticalAlerts: (state) => state.alerts.filter(alert => alert.severity === 'critical'),
     weatherWarnings: (state) => state.alerts.filter(alert => 
-      ['heavy_rain', 'drought', 'typhoon', 'extreme_temperature'].includes(alert.type)
+      [
+        'heavy_rain',
+        'drought',
+        'typhoon',
+        'extreme_temperature',
+        'high_humidity',
+        'low_humidity'
+      ].includes(alert.type)
     ),
   },
 
@@ -25,6 +32,9 @@ export const useWeatherStore = defineStore('weather', {
       try {
         const response = await axios.get(`/api/weather/fields/${fieldId}/current`);
         this.currentWeather = response.data.weather;
+        if (response.data.alerts) {
+          this.alerts = response.data.alerts;
+        }
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch current weather';

@@ -1,21 +1,32 @@
 <template>
   <div class="bg-white rounded-lg shadow-lg p-6">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-gray-900">Current Weather</h3>
-      <button
-        @click="refreshWeather"
-        :disabled="loading"
-        class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        <svg 
-          :class="['h-5 w-5', { 'animate-spin': loading }]" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Current Weather</h3>
+        <p v-if="weather && isDataStale" class="text-xs text-orange-600 mt-1">
+          ⚠️ Data may be outdated
+        </p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span v-if="autoRefreshActive" class="text-xs text-gray-400">
+          Auto-refresh: {{ timeUntilRefresh }}
+        </span>
+        <button
+          @click="refreshWeather"
+          :disabled="loading"
+          class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+          :title="loading ? 'Refreshing...' : 'Refresh weather data'"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
+          <svg 
+            :class="['h-5 w-5', { 'animate-spin': loading }]" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -86,8 +97,14 @@
               {{ getAlertIcon(alert.type) }}
             </div>
             <div class="ml-3">
-              <p class="text-sm font-medium">{{ alert.title }}</p>
+              <p class="text-sm font-medium">{{ alert.title || 'Weather Alert' }}</p>
               <p class="text-xs">{{ alert.message }}</p>
+              <p 
+                v-if="alert.recommendation" 
+                class="text-xs text-gray-500 mt-1 italic"
+              >
+                {{ alert.recommendation }}
+              </p>
             </div>
           </div>
         </div>
@@ -148,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useWeatherStore } from '@/stores/weather';
 import { useFarmStore } from '@/stores/farm';
 
@@ -164,12 +181,35 @@ const farmStore = useFarmStore();
 
 const loading = ref(false);
 const error = ref('');
+const autoRefreshInterval = ref(null);
+const refreshCountdown = ref(600); // 10 minutes in seconds
+const autoRefreshActive = ref(true);
 
 const weather = computed(() => weatherStore.currentWeather);
-const alerts = computed(() => weatherStore.weatherWarnings);
+const alerts = computed(() => weatherStore.alerts || []);
+
+// Check if weather data is stale (older than 30 minutes)
+const isDataStale = computed(() => {
+  if (!weather.value || !weather.value.recorded_at) return false;
+  const recordedAt = new Date(weather.value.recorded_at);
+  const now = new Date();
+  const minutesSinceUpdate = (now - recordedAt) / (1000 * 60);
+  return minutesSinceUpdate > 30;
+});
+
+// Format countdown timer
+const timeUntilRefresh = computed(() => {
+  const minutes = Math.floor(refreshCountdown.value / 60);
+  const seconds = refreshCountdown.value % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+});
 
 const isFavorableForFarming = computed(() => {
   if (!weather.value) return false;
+
+  if (typeof weather.value.is_favorable_for_farming === 'boolean') {
+    return weather.value.is_favorable_for_farming;
+  }
   
   return weather.value.temperature >= 10 && 
          weather.value.temperature <= 35 &&
@@ -199,14 +239,50 @@ const refreshWeather = async () => {
     if (failures.length > 0) {
       console.warn('Some weather data failed to load:', failures);
       if (failures.length === results.length) {
-        error.value = 'Failed to fetch weather data';
+        const firstFailure = failures[0];
+        const errorMessage = firstFailure.reason?.response?.data?.message || 
+                            firstFailure.reason?.message || 
+                            'Failed to fetch weather data';
+        
+        // Check for API configuration errors
+        if (errorMessage.includes('401') || errorMessage.includes('Invalid API key')) {
+          error.value = 'OpenWeather API key is invalid. Please check your configuration.';
+        } else if (errorMessage.includes('429')) {
+          error.value = 'API rate limit exceeded. Please try again later.';
+        } else {
+          error.value = errorMessage;
+        }
       }
+    } else {
+      // Reset countdown on successful refresh
+      refreshCountdown.value = 600;
     }
   } catch (err) {
-    error.value = err.message || 'Failed to fetch weather data';
+    const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch weather data';
+    if (errorMessage.includes('401') || errorMessage.includes('Invalid API key')) {
+      error.value = 'OpenWeather API key is invalid. Please check your .env file.';
+    } else {
+      error.value = errorMessage;
+    }
   } finally {
     loading.value = false;
   }
+};
+
+// Start auto-refresh countdown
+const startAutoRefresh = () => {
+  // Countdown timer
+  const countdownInterval = setInterval(() => {
+    if (refreshCountdown.value > 0) {
+      refreshCountdown.value--;
+    } else {
+      // Auto-refresh when countdown reaches 0
+      refreshWeather();
+      refreshCountdown.value = 600; // Reset to 10 minutes
+    }
+  }, 1000);
+  
+  autoRefreshInterval.value = countdownInterval;
 };
 
 const getWeatherIcon = (conditions) => {
@@ -226,7 +302,12 @@ const getAlertIcon = (type) => {
     heavy_rain: '🌧️',
     drought: '🌵',
     typhoon: '🌀',
-    extreme_temperature: '🌡️'
+    extreme_temperature: '🌡️',
+    high_humidity: '💧',
+    low_humidity: '💨',
+    wind: '🌬️',
+    conditions: '🌦️',
+    disease_risk: '🦠'
   };
   return icons[type] || '⚠️';
 };
@@ -263,5 +344,12 @@ const formatTime = (timestamp) => {
 
 onMounted(() => {
   refreshWeather();
+  startAutoRefresh();
+});
+
+onUnmounted(() => {
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value);
+  }
 });
 </script>

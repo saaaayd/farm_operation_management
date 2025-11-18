@@ -167,9 +167,24 @@
 
           <!-- User Growth Chart -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4">User Growth (Last 30 Days)</h2>
-            <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">User growth chart placeholder</span>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold">User Growth (Last 30 Days)</h2>
+              <div v-if="userGrowthData" class="text-sm text-gray-600">
+                <span class="font-medium text-green-600">+{{ userGrowthData.total_new_users }}</span> new users
+              </div>
+            </div>
+            <div v-if="loading && !userGrowthData" class="w-full h-64 flex items-center justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+            <div v-else-if="userGrowthData && userGrowthData.labels && userGrowthData.labels.length > 0" class="w-full h-64">
+              <LineChart 
+                :data="chartData" 
+                :options="chartOptions"
+                :height="256"
+              />
+            </div>
+            <div v-else class="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+              <span class="text-gray-500">No user growth data available</span>
             </div>
           </div>
         </div>
@@ -290,14 +305,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
-import { formatCurrency } from '@/utils/format'
+import LineChart from '@/Components/Charts/LineChart.vue';
+import axios from 'axios';
 
 const auth = useAuthStore();
 const router = useRouter()
 const loading = ref(false)
+const userGrowthData = ref(null)
 
 const metrics = ref({
   totalUsers: 1247,
@@ -402,15 +419,7 @@ const formatDateTime = (date) => {
 }
 
 const refreshData = async () => {
-  loading.value = true
-  try {
-    // API call to refresh data
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-  } catch (error) {
-    console.error('Error refreshing data:', error)
-  } finally {
-    loading.value = false
-  }
+  await loadDashboardData();
 }
 
 const exportData = () => {
@@ -483,8 +492,114 @@ const handleLogout = async () => {
   router.push('/login');
 };
 
+// Chart data computed property
+const chartData = computed(() => {
+  if (!userGrowthData.value || !userGrowthData.value.labels) {
+    return {
+      labels: [],
+      datasets: []
+    };
+  }
+
+  return {
+    labels: userGrowthData.value.labels,
+    datasets: [
+      {
+        label: 'Total Users',
+        data: userGrowthData.value.cumulative_users,
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: 'rgb(59, 130, 246)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+      }
+    ]
+  };
+});
+
+// Chart options
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top',
+    },
+    tooltip: {
+      enabled: true,
+      mode: 'index',
+      intersect: false,
+      callbacks: {
+        label: function(context) {
+          return `Total Users: ${context.parsed.y}`;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      display: true,
+      title: {
+        display: true,
+        text: 'Date'
+      },
+      grid: {
+        display: false
+      }
+    },
+    y: {
+      display: true,
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Number of Users'
+      },
+      ticks: {
+        stepSize: 1,
+        precision: 0
+      }
+    }
+  },
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  }
+}));
+
+// Load admin dashboard data
+const loadDashboardData = async () => {
+  loading.value = true;
+  try {
+    const response = await axios.get('/api/dashboard');
+    if (response.data) {
+      if (response.data.stats) {
+        metrics.value = {
+          totalUsers: response.data.stats.total_users || 0,
+          totalFields: response.data.stats.total_fields || 0,
+          totalOrders: response.data.stats.total_orders || 0,
+          totalRevenue: response.data.monthly_revenue || 0,
+          activeUsers: response.data.stats.total_users || 0
+        };
+      }
+      if (response.data.user_growth) {
+        userGrowthData.value = response.data.user_growth;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    // Keep default values on error
+  } finally {
+    loading.value = false;
+  }
+};
+
 onMounted(() => {
-  // Load admin dashboard data from API
+  loadDashboardData();
 })
 </script>
 
