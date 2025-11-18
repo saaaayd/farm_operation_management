@@ -36,10 +36,11 @@ class FieldController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255', // <-- ADDED THIS
             'location' => 'required|array',
             'location.lat' => 'required|numeric|between:-90,90',
             'location.lon' => 'required|numeric|between:-180,180',
-            'location.address' => 'required|string|max:255', // make address required now
+            'location.address' => 'required|string|max:255',
             'soil_type' => 'required|string|max:255',
             'size' => 'required|numeric|min:0',
         ]);
@@ -53,7 +54,8 @@ class FieldController extends Controller
         
         $field = Field::create([
             'user_id' => $request->user()->id,
-            'location' => $request->location, // this now includes lat, lon, and address
+            'name' => $request->name, // <-- ADDED THIS
+            'location' => $request->location,
             'soil_type' => $request->soil_type,
             'size' => $request->size,
         ]);
@@ -102,6 +104,7 @@ class FieldController extends Controller
         }
         
         $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255', // <-- ADDED THIS
             'location' => 'sometimes|array',
             'location.lat' => 'sometimes|numeric|between:-90,90',
             'location.lon' => 'sometimes|numeric|between:-180,180',
@@ -117,7 +120,8 @@ class FieldController extends Controller
             ], 422);
         }
         
-        $field->update($request->only(['location', 'soil_type', 'size']));
+        // <-- UPDATED THIS
+        $field->update($request->only(['name', 'location', 'soil_type', 'size']));
         
         return response()->json([
             'message' => 'Field updated successfully',
@@ -152,5 +156,6 @@ class FieldController extends Controller
             return response()->json([
                 'message' => 'Field deleted successfully'
             ]);
-        }
-    }
+    } // <-- This brace closes the destroy() function
+
+} // <-- This brace closes the class

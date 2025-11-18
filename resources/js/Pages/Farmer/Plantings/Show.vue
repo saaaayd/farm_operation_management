@@ -1,179 +1,252 @@
 <template>
-  <div class="min-h-screen bg-gray-100 py-10">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">
-            {{ planting?.crop_type || 'Planting Details' }}
-          </h1>
-          <p class="text-sm text-gray-600">
-            Field: {{ planting?.field?.name ?? 'Unknown field' }}
-          </p>
-        </div>
-        <div class="flex space-x-3">
-          <button
-            @click="goBack"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Back to Plantings
-          </button>
-          <button
-            @click="goToEdit"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-          >
-            Edit Planting
-          </button>
-        </div>
-      </div>
-
-      <div v-if="loading" class="bg-white shadow rounded-lg p-6 flex items-center justify-center">
-        <svg class="animate-spin h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      </div>
-
-      <div v-else-if="error" class="bg-white shadow rounded-lg p-6">
-        <p class="text-red-600">{{ error }}</p>
-      </div>
-
-      <div v-else-if="planting" class="space-y-6">
-        <!-- Overview -->
-        <div class="bg-white shadow rounded-lg p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
+          <div class="flex items-center gap-3">
+            <button @click="goBack" class="text-gray-500 hover:text-gray-700">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
             <div>
-              <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Variety</h2>
-              <p class="mt-2 text-lg text-gray-900">
-                {{ planting.rice_variety?.name ?? 'Not specified' }}
-              </p>
-              <p class="text-sm text-gray-600">
-                {{ planting.rice_variety?.description }}
+              <h1 class="text-2xl font-semibold text-gray-900">
+                {{ planting ? planting.crop_type : 'Planting Details' }}
+              </h1>
+              <p class="text-sm text-gray-500">
+                {{ planting ? `On Field: ${planting.field?.name}` : 'Loading...' }}
               </p>
             </div>
-            <div>
-              <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Status</h2>
-              <span
-                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                :class="statusColor(planting.status)"
-              >
-                {{ formatLabel(planting.status) }}
-              </span>
-            </div>
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-            <div>
-              <h3 class="text-sm text-gray-500">Planting Date</h3>
-              <p class="text-base text-gray-900">{{ formatDate(planting.planting_date) }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm text-gray-500">Expected Harvest</h3>
-              <p class="text-base text-gray-900">{{ formatDate(planting.expected_harvest_date) }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm text-gray-500">Season</h3>
-              <p class="text-base text-gray-900 capitalize">{{ planting.season }}</p>
-            </div>
+          <div class="flex items-center gap-3" v-if="planting">
+            <button
+              @click="goToEdit(planting.id)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Edit
+            </button>
+            <button
+              @click="confirmDelete(planting)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </button>
           </div>
-        </div>
-
-        <!-- Metrics -->
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Planting Metrics</h2>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <p class="text-sm text-gray-500">Area Planted</p>
-              <p class="text-xl font-semibold text-gray-900">{{ planting.area_planted ?? '—' }} ha</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Seed Rate</p>
-              <p class="text-xl font-semibold text-gray-900">
-                {{ planting.seed_rate ? planting.seed_rate + ' kg/ha' : '—' }}
-              </p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Planting Method</p>
-              <p class="text-xl font-semibold text-gray-900">{{ formatLabel(planting.planting_method) }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Tasks Linked</p>
-              <p class="text-xl font-semibold text-gray-900">{{ (planting.tasks || []).length }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div class="bg-white shadow rounded-lg p-6" v-if="planting.notes">
-          <h2 class="text-lg font-semibold text-gray-900 mb-2">Notes</h2>
-          <p class="text-gray-700 whitespace-pre-line">{{ planting.notes }}</p>
         </div>
       </div>
-    </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div v-if="loading" class="bg-white shadow sm:rounded-lg p-12 text-center">
+        <LoadingSpinner text="Loading planting details..." />
+      </div>
+      
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-6">
+        <h3 class="text-lg font-medium text-red-800">Failed to load planting</h3>
+        <p class="mt-2 text-sm text-red-700">{{ error }}</p>
+        <button
+          @click="fetchPlantingData"
+          class="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700"
+        >
+          Try Again
+        </button>
+      </div>
+
+      <div v-else-if="planting" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex justify-between items-start">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Planting Details</h3>
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  :class="statusClass(planting.status)"
+                >
+                  {{ formatStatus(planting.status) }}
+                </span>
+              </div>
+              
+              <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Field</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ planting.field?.name || 'N/A' }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Crop</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ planting.crop_type || 'N/A' }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Variety</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ planting.rice_variety?.name || 'N/A' }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Season</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ formatStatus(planting.season) }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Planting Date</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ formatDate(planting.planting_date) }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Expected Harvest</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ formatDate(planting.expected_harvest_date) }}</dd>
+                </div>
+                 <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Planting Method</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ formatStatus(planting.planting_method) }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Area Planted</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ planting.area_planted || 'N/A' }} ha</dd>
+                </div>
+                <div class="sm:col-span-1">
+                  <dt class="text-sm font-medium text-gray-500">Seed Quantity</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ planting.seed_rate || 'N/A' }} kg</dd>
+                </div>
+              </dl>
+              
+              <div class="mt-6" v-if="planting.notes">
+                <dt class="text-sm font-medium text-gray-500">Notes</dt>
+                <dd class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{{ planting.notes }}</dd>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-1 space-y-6">
+          <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg font-medium leading-6 text-gray-900">Tasks</h3>
+              <ul v-if="planting.tasks && planting.tasks.length > 0" class="mt-4 space-y-3">
+                <li v-for="task in planting.tasks" :key="task.id" class="p-3 bg-gray-50 rounded-md flex justify-between items-center">
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">{{ task.name }}</p>
+                    <p class="text-xs text-gray-500">Due: {{ formatDate(task.due_date) }}</p>
+                  </div>
+                  <span :class="statusClass(task.status)" class="text-xs font-medium px-2 py-0.5 rounded-full">
+                    {{ formatStatus(task.status) }}
+                  </span>
+                </li>
+              </ul>
+              <p v-else class="mt-4 text-sm text-gray-500">No tasks associated with this planting.</p>
+              </div>
+          </div>
+
+          <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg font-medium leading-6 text-gray-900">Harvests</h3>
+              <ul v-if="planting.harvests && planting.harvests.length > 0" class="mt-4 space-y-3">
+                <li v-for="harvest in planting.harvests" :key="harvest.id" class="p-3 bg-gray-50 rounded-md">
+                  <p class="text-sm font-medium text-gray-900">{{ harvest.quantity }} {{ harvest.unit }}</p>
+                  <p class="text-xs text-gray-500">Harvested on: {{ formatDate(harvest.harvest_date) }}</p>
+                </li>
+              </ul>
+              <p v-else class="mt-4 text-sm text-gray-500">No harvests recorded for this planting yet.</p>
+              </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { plantingsAPI } from '@/services/api';
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useFarmStore } from '@/stores/farm'
+import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 
-const route = useRoute();
-const router = useRouter();
+const router = useRouter()
+const route = useRoute()
+const farmStore = useFarmStore()
 
-const planting = ref(null);
-const loading = ref(true);
-const error = ref('');
+// Get the planting ID from the URL
+const plantingId = route.params.id
 
-const formatDate = (value) => {
-  if (!value) return 'Not set';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? 'Not set' : date.toLocaleDateString();
-};
+// Use computed props to reactively get data from the store
+const loading = computed(() => farmStore.loadingPlanting)
+const error = computed(() => farmStore.error)
+const planting = computed(() => farmStore.currentPlanting)
 
-const formatLabel = (value) => {
-  if (!value) return 'Not set';
-  return value
-    .toString()
-    .split('_')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-};
-
-const statusColor = (status) => {
-  const map = {
-    planned: 'bg-indigo-100 text-indigo-800',
-    planted: 'bg-blue-100 text-blue-800',
-    growing: 'bg-green-100 text-green-800',
-    ready: 'bg-yellow-100 text-yellow-800',
-    harvested: 'bg-gray-100 text-gray-800',
-    failed: 'bg-red-100 text-red-800',
-  };
-  return map[status] || 'bg-gray-100 text-gray-800';
-};
-
-const goBack = () => {
-  router.push('/plantings');
-};
-
-const goToEdit = () => {
-  router.push(`/plantings/${route.params.id}/edit`);
-};
-
-const loadPlanting = async () => {
+const fetchPlantingData = async () => {
+  // Clear any previous errors
+  farmStore.error = null 
   try {
-    const response = await plantingsAPI.getById(route.params.id);
-    planting.value = response.data?.planting || response.data;
-    if (!planting.value) {
-      throw new Error('Planting not found');
-    }
+    // Call the action we added to the store
+    await farmStore.fetchPlantingById(plantingId)
   } catch (err) {
-    console.error('Failed to load planting:', err);
-    error.value = err.response?.data?.message || err.message || 'Failed to load planting details.';
-  } finally {
-    loading.value = false;
+    console.error('Failed to fetch planting:', err)
+    // The store action already sets the error, so we just log it
   }
-};
+}
 
-onMounted(loadPlanting);
+// --- Navigation ---
+const goBack = () => {
+  router.push('/plantings') // Go back to the index page
+}
+
+const goToEdit = (id) => {
+  router.push(`/plantings/${id}/edit`)
+}
+
+// --- CRUD Actions ---
+const confirmDelete = async (planting) => {
+  const cropName = planting.crop_type || 'this planting'
+  if (window.confirm(`Are you sure you want to delete "${cropName}"? This cannot be undone.`)) {
+    try {
+      await farmStore.deletePlanting(planting.id)
+      // After deleting, go back to the index page
+      router.push('/plantings')
+    } catch (err) {
+      console.error('Failed to delete planting:', err)
+      // The store action will set the error, which our computed prop will catch
+    }
+  }
+}
+
+// --- Formatters (consistent with Index page) ---
+const formatDate = (value) => {
+  if (!value) return 'N/A'
+  try {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch (e) {
+    return value
+  }
+}
+
+const formatStatus = (status) => {
+  if (!status) return 'Unknown'
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+}
+
+const statusClass = (status) => {
+  const classes = {
+    // Planting Status
+    planned: 'bg-gray-100 text-gray-800',
+    planted: 'bg-blue-100 text-blue-800',
+    growing: 'bg-yellow-100 text-yellow-800',
+    ready: 'bg-teal-100 text-teal-800',
+    harvested: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-800',
+    // Season
+    wet: 'bg-blue-100 text-blue-800',
+    dry: 'bg-orange-100 text-orange-800',
+    // Method
+    transplanting: 'bg-indigo-100 text-indigo-800',
+    direct_seeding: 'bg-purple-100 text-purple-800',
+    broadcasting: 'bg-pink-100 text-pink-800',
+    // Task Status
+    pending: 'bg-gray-100 text-gray-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100 text-green-800',
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+// Fetch the data when the component is first loaded
+onMounted(() => {
+  fetchPlantingData()
+})
 </script>
-

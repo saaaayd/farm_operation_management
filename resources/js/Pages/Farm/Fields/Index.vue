@@ -1,337 +1,283 @@
 <template>
-  <div class="fields-page">
-    <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">Fields</h1>
-          <p class="text-gray-600 mt-2">Manage your farm fields and their details</p>
-        </div>
-        <button
-          @click="showCreateModal = true"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Add New Field
-        </button>
-      </div>
-
-      <!-- Filters and Search -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search fields..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <h1 class="text-2xl font-semibold text-gray-900">Fields</h1>
+            <p class="text-sm text-gray-500">
+              Track field boundaries, soil data, and readiness for planting.
+            </p>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              v-model="statusFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="fallow">Fallow</option>
-              <option value="maintenance">Maintenance</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Crop Type</label>
-            <select
-              v-model="cropFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Crops</option>
-              <option value="corn">Corn</option>
-              <option value="wheat">Wheat</option>
-              <option value="soybeans">Soybeans</option>
-              <option value="rice">Rice</option>
-            </select>
-          </div>
-          <div class="flex items-end">
+          <div class="flex items-center gap-3">
             <button
-              @click="clearFilters"
-              class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              @click="refreshFields"
+              :disabled="loading"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
-              Clear Filters
+              <svg
+                :class="['h-4 w-4 mr-2', { 'animate-spin': loading }]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh
+            </button>
+            <button
+              @click="openCreateModal"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+            >
+              Add Field
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">{{ error }}</p>
+            <button
+              @click="refreshFields"
+              class="mt-2 text-sm font-medium text-red-700 hover:text-red-800"
+            >
+              Try again
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Fields Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-else-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div
-          v-for="field in filteredFields"
-          :key="field.id"
-          class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+          v-for="n in 6"
+          :key="n"
+          class="bg-white rounded-lg shadow p-6 animate-pulse space-y-4"
         >
-          <div class="p-6">
-            <div class="flex justify-between items-start mb-4">
-              <h3 class="text-xl font-semibold text-gray-900">{{ field.name }}</h3>
-              <span
-                :class="getStatusBadgeClass(field.status)"
-                class="px-2 py-1 text-xs font-medium rounded-full"
-              >
-                {{ field.status }}
-              </span>
-            </div>
-            
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between">
-                <span class="text-gray-600">Size:</span>
-                <span class="font-medium">{{ field.size }} acres</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Crop:</span>
-                <span class="font-medium">{{ field.current_crop || 'None' }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Soil Type:</span>
-                <span class="font-medium">{{ field.soil_type }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Last Planted:</span>
-                <span class="font-medium">{{ formatDate(field.last_planted) }}</span>
-              </div>
-            </div>
-
-            <div class="flex space-x-2">
-              <button
-                @click="viewField(field.id)"
-                class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              >
-                View Details
-              </button>
-              <button
-                @click="editField(field.id)"
-                class="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
-              >
-                Edit
-              </button>
-            </div>
+          <div class="h-6 bg-gray-200 rounded"></div>
+          <div class="space-y-2">
+            <div class="h-3 bg-gray-200 rounded"></div>
+            <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-200 rounded w-2/4"></div>
           </div>
+          <div class="h-10 bg-gray-200 rounded"></div>
         </div>
       </div>
 
-      <!-- Empty State -->
-      <div v-if="filteredFields.length === 0" class="text-center py-12">
-        <div class="text-gray-400 text-6xl mb-4">🌾</div>
-        <h3 class="text-xl font-medium text-gray-900 mb-2">No fields found</h3>
-        <p class="text-gray-600 mb-6">Get started by adding your first field</p>
-        <button
-          @click="showCreateModal = true"
-          class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Add Your First Field
-        </button>
-      </div>
+      <div v-else>
+        <div v-if="fields.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
+          <div class="text-5xl mb-4">🌾</div>
+          <h2 class="text-lg font-semibold text-gray-900 mb-2">No fields yet</h2>
+          <p class="text-sm text-gray-600 mb-6">
+            Add your first field to start tracking planting schedules and weather insights.
+          </p>
+          <button
+            @click="openCreateModal"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+          >
+            Add Field
+          </button>
+        </div>
 
-      <!-- Create Field Modal -->
-      <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-          <h2 class="text-xl font-semibold mb-4">Add New Field</h2>
-          
-          <form @submit.prevent="createField" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Field Name</label>
-              <input
-                v-model="newField.name"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Size (acres)</label>
-              <input
-                v-model="newField.size"
-                type="number"
-                step="0.1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Soil Type</label>
-              <select
-                v-model="newField.soil_type"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select soil type</option>
-                <option value="clay">Clay</option>
-                <option value="sandy">Sandy</option>
-                <option value="loamy">Loamy</option>
-                <option value="silty">Silty</option>
-              </select>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea
-                v-model="newField.description"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              ></textarea>
-            </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <article
+            v-for="field in fields"
+            :key="field.id"
+            class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+          >
+            <div class-="p-6 h-full flex flex-col">
+              <div class="flex items-start justify-between mb-4 pt-6 px-6">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ field.name || 'Unnamed Field' }}</h3>
+                  <p class="text-xs text-gray-500">
+                    {{ formatLocation(field.location || field.address) }}
+                  </p>
+                </div>
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  :class="statusClass(field.status)"
+                >
+                  {{ field.status ? statusLabel(field.status) : 'Active' }}
+                </span>
+              </div>
 
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
-                @click="showCreateModal = false"
-                class="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                :disabled="loading"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {{ loading ? 'Creating...' : 'Create Field' }}
-              </button>
+              <dl class="grid grid-cols-2 gap-y-2 text-sm text-gray-600 mb-4 px-6">
+                <div>
+                  <dt class="font-medium text-gray-500">Size</dt>
+                  <dd class="text-gray-900 font-semibold">
+                    {{ formatArea(field.size || field.area || field.field_size) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-500">Soil Type</dt>
+                  <dd>{{ field.soil_type || 'Not specified' }}</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-500">Current Crop</dt>
+                  <dd>{{ field.current_crop || 'None' }}</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-500">Irrigation</dt>
+                  <dd>{{ field.irrigation_type || 'Not specified' }}</dd>
+                </div>
+              </dl>
+
+              <div class="mt-auto border-t border-gray-200">
+                <div class="flex divide-x divide-gray-200">
+                  <button
+                    @click="openEditModal(field)"
+                    class="flex-1 inline-flex items-center justify-center py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-bl-lg"
+                  >
+                    <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L13.196 5.232z" />
+                    </svg>
+                    <span class="ml-2">Edit</span>
+                  </button>
+                  <button
+                    @click="confirmDelete(field)"
+                    class="flex-1 inline-flex items-center justify-center py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-br-lg"
+                  >
+                    <svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span class="ml-2">Delete</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </form>
+          </article>
         </div>
       </div>
-    </div>
+    </main>
+
+    <FieldFormModal
+      :show="isModalOpen"
+      :field="selectedField"
+      @close="closeModal"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useFarmStore } from '@/stores/farm'
+import FieldFormModal from '@/Components/Modals/FieldFormModal.vue'
 
 const router = useRouter()
-const loading = ref(false)
-const showCreateModal = ref(false)
-const searchQuery = ref('')
-const statusFilter = ref('')
-const cropFilter = ref('')
+const farmStore = useFarmStore()
 
-const fields = ref([
-  {
-    id: 1,
-    name: 'North Field',
-    size: 25.5,
-    soil_type: 'loamy',
-    current_crop: 'corn',
-    status: 'active',
-    last_planted: '2024-03-15',
-    description: 'Main corn field with excellent drainage'
-  },
-  {
-    id: 2,
-    name: 'South Field',
-    size: 18.2,
-    soil_type: 'clay',
-    current_crop: 'wheat',
-    status: 'active',
-    last_planted: '2024-02-20',
-    description: 'Wheat field with clay soil'
-  },
-  {
-    id: 3,
-    name: 'East Field',
-    size: 32.0,
-    soil_type: 'sandy',
-    current_crop: null,
-    status: 'fallow',
-    last_planted: '2023-10-15',
-    description: 'Currently fallow, planning for soybeans'
-  }
-])
+const loading = ref(true)
+const error = ref('')
+const isModalOpen = ref(false)
+const selectedField = ref(null)
 
-const newField = ref({
-  name: '',
-  size: '',
-  soil_type: '',
-  description: ''
-})
+const fields = computed(() => farmStore.fields || [])
 
-const filteredFields = computed(() => {
-  return fields.value.filter(field => {
-    const matchesSearch = field.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         field.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesStatus = !statusFilter.value || field.status === statusFilter.value
-    const matchesCrop = !cropFilter.value || field.current_crop === cropFilter.value
-    
-    return matchesSearch && matchesStatus && matchesCrop
-  })
-})
-
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    active: 'bg-green-100 text-green-800',
-    fallow: 'bg-yellow-100 text-yellow-800',
-    maintenance: 'bg-red-100 text-red-800'
-  }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+// --- Modal Controls ---
+const openCreateModal = () => {
+  selectedField.value = null
+  isModalOpen.value = true
 }
 
-const formatDate = (date) => {
-  if (!date) return 'Never'
-  return new Date(date).toLocaleDateString()
+const openEditModal = (field) => {
+  selectedField.value = { ...field } // Pass a copy to avoid reactive mutation
+  isModalOpen.value = true
 }
 
-const viewField = (id) => {
-  router.push(`/fields/${id}`)
+const closeModal = () => {
+  isModalOpen.value = false
+  selectedField.value = null
 }
 
-const editField = (id) => {
-  // Navigate to edit page or show edit modal
-  console.log('Edit field:', id)
-}
-
-const createField = async () => {
+// --- Data Fetching ---
+const refreshFields = async () => {
   loading.value = true
+  error.value = ''
+
   try {
-    // API call to create field
-    const field = {
-      id: Date.now(),
-      ...newField.value,
-      status: 'active',
-      current_crop: null,
-      last_planted: null
-    }
-    fields.value.push(field)
-    
-    // Reset form
-    newField.value = {
-      name: '',
-      size: '',
-      soil_type: '',
-      description: ''
-    }
-    showCreateModal.value = false
-  } catch (error) {
-    console.error('Error creating field:', error)
+    await farmStore.fetchFields()
+  } catch (err) {
+    console.error('Failed to load fields:', err)
+    error.value = err.userMessage || err.response?.data?.message || 'Unable to load fields.'
   } finally {
     loading.value = false
   }
 }
 
-const clearFilters = () => {
-  searchQuery.value = ''
-  statusFilter.value = ''
-  cropFilter.value = ''
+// --- CRUD Actions ---
+const confirmDelete = async (field) => {
+  if (window.confirm(`Are you sure you want to delete "${field.name || 'this field'}"? This cannot be undone.`)) {
+    try {
+      await farmStore.deleteField(field.id)
+      // No need to call refreshFields() if store optimistically updates
+    } catch (err) {
+      console.error('Failed to delete field:', err)
+      error.value = err.userMessage || err.response?.data?.message || 'Unable to delete field.'
+    }
+  }
 }
 
+// --- Formatters (Copied from original) ---
+const formatArea = (value) => {
+  if (!value) return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return value
+  return `${num.toFixed(1)} ha`
+}
+
+const formatLocation = (location) => {
+  if (!location) return 'Location not set'
+  if (typeof location === 'string') return location
+  // Updated to handle new structure
+  if (location.address) return location.address
+  const parts = [location.barangay, location.city, location.province].filter(Boolean)
+  return parts.join(', ') || 'Location not set'
+}
+
+const formatDate = (value) => {
+  if (!value) return 'Recently'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Recently' : date.toLocaleDateString()
+}
+
+const statusLabel = (status) => {
+  const labels = {
+    active: 'Active',
+    fallow: 'Fallow',
+    maintenance: 'Maintenance'
+  }
+  return labels[status] || status
+}
+
+const statusClass = (status) => {
+  const classes = {
+    active: 'bg-green-100 text-green-800',
+    fallow: 'bg-yellow-100 text-yellow-800',
+    maintenance: 'bg-red-100 text-red-800'
+  }
+  return classes[status] || 'bg-blue-100 text-blue-800'
+}
+
+// --- Lifecycle ---
 onMounted(() => {
-  // Load fields from API
+  if (!fields.value.length) {
+    refreshFields()
+  } else {
+    loading.value = false
+  }
 })
 </script>
-
-<style scoped>
-.fields-page {
-  min-height: 100vh;
-  background-color: #f8fafc;
-}
-</style>
