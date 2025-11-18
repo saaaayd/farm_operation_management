@@ -265,6 +265,8 @@ export const riceMarketplaceAPI = {
   createOrder: (orderData) => api.post('/rice-marketplace/orders', orderData),
   confirmOrder: (id, data = {}) => api.post(`/rice-marketplace/orders/${id}/confirm`, data),
   cancelOrder: (id, data) => api.post(`/rice-marketplace/orders/${id}/cancel`, data),
+  getOrderMessages: (id) => api.get(`/rice-marketplace/orders/${id}/messages`),
+  sendOrderMessage: (id, payload) => api.post(`/rice-marketplace/orders/${id}/messages`, payload),
 };
 
 // Legacy Marketplace API (for backward compatibility)
@@ -323,9 +325,9 @@ export const laborAPI = {
 // Dashboard API
 export const dashboardAPI = {
   getStats: () => api.get('/dashboard'),
-  getFarmerStats: () => api.get('/dashboard/farmer'),
-  getBuyerStats: () => api.get('/dashboard/buyer'),
-  getAdminStats: () => api.get('/dashboard/admin'),
+  getFarmerStats: () => api.get('/dashboard'),
+  getBuyerStats: () => api.get('/dashboard'),
+  getAdminStats: () => api.get('/dashboard'),
 };
 
 // Analytics API

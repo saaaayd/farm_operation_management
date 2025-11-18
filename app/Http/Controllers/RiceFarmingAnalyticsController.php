@@ -429,11 +429,91 @@ class RiceFarmingAnalyticsController extends Controller
 
     private function calculateResourceEfficiency($userId, $startDate)
     {
-        // Simplified resource efficiency calculation
+        // Get expenses categorized by type
+        $expenses = Expense::where('user_id', $userId)
+            ->where('date', '>=', $startDate)
+            ->get();
+
+        // Get harvests for yield calculation
+        $plantings = Planting::whereHas('field', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })
+        ->where('planting_date', '>=', $startDate)
+        ->with('harvests')
+        ->get();
+
+        $totalYield = $plantings->sum(function ($planting) {
+            return $planting->harvests->sum('yield');
+        });
+
+        $totalArea = $plantings->sum('area_planted');
+
+        // Calculate water efficiency (based on water-related expenses vs yield)
+        $waterExpenses = $expenses->filter(function ($expense) {
+            $category = strtolower($expense->category ?? '');
+            $description = strtolower($expense->description ?? '');
+            return str_contains($category, 'water') || 
+                   str_contains($category, 'irrigation') ||
+                   str_contains($description, 'water') ||
+                   str_contains($description, 'irrigation');
+        })->sum('amount');
+
+        $waterEfficiency = 0;
+        if ($waterExpenses > 0 && $totalYield > 0) {
+            // Higher yield per water expense = better efficiency
+            $yieldPerWaterExpense = $totalYield / $waterExpenses;
+            // Normalize to 0-100 scale (assuming 0.1 kg per peso is good efficiency)
+            $waterEfficiency = min(100, ($yieldPerWaterExpense / 0.1) * 10);
+        } else {
+            $waterEfficiency = $totalYield > 0 ? 50 : 0; // Default if no water expenses
+        }
+
+        // Calculate fertilizer efficiency
+        $fertilizerExpenses = $expenses->filter(function ($expense) {
+            $category = strtolower($expense->category ?? '');
+            $description = strtolower($expense->description ?? '');
+            return str_contains($category, 'fertilizer') || 
+                   str_contains($category, 'fertiliser') ||
+                   str_contains($description, 'fertilizer') ||
+                   str_contains($description, 'fertiliser') ||
+                   str_contains($description, 'npk') ||
+                   str_contains($description, 'urea');
+        })->sum('amount');
+
+        $fertilizerEfficiency = 0;
+        if ($fertilizerExpenses > 0 && $totalYield > 0) {
+            $yieldPerFertilizerExpense = $totalYield / $fertilizerExpenses;
+            // Normalize to 0-100 scale (assuming 0.15 kg per peso is good efficiency)
+            $fertilizerEfficiency = min(100, ($yieldPerFertilizerExpense / 0.15) * 10);
+        } else {
+            $fertilizerEfficiency = $totalYield > 0 ? 50 : 0;
+        }
+
+        // Calculate labor efficiency
+        $laborExpenses = $expenses->filter(function ($expense) {
+            $category = strtolower($expense->category ?? '');
+            $description = strtolower($expense->description ?? '');
+            return str_contains($category, 'labor') || 
+                   str_contains($category, 'labour') ||
+                   str_contains($category, 'wage') ||
+                   str_contains($description, 'labor') ||
+                   str_contains($description, 'labour') ||
+                   str_contains($description, 'wage');
+        })->sum('amount');
+
+        $laborEfficiency = 0;
+        if ($laborExpenses > 0 && $totalYield > 0) {
+            $yieldPerLaborExpense = $totalYield / $laborExpenses;
+            // Normalize to 0-100 scale (assuming 0.2 kg per peso is good efficiency)
+            $laborEfficiency = min(100, ($yieldPerLaborExpense / 0.2) * 10);
+        } else {
+            $laborEfficiency = $totalYield > 0 ? 50 : 0;
+        }
+
         return [
-            'water_efficiency' => 75, // Placeholder
-            'fertilizer_efficiency' => 82, // Placeholder
-            'labor_efficiency' => 68, // Placeholder
+            'water_efficiency' => round($waterEfficiency, 2),
+            'fertilizer_efficiency' => round($fertilizerEfficiency, 2),
+            'labor_efficiency' => round($laborEfficiency, 2),
         ];
     }
 
@@ -455,11 +535,46 @@ class RiceFarmingAnalyticsController extends Controller
 
     private function calculateCostEfficiency($userId, $startDate)
     {
-        // Simplified cost efficiency calculation
+        // Get all expenses for the period
+        $expenses = Expense::where('user_id', $userId)
+            ->where('date', '>=', $startDate)
+            ->get();
+
+        $totalExpenses = $expenses->sum('amount');
+
+        // Get harvests for yield calculation
+        $plantings = Planting::whereHas('field', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })
+        ->where('planting_date', '>=', $startDate)
+        ->with('harvests')
+        ->get();
+
+        $totalYield = $plantings->sum(function ($planting) {
+            return $planting->harvests->sum('yield');
+        });
+
+        $totalArea = $plantings->sum('area_planted');
+
+        // Calculate cost per kg
+        $costPerKg = $totalYield > 0 ? $totalExpenses / $totalYield : 0;
+
+        // Calculate cost per hectare
+        $costPerHectare = $totalArea > 0 ? $totalExpenses / $totalArea : 0;
+
+        // Calculate efficiency score (0-100)
+        // Lower cost per kg and per hectare = higher efficiency
+        // Assuming good efficiency: cost_per_kg < 3.0 and cost_per_hectare < 2000
+        $costPerKgScore = $costPerKg > 0 ? max(0, 100 - (($costPerKg / 3.0) * 100)) : 0;
+        $costPerHectareScore = $costPerHectare > 0 ? max(0, 100 - (($costPerHectare / 2000) * 100)) : 0;
+        
+        // Weighted average: 60% cost per kg, 40% cost per hectare
+        $efficiencyScore = ($costPerKgScore * 0.6) + ($costPerHectareScore * 0.4);
+
         return [
-            'cost_per_kg' => 2.5, // Placeholder
-            'cost_per_hectare' => 1500, // Placeholder
-            'efficiency_score' => 78, // Placeholder
+            'cost_per_kg' => round($costPerKg, 2),
+            'cost_per_hectare' => round($costPerHectare, 2),
+            'efficiency_score' => round($efficiencyScore, 2),
         ];
     }
 

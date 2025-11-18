@@ -411,27 +411,263 @@ class ReportController extends Controller
     }
 
     /**
-     * Export report to PDF (placeholder)
+     * Export report to PDF
      */
     public function exportToPdf(Request $request)
     {
-        // This would integrate with a PDF generation library like DomPDF or Snappy
-        return response()->json([
-            'message' => 'PDF export functionality would be implemented here',
-            'status' => 'not_implemented'
-        ]);
+        try {
+            $reportType = $request->get('type', 'financial');
+            $period = $request->get('period', '365');
+            $userId = auth()->id();
+
+            // Get report data
+            $reportData = $this->getReportData($reportType, $userId, $period);
+
+            // Check if PDF library is available
+            if (!class_exists('\Barryvdh\DomPDF\Facade\Pdf') && !class_exists('\Snappy\Pdf')) {
+                return response()->json([
+                    'message' => 'PDF export requires a PDF library. Please install barryvdh/laravel-dompdf or knplabs/knp-snappy.',
+                    'status' => 'library_required',
+                    'data' => $reportData, // Return data as JSON fallback
+                ], 503);
+            }
+
+            // Generate PDF using available library
+            // This is a template - actual implementation depends on the library used
+            $html = view('reports.' . $reportType, ['data' => $reportData])->render();
+
+            if (class_exists('\Barryvdh\DomPDF\Facade\Pdf')) {
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+                return $pdf->download('report-' . $reportType . '-' . now()->format('Y-m-d') . '.pdf');
+            } elseif (class_exists('\Snappy\Pdf')) {
+                $pdf = \Snappy\Pdf::loadHTML($html);
+                return $pdf->download('report-' . $reportType . '-' . now()->format('Y-m-d') . '.pdf');
+            }
+
+            // Fallback: return JSON data
+            return response()->json([
+                'message' => 'PDF generation failed. Data returned as JSON.',
+                'status' => 'fallback',
+                'data' => $reportData,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to export PDF',
+                'error' => $e->getMessage(),
+                'status' => 'error'
+            ], 500);
+        }
+    }
+
+    private function getReportData($type, $userId, $period)
+    {
+        $startDate = now()->subDays($period);
+        
+        switch ($type) {
+            case 'financial':
+                return $this->getFinancialReportData($userId, $startDate);
+            case 'crop_yield':
+                return $this->getCropYieldReportData($userId, $startDate);
+            case 'weather':
+                return $this->getWeatherReportData($userId, $startDate);
+            default:
+                return ['message' => 'Unknown report type'];
+        }
+    }
+
+    private function getFinancialReportData($userId, $startDate)
+    {
+        // Get user's farm
+        $farm = \App\Models\Farm::where('user_id', $userId)->first();
+        
+        if (!$farm) {
+            return ['message' => 'No farm found for user'];
+        }
+
+        $endDate = now();
+        
+        // Get financial data directly
+        $expenses = \App\Models\Expense::where('user_id', $userId)
+            ->where('date', '>=', $startDate)
+            ->where('date', '<=', $endDate)
+            ->get();
+
+        $sales = \App\Models\Sale::where('user_id', $userId)
+            ->where('sale_date', '>=', $startDate)
+            ->where('sale_date', '<=', $endDate)
+            ->get();
+
+        $totalExpenses = $expenses->sum('amount');
+        $totalRevenue = $sales->sum('total_amount');
+        $netProfit = $totalRevenue - $totalExpenses;
+
+        return [
+            'total_expenses' => $totalExpenses,
+            'total_revenue' => $totalRevenue,
+            'net_profit' => $netProfit,
+            'expenses_by_category' => $expenses->groupBy('category')->map->sum('amount'),
+            'period_start' => $startDate,
+            'period_end' => $endDate,
+        ];
+    }
+
+    private function getCropYieldReportData($userId, $startDate)
+    {
+        // Get crop yield data
+        $fields = \App\Models\Field::where('user_id', $userId)->get();
+        $plantings = \App\Models\Planting::whereHas('field', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })
+        ->where('planting_date', '>=', $startDate)
+        ->with(['harvests', 'field', 'riceVariety'])
+        ->get();
+
+        $yieldData = [];
+        foreach ($plantings as $planting) {
+            $totalYield = $planting->harvests->sum('yield');
+            $yieldData[] = [
+                'field_name' => $planting->field->name ?? 'Unknown',
+                'variety' => $planting->riceVariety->name ?? 'Unknown',
+                'planting_date' => $planting->planting_date,
+                'area_planted' => $planting->area_planted,
+                'total_yield' => $totalYield,
+                'yield_per_hectare' => $planting->area_planted > 0 ? $totalYield / $planting->area_planted : 0,
+            ];
+        }
+
+        return [
+            'yield_data' => $yieldData,
+            'total_yield' => collect($yieldData)->sum('total_yield'),
+            'average_yield_per_hectare' => collect($yieldData)->avg('yield_per_hectare'),
+            'period_start' => $startDate,
+            'period_end' => now(),
+        ];
+    }
+
+    private function getWeatherReportData($userId, $startDate)
+    {
+        $fields = \App\Models\Field::where('user_id', $userId)->get();
+        $weatherData = [];
+
+        foreach ($fields as $field) {
+            $request = new Request([
+                'field_id' => $field->id,
+                'period_days' => now()->diffInDays($startDate),
+                'report_type' => 'summary',
+            ]);
+            
+            $response = $this->generateWeatherReport($request);
+            $data = json_decode($response->getContent(), true);
+            
+            if (isset($data['report'])) {
+                $weatherData[] = [
+                    'field_name' => $field->name,
+                    'field_id' => $field->id,
+                    'weather_report' => $data['report'],
+                ];
+            }
+        }
+
+        return [
+            'fields_weather' => $weatherData,
+            'period_start' => $startDate,
+            'period_end' => now(),
+        ];
     }
 
     /**
-     * Export report to Excel (placeholder)
+     * Export report to Excel
      */
     public function exportToExcel(Request $request)
     {
-        // This would integrate with Laravel Excel package
-        return response()->json([
-            'message' => 'Excel export functionality would be implemented here',
-            'status' => 'not_implemented'
-        ]);
+        try {
+            $reportType = $request->get('type', 'financial');
+            $period = $request->get('period', '365');
+            $userId = auth()->id();
+
+            // Get report data
+            $reportData = $this->getReportData($reportType, $userId, $period);
+
+            // Check if Laravel Excel is available
+            if (!class_exists('\Maatwebsite\Excel\Facades\Excel')) {
+                // Fallback: return CSV format
+                return $this->exportToCsv($reportData, $reportType);
+            }
+
+            // Generate Excel using Laravel Excel
+            $exportClass = $this->getExportClass($reportType);
+            
+            if (!$exportClass) {
+                return response()->json([
+                    'message' => 'Export class not found for report type: ' . $reportType,
+                    'status' => 'error'
+                ], 400);
+            }
+
+            $filename = 'report-' . $reportType . '-' . now()->format('Y-m-d') . '.xlsx';
+            
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new $exportClass($reportData),
+                $filename
+            );
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to export Excel',
+                'error' => $e->getMessage(),
+                'status' => 'error'
+            ], 500);
+        }
+    }
+
+    private function exportToCsv($data, $reportType)
+    {
+        $filename = 'report-' . $reportType . '-' . now()->format('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            
+            // Write headers if data is structured
+            if (is_array($data) && !empty($data)) {
+                if (isset($data[0]) && is_array($data[0])) {
+                    fputcsv($file, array_keys($data[0]));
+                }
+                
+                // Write data rows
+                foreach ($data as $row) {
+                    if (is_array($row)) {
+                        fputcsv($file, array_values($row));
+                    }
+                }
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function getExportClass($reportType)
+    {
+        $classes = [
+            'financial' => 'App\Exports\FinancialReportExport',
+            'crop_yield' => 'App\Exports\CropYieldReportExport',
+            'weather' => 'App\Exports\WeatherReportExport',
+        ];
+
+        $className = $classes[$reportType] ?? null;
+        
+        if ($className && class_exists($className)) {
+            return $className;
+        }
+
+        return null;
     }
 
     /**

@@ -1,0 +1,38 @@
+SYSTEM REQUIREMENTS SPECIFICATION FOR BUYER ROLE (FARM OPERATIONS MANAGEMENT SYSTEM)
+
+I. FUNCTIONAL REQUIREMENTS (FR)
+
+A. User/Account Management (FR-A)
+FR-A.1 The system must allow the Buyer to register and securely log in to utilize system capabilities.
+FR-A.2 The system must allow the Buyer to manage and modify their profile details.
+FR-A.3 The system must perform data validation (check for null values and duplication) during account creation and updates.
+
+B. Online Product Marketplace (FR-B)
+FR-B.1 The system must allow the Buyer to browse and view farmer-posted product offerings (rice and rice-related products only).
+FR-B.2 The system must allow the Buyer to view product information, including description, price, and stock status.
+FR-B.3 The system must allow the Buyer to place orders through the order module.
+FR-B.4 The system must allow the Buyer to track the status of their orders (e.g., confirmed, prepared, fulfilled).
+FR-B.5 The system must allow the Buyer to view their entire order history/list.
+FR-B.6 The system must allow for direct communication/messaging between the Buyer and the farmer (seller).
+FR-B.7 The system will not handle direct payment processing; transactions are organized/settled outside the platform.
+
+II. NON-FUNCTIONAL REQUIREMENTS (NFR)
+
+A. Security and Data Integrity (NFR-A)
+NFR-A.1 Users must authenticate using email and password.
+NFR-A.2 The system must ensure secure handling of user information.
+NFR-A.3 The system must provide protection against unauthorized access.
+NFR-A.4 All Buyer actions must be executed with in-built data validation capabilities to safeguard against duplicate data or system discrepancies.
+
+B. Usability and Scalability (NFR-B)
+NFR-B.1 The system should be accesesible across various devices, including mobile phones.
+NFR-B.2 Users should be able to navigate the system with minimal instructions.
+NFR-B.3 The system should support up to 10 users at the same time.
+NFR-B.4 The system should handle an increasing number of users and data without major issues (scalability).
+
+III. IMPLEMENTATION NOTES (November 2025)
+
+- FR-B.1–B.3 are fulfilled through the Vue buyer marketplace pages backed by `/api/rice-marketplace/products` and the unified `/api/rice-marketplace/orders` endpoint (pre-orders included).
+- FR-B.4–B.5 are covered by the rebuilt `/orders` experience, which lists real orders with live progress plus a detail view per order.
+- FR-B.6 now has a dedicated conversation thread per order (buyer ↔ farmer) via `/api/rice-marketplace/orders/{order}/messages`.
+- FR-B.7 is enforced across UI copy and API responses: the platform never processes payments and reminds users to settle transactions offline.

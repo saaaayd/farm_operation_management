@@ -51,8 +51,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // Rice Farm Profile routes
-    Route::prefix('farmer')->group(function () {
+    Route::middleware('farmer')->prefix('farmer')->group(function () {
+        Route::get('/profile', [RiceFarmProfileController::class, 'getProfile']);
         Route::post('/profile', [RiceFarmProfileController::class, 'createRiceFarmProfile']);
+        Route::put('/profile', [RiceFarmProfileController::class, 'updateProfile']);
     });    
 
     // Rice Varieties routes
@@ -90,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Field management routes
-    Route::prefix('fields')->group(function () {
+    Route::middleware('farmer')->prefix('fields')->group(function () {
         Route::get('/', [\App\Http\Controllers\Farm\FieldController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Farm\FieldController::class, 'store']);
         Route::get('/{field}', [\App\Http\Controllers\Farm\FieldController::class, 'show']);
@@ -99,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Planting management routes
-    Route::prefix('plantings')->group(function () {
+    Route::middleware('farmer')->prefix('plantings')->group(function () {
         Route::get('/', [\App\Http\Controllers\Farm\PlantingController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Farm\PlantingController::class, 'store']);
         Route::get('/{planting}', [\App\Http\Controllers\Farm\PlantingController::class, 'show']);
@@ -108,7 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Rice Farming Lifecycle routes
-    Route::prefix('rice-farming')->group(function () {
+    Route::middleware('farmer')->prefix('rice-farming')->group(function () {
         Route::post('/plantings', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'createRicePlanting']);
         Route::get('/lifecycle-overview', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'getLifecycleOverview']);
         Route::get('/plantings/{planting}/lifecycle', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'getPlantingLifecycle']);
@@ -118,7 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Task management routes
-    Route::prefix('tasks')->group(function () {
+    Route::middleware('farmer')->prefix('tasks')->group(function () {
         Route::get('/', [\App\Http\Controllers\Labor\TaskController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Labor\TaskController::class, 'store']);
         Route::get('/{task}', [\App\Http\Controllers\Labor\TaskController::class, 'show']);
@@ -128,7 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Harvest management routes
-    Route::prefix('harvests')->group(function () {
+    Route::middleware('farmer')->prefix('harvests')->group(function () {
         Route::get('/', [\App\Http\Controllers\Farm\HarvestController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Farm\HarvestController::class, 'store']);
         Route::get('/{harvest}', [\App\Http\Controllers\Farm\HarvestController::class, 'show']);
@@ -137,7 +139,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Labor management routes
-    Route::prefix('laborers')->group(function () {
+    Route::middleware('farmer')->prefix('laborers')->group(function () {
         Route::get('/', [\App\Http\Controllers\Labor\LaborerController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Labor\LaborerController::class, 'store']);
         Route::get('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'show']);
@@ -145,7 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'destroy']);
     });
 
-    Route::prefix('labor-wages')->group(function () {
+    Route::middleware('farmer')->prefix('labor-wages')->group(function () {
         Route::get('/', [\App\Http\Controllers\Labor\WageController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Labor\WageController::class, 'store']);
         Route::get('/{laborWage}', [\App\Http\Controllers\Labor\WageController::class, 'show']);
@@ -154,7 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Inventory management routes
-    Route::prefix('inventory')->group(function () {
+    Route::middleware('farmer')->prefix('inventory')->group(function () {
         Route::get('/', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'store']);
         Route::get('/{item}', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'show']);
@@ -172,16 +174,28 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats', [\App\Http\Controllers\RiceMarketplaceController::class, 'getMarketplaceStats']);
         
         // Product management (farmers only)
-        Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
-        Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
-        Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
+        Route::middleware('farmer')->group(function () {
+            Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
+            Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
+            Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
+        });
         
         // Order management
         Route::get('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrders']);
         Route::get('/orders/{order}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrder']);
-        Route::post('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'createOrder']);
-        Route::post('/orders/{order}/confirm', [\App\Http\Controllers\RiceMarketplaceController::class, 'confirmOrder']);
-        Route::post('/orders/{order}/cancel', [\App\Http\Controllers\RiceMarketplaceController::class, 'cancelOrder']);
+
+        Route::middleware('buyer')->group(function () {
+            Route::post('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'createOrder']);
+        });
+
+        Route::middleware('farmer')->group(function () {
+            Route::post('/orders/{order}/confirm', [\App\Http\Controllers\RiceMarketplaceController::class, 'confirmOrder']);
+            Route::post('/orders/{order}/cancel', [\App\Http\Controllers\RiceMarketplaceController::class, 'cancelOrder']);
+        });
+
+        // Order messaging
+        Route::get('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'index']);
+        Route::post('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'store']);
     });
 
     // Legacy Marketplace routes (for backward compatibility)
@@ -199,7 +213,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Order management routes
-    Route::prefix('orders')->group(function () {
+    Route::middleware('farmer')->prefix('orders')->group(function () {
         Route::get('/', [\App\Http\Controllers\Inventory\OrderController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Inventory\OrderController::class, 'store']);
         Route::get('/{order}', [\App\Http\Controllers\Inventory\OrderController::class, 'show']);
@@ -211,7 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Sales management routes
-    Route::prefix('sales')->group(function () {
+    Route::middleware('farmer')->prefix('sales')->group(function () {
         Route::get('/', [\App\Http\Controllers\MarketPlace\SaleController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\MarketPlace\SaleController::class, 'store']);
         Route::get('/{sale}', [\App\Http\Controllers\MarketPlace\SaleController::class, 'show']);
@@ -220,7 +234,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Financial management routes
-    Route::prefix('expenses')->group(function () {
+    Route::middleware('farmer')->prefix('expenses')->group(function () {
         Route::get('/', [\App\Http\Controllers\Financial\ExpenseController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Financial\ExpenseController::class, 'store']);
         Route::get('/{expense}', [\App\Http\Controllers\Financial\ExpenseController::class, 'show']);
@@ -229,12 +243,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Rice Farming Analytics routes
-    Route::prefix('analytics')->group(function () {
+    Route::middleware('farmer')->prefix('analytics')->group(function () {
         Route::get('/rice-farming', [\App\Http\Controllers\RiceFarmingAnalyticsController::class, 'getRiceFarmingAnalytics']);
     });
 
     // Reports routes (simplified)
-    Route::prefix('reports')->group(function () {
+    Route::middleware('farmer')->prefix('reports')->group(function () {
         Route::get('/financial', [\App\Http\Controllers\Financial\ExpenseController::class, 'index']);
         Route::get('/crop-yield', [\App\Http\Controllers\Farm\HarvestController::class, 'index']);
         Route::get('/labor-cost', [\App\Http\Controllers\Labor\WageController::class, 'index']);

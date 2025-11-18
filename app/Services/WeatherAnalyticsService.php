@@ -497,7 +497,109 @@ class WeatherAnalyticsService
 
     private function analyzeGrowthStageWeather($planting, $weatherData)
     {
-        return ['analysis' => 'Growth stage weather analysis placeholder'];
+        if ($weatherData->isEmpty() || !$planting) {
+            return ['analysis' => 'Insufficient data for growth stage analysis'];
+        }
+
+        $currentStage = $planting->current_stage ?? 'seedling';
+        $stageWeather = $this->getWeatherForStage($planting, $weatherData, $currentStage);
+        
+        $analysis = [
+            'current_stage' => $currentStage,
+            'temperature_avg' => $stageWeather->avg('temperature'),
+            'humidity_avg' => $stageWeather->avg('humidity'),
+            'rainfall_total' => $stageWeather->sum('rainfall'),
+            'optimal_conditions_days' => $this->countOptimalDays($stageWeather, $currentStage),
+            'stress_days' => $this->countStressDays($stageWeather, $currentStage),
+            'recommendations' => $this->getStageRecommendations($currentStage, $stageWeather),
+        ];
+
+        return $analysis;
+    }
+
+    private function getWeatherForStage($planting, $weatherData, $stage)
+    {
+        // Get weather data for the current growth stage period
+        $stageStartDate = $this->getStageStartDate($planting, $stage);
+        return $weatherData->where('recorded_at', '>=', $stageStartDate);
+    }
+
+    private function getStageStartDate($planting, $stage)
+    {
+        // Estimate stage start date based on planting date and stage
+        $daysPerStage = [
+            'seedling' => 0,
+            'tillering' => 15,
+            'flowering' => 60,
+            'grain_filling' => 90,
+            'ripening' => 120,
+        ];
+        
+        $daysOffset = $daysPerStage[$stage] ?? 0;
+        return $planting->planting_date ? 
+            Carbon::parse($planting->planting_date)->addDays($daysOffset) : 
+            now()->subDays(30);
+    }
+
+    private function countOptimalDays($weatherData, $stage)
+    {
+        $optimalRanges = [
+            'seedling' => ['temp' => [20, 30], 'humidity' => [70, 90]],
+            'tillering' => ['temp' => [25, 32], 'humidity' => [70, 85]],
+            'flowering' => ['temp' => [25, 30], 'humidity' => [70, 80]],
+            'grain_filling' => ['temp' => [20, 28], 'humidity' => [60, 75]],
+            'ripening' => ['temp' => [20, 28], 'humidity' => [50, 70]],
+        ];
+
+        $range = $optimalRanges[$stage] ?? ['temp' => [20, 30], 'humidity' => [60, 80]];
+        
+        return $weatherData->filter(function($log) use ($range) {
+            $temp = $log->temperature ?? 0;
+            $humidity = $log->humidity ?? 0;
+            return $temp >= $range['temp'][0] && $temp <= $range['temp'][1] &&
+                   $humidity >= $range['humidity'][0] && $humidity <= $range['humidity'][1];
+        })->count();
+    }
+
+    private function countStressDays($weatherData, $stage)
+    {
+        $stressThresholds = [
+            'seedling' => ['temp_high' => 35, 'temp_low' => 15, 'humidity_low' => 50],
+            'tillering' => ['temp_high' => 38, 'temp_low' => 18, 'humidity_low' => 55],
+            'flowering' => ['temp_high' => 35, 'temp_low' => 20, 'humidity_low' => 60],
+            'grain_filling' => ['temp_high' => 32, 'temp_low' => 18, 'humidity_low' => 50],
+            'ripening' => ['temp_high' => 30, 'temp_low' => 15, 'humidity_low' => 40],
+        ];
+
+        $thresholds = $stressThresholds[$stage] ?? ['temp_high' => 35, 'temp_low' => 15, 'humidity_low' => 50];
+        
+        return $weatherData->filter(function($log) use ($thresholds) {
+            $temp = $log->temperature ?? 0;
+            $humidity = $log->humidity ?? 0;
+            return $temp > $thresholds['temp_high'] || 
+                   $temp < $thresholds['temp_low'] || 
+                   $humidity < $thresholds['humidity_low'];
+        })->count();
+    }
+
+    private function getStageRecommendations($stage, $weatherData)
+    {
+        $recommendations = [];
+        
+        $avgTemp = $weatherData->avg('temperature');
+        $avgHumidity = $weatherData->avg('humidity');
+        
+        if ($avgTemp > 32) {
+            $recommendations[] = 'High temperature detected. Consider increasing irrigation frequency.';
+        }
+        if ($avgHumidity < 60) {
+            $recommendations[] = 'Low humidity detected. Monitor water levels closely.';
+        }
+        if ($weatherData->where('rainfall', '>', 50)->count() > 0) {
+            $recommendations[] = 'Heavy rainfall detected. Ensure proper drainage.';
+        }
+        
+        return $recommendations;
     }
 
     private function identifyStressEvents($weatherData)
@@ -566,7 +668,37 @@ class WeatherAnalyticsService
 
     private function calculateOverallRiskScore($risks)
     {
-        return 45; // Placeholder
+        if (empty($risks) || !is_array($risks)) {
+            return 0; // No risks = low risk score
+        }
+
+        $totalRisk = 0;
+        $count = 0;
+        
+        foreach ($risks as $risk) {
+            if (is_array($risk) && isset($risk['risk_level'])) {
+                $riskValue = match($risk['risk_level']) {
+                    'critical' => 90,
+                    'high' => 70,
+                    'medium' => 50,
+                    'low' => 30,
+                    default => 50,
+                };
+                
+                // Adjust by probability if available
+                if (isset($risk['probability'])) {
+                    $riskValue *= $risk['probability'];
+                }
+                
+                $totalRisk += $riskValue;
+                $count++;
+            } elseif (is_numeric($risk)) {
+                $totalRisk += $risk;
+                $count++;
+            }
+        }
+        
+        return $count > 0 ? min(100, round($totalRisk / $count)) : 0;
     }
 
     private function getMitigationStrategies($risks)
@@ -672,7 +804,85 @@ class WeatherAnalyticsService
 
     private function calculateDataQualityScore($weatherLogs)
     {
-        return 85; // Placeholder score
+        if ($weatherLogs->isEmpty()) {
+            return 0; // No data = no quality
+        }
+
+        $totalLogs = $weatherLogs->count();
+        $completeLogs = 0;
+        $recentLogs = 0;
+        $now = now();
+        
+        foreach ($weatherLogs as $log) {
+            // Check if log has essential fields
+            $hasTemp = isset($log->temperature) && $log->temperature !== null;
+            $hasHumidity = isset($log->humidity) && $log->humidity !== null;
+            $hasConditions = isset($log->conditions) && !empty($log->conditions);
+            
+            if ($hasTemp && $hasHumidity && $hasConditions) {
+                $completeLogs++;
+            }
+            
+            // Check if log is recent (within last 7 days)
+            if ($log->recorded_at && Carbon::parse($log->recorded_at)->diffInDays($now) <= 7) {
+                $recentLogs++;
+            }
+        }
+        
+        // Calculate quality score based on:
+        // - Completeness (40%): percentage of logs with all required fields
+        // - Recency (30%): percentage of logs from last 7 days
+        // - Consistency (30%): based on data spread (simplified)
+        $completenessScore = ($completeLogs / $totalLogs) * 100;
+        $recencyScore = min(100, ($recentLogs / max(1, $totalLogs)) * 100);
+        $consistencyScore = $this->calculateConsistencyScore($weatherLogs);
+        
+        $qualityScore = ($completenessScore * 0.4) + ($recencyScore * 0.3) + ($consistencyScore * 0.3);
+        
+        return min(100, round($qualityScore));
+    }
+
+    private function calculateConsistencyScore($weatherLogs)
+    {
+        if ($weatherLogs->count() < 2) {
+            return 50; // Can't determine consistency with less than 2 logs
+        }
+        
+        $temps = $weatherLogs->pluck('temperature')->filter();
+        $humidities = $weatherLogs->pluck('humidity')->filter();
+        
+        if ($temps->isEmpty() || $humidities->isEmpty()) {
+            return 50;
+        }
+        
+        // Calculate coefficient of variation (lower is better)
+        $tempAvg = $temps->avg();
+        $tempStd = $this->calculateStdDev($temps->toArray());
+        $tempCV = $tempAvg > 0 ? ($tempStd / $tempAvg) * 100 : 100;
+        
+        $humidityAvg = $humidities->avg();
+        $humidityStd = $this->calculateStdDev($humidities->toArray());
+        $humidityCV = $humidityAvg > 0 ? ($humidityStd / $humidityAvg) * 100 : 100;
+        
+        // Lower CV = higher consistency score
+        $consistencyScore = 100 - min(50, ($tempCV + $humidityCV) / 2);
+        
+        return max(0, $consistencyScore);
+    }
+
+    private function calculateStdDev($values)
+    {
+        $count = count($values);
+        if ($count < 2) return 0;
+        
+        $mean = array_sum($values) / $count;
+        $variance = 0;
+        
+        foreach ($values as $value) {
+            $variance += pow($value - $mean, 2);
+        }
+        
+        return sqrt($variance / $count);
     }
 
     private function calculateReliabilityMetrics($weatherLogs)

@@ -102,6 +102,14 @@ class RiceOrder extends Model
     }
 
     /**
+     * Get messages associated with the order
+     */
+    public function messages()
+    {
+        return $this->hasMany(RiceOrderMessage::class, 'rice_order_id')->latest();
+    }
+
+    /**
      * Scope to get orders by status
      */
     public function scopeByStatus($query, $status)
