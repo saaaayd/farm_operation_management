@@ -94,7 +94,8 @@ resources/js/
 ### 🛒 Buyer Role
 - **Marketplace**: Browse and purchase rice products
 - **Shopping Cart**: Add products and manage quantities
-- **Order Management**: Track order history and status
+- **Order Management**: Track order history, status, and pre-order availability
+- **In-app Messaging**: Chat with farmers on each order to coordinate pickup or delivery (payments remain offline)
 - **Product Details**: View rice variety information and farmer details
 
 ### 👨‍💼 Admin Role

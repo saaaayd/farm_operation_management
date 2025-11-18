@@ -257,6 +257,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
+    path: '/marketplace/orders/:id',
+    name: 'marketplace-order-detail',
+    component: OrderDetail,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
     path: '/marketplace/products/:id',
     name: 'product-detail',
     component: ProductDetail,
@@ -272,13 +278,13 @@ const routes = [
     path: '/orders',
     name: 'orders',
     component: OrdersList,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['buyer'] }
   },
   {
     path: '/orders/:id',
     name: 'order-detail',
     component: OrderDetail,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['buyer'] }
   },
   
   // Financial Routes

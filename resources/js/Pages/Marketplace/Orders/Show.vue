@@ -1,32 +1,36 @@
 <template>
   <div class="order-detail-page">
     <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
+      <div v-if="loading" class="py-24 text-center text-gray-500">
+        <div class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-green-600"></div>
+        Loading order details...
+      </div>
+
+      <div v-else-if="error" class="mx-auto max-w-2xl rounded-lg bg-white p-6 text-center shadow">
+        <h1 class="text-xl font-semibold text-gray-900 mb-2">Unable to load order</h1>
+        <p class="text-gray-600 mb-6">{{ error }}</p>
+        <button
+          @click="router.push(ordersListRoute)"
+          class="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+        >
+          Back to Orders
+        </button>
+      </div>
+
+      <div v-else-if="order" class="space-y-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
         <div>
           <nav class="text-sm text-gray-500 mb-2">
-            <router-link to="/orders" class="hover:text-gray-700">Orders</router-link>
+              <router-link :to="ordersListRoute" class="hover:text-gray-700">Orders</router-link>
             <span class="mx-2">/</span>
             <span class="text-gray-900">Order #{{ order.id }}</span>
           </nav>
           <h1 class="text-3xl font-bold text-gray-900">Order #{{ order.id }}</h1>
-          <p class="text-gray-600 mt-2">Placed on {{ formatDate(order.date) }}</p>
+            <p class="text-gray-600 mt-2">
+              Placed on {{ formatDate(order.order_date || order.created_at) }}
+            </p>
         </div>
-        <div class="flex space-x-3">
-          <button
-            v-if="order.status === 'delivered'"
-            @click="leaveReview"
-            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Leave Review
-          </button>
-          <button
-            v-if="order.status === 'pending'"
-            @click="cancelOrder"
-            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            Cancel Order
-          </button>
           <button
             @click="printOrder"
             class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -34,9 +38,9 @@
             Print Order
           </button>
         </div>
-      </div>
+        </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Order Status -->
@@ -49,7 +53,9 @@
               >
                 {{ order.status }}
               </span>
-              <span class="text-sm text-gray-600">Last updated: {{ formatDate(order.updated_at) }}</span>
+              <span class="text-sm text-gray-600">
+                Last updated: {{ formatDate(order.updated_at) }}
+              </span>
             </div>
             
             <!-- Progress Steps -->
@@ -65,7 +71,9 @@
                 >
                   {{ index + 1 }}
                 </div>
-                <span class="text-xs text-gray-600 text-center">{{ step }}</span>
+                <span class="text-xs text-gray-600 text-center">
+                  {{ step.charAt(0).toUpperCase() + step.slice(1) }}
+                </span>
               </div>
             </div>
           </div>
@@ -75,26 +83,28 @@
             <h2 class="text-xl font-semibold mb-4">Order Items</h2>
             <div class="space-y-4">
               <div
-                v-for="item in order.items"
+                v-for="item in lineItems"
                 :key="item.id"
                 class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg"
               >
                 <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <span class="text-gray-500 text-2xl">{{ item.icon }}</span>
+                  <span class="text-gray-500 text-2xl">🌾</span>
                 </div>
                 <div class="flex-1">
                   <h3 class="font-medium text-gray-900">{{ item.name }}</h3>
                   <p class="text-sm text-gray-600">{{ item.description }}</p>
                   <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                    <span>Sold by: {{ item.seller_name }}</span>
-                    <span>•</span>
-                    <span>{{ item.location }}</span>
+                    <span>Farmer: {{ item.farmer || 'Pending assignment' }}</span>
+                    <span v-if="item.location">•</span>
+                    <span v-if="item.location">{{ item.location }}</span>
                   </div>
                 </div>
                 <div class="text-right">
                   <div class="font-medium">{{ formatCurrency(item.price) }}</div>
                   <div class="text-sm text-gray-600">Qty: {{ item.quantity }}</div>
-                  <div class="font-medium text-green-600">{{ formatCurrency(item.price * item.quantity) }}</div>
+                  <div class="font-medium text-green-600">
+                    {{ formatCurrency(item.price * item.quantity) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -105,12 +115,14 @@
             <h2 class="text-xl font-semibold mb-4">Shipping Information</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 class="font-medium text-gray-900 mb-2">Shipping Address</h3>
-                <div class="text-gray-600">
-                  <div>{{ order.shipping_address.name }}</div>
-                  <div>{{ order.shipping_address.street }}</div>
-                  <div>{{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.zip }}</div>
-                  <div>{{ order.shipping_address.country }}</div>
+                <h3 class="font-medium text-gray-900 mb-2">Delivery Address</h3>
+                <div class="text-gray-600 space-y-1">
+                  <div>{{ deliveryAddress.street || 'Provided during checkout' }}</div>
+                  <div v-if="deliveryAddress.city">
+                    {{ deliveryAddress.city }} {{ deliveryAddress.state ? ', ' + deliveryAddress.state : '' }}
+                    {{ deliveryAddress.postal_code }}
+                  </div>
+                  <div v-if="deliveryAddress.country">{{ deliveryAddress.country }}</div>
                 </div>
               </div>
               <div>
@@ -118,19 +130,15 @@
                 <div class="space-y-2 text-gray-600">
                   <div class="flex justify-between">
                     <span>Method:</span>
-                    <span>{{ order.shipping_method }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span>Cost:</span>
-                    <span>{{ formatCurrency(order.shipping_cost) }}</span>
+                    <span>{{ order.delivery_method || 'Pickup' }}</span>
                   </div>
                   <div v-if="order.tracking_number" class="flex justify-between">
                     <span>Tracking:</span>
                     <span class="font-mono">{{ order.tracking_number }}</span>
                   </div>
-                  <div v-if="order.estimated_delivery" class="flex justify-between">
-                    <span>Est. Delivery:</span>
-                    <span>{{ formatDate(order.estimated_delivery) }}</span>
+                  <div v-if="order.available_date" class="flex justify-between">
+                    <span>Available:</span>
+                    <span>{{ formatDate(order.available_date) }}</span>
                   </div>
                 </div>
               </div>
@@ -140,15 +148,15 @@
           <!-- Order Timeline -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Order Timeline</h2>
-            <div class="space-y-4">
+            <div v-if="orderTimeline.length" class="space-y-4">
               <div
-                v-for="event in order.timeline"
+                v-for="event in orderTimeline"
                 :key="event.id"
                 class="flex items-start space-x-3"
               >
                 <div class="flex-shrink-0">
                   <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span class="text-blue-600 text-sm">{{ getTimelineIcon(event.type) }}</span>
+                    <span class="text-blue-600 text-sm">{{ event.type === 'cancelled' ? '❌' : '🗓️' }}</span>
                   </div>
                 </div>
                 <div class="flex-1">
@@ -158,6 +166,62 @@
                 </div>
               </div>
             </div>
+            <p v-else class="text-sm text-gray-500">Status updates will appear here.</p>
+          </div>
+
+          <!-- Order Messages -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold">Order Messages</h2>
+              <button
+                @click="loadMessages"
+                class="text-sm text-green-600 hover:text-green-700"
+                type="button"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div v-if="messagesLoading" class="text-sm text-gray-500">Loading messages…</div>
+            <div
+              v-else
+              class="mb-4 max-h-64 space-y-3 overflow-y-auto rounded border border-gray-100 bg-gray-50 p-3"
+            >
+              <div v-if="!messages.length" class="text-sm text-gray-500">
+                No messages yet. Start the conversation to coordinate pickup or delivery.
+              </div>
+              <div
+                v-for="message in messages"
+                :key="message.id"
+                class="max-w-md rounded-lg px-4 py-3 text-sm"
+                :class="message.sender_id === currentUserId ? 'ml-auto bg-green-100 text-right' : 'mr-auto bg-white text-left border border-gray-200'"
+              >
+                <div class="text-xs text-gray-500">
+                  {{ message.sender?.name || 'Participant' }} • {{ formatDateTime(message.created_at) }}
+                </div>
+                <div class="mt-2 text-gray-800 whitespace-pre-line">{{ message.message }}</div>
+              </div>
+            </div>
+
+            <form @submit.prevent="sendMessage" class="space-y-3">
+              <textarea
+                id="order-message-input"
+                v-model="messageInput"
+                rows="3"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                placeholder="Share updates or ask a question"
+              ></textarea>
+              <div class="flex items-center justify-between">
+                <span v-if="messageError" class="text-sm text-red-600">{{ messageError }}</span>
+                <button
+                  type="submit"
+                  :disabled="sendingMessage || !messageInput.trim()"
+                  class="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {{ sendingMessage ? 'Sending…' : 'Send Message' }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -169,20 +233,12 @@
               <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Subtotal:</span>
-                <span class="font-medium">{{ formatCurrency(order.subtotal) }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Shipping:</span>
-                <span class="font-medium">{{ formatCurrency(order.shipping_cost) }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Tax:</span>
-                <span class="font-medium">{{ formatCurrency(order.tax) }}</span>
+                <span class="font-medium">{{ formatCurrency(orderSubtotal) }}</span>
               </div>
               <div class="border-t border-gray-200 pt-3">
                 <div class="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>{{ formatCurrency(order.total) }}</span>
+                  <span>{{ formatCurrency(order.total_amount || orderSubtotal) }}</span>
                 </div>
               </div>
             </div>
@@ -194,20 +250,16 @@
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Payment Method:</span>
-                <span class="font-medium">{{ order.payment_method }}</span>
+                <span class="font-medium">{{ order.payment_method || 'To be arranged' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Payment Status:</span>
                 <span
-                  :class="order.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'"
+                  :class="order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'"
                   class="font-medium"
                 >
-                  {{ order.payment_status }}
+                  {{ order.payment_status || 'pending' }}
                 </span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Transaction ID:</span>
-                <span class="font-mono text-sm">{{ order.transaction_id }}</span>
               </div>
             </div>
           </div>
@@ -217,77 +269,86 @@
             <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
             <div class="space-y-3">
               <button
-                @click="trackPackage"
-                v-if="order.tracking_number"
-                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                📦 Track Package
-              </button>
-              <button
                 @click="contactSeller"
                 class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
               >
                 💬 Contact Seller
               </button>
-              <button
-                @click="reorderItems"
-                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                🔄 Reorder Items
-              </button>
-              <button
-                @click="downloadInvoice"
-                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                📄 Download Invoice
-              </button>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
+import { riceMarketplaceAPI } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
-const order = ref({
-  id: null,
-  date: '',
-  status: '',
-  updated_at: '',
-  total: 0,
-  subtotal: 0,
-  shipping_cost: 0,
-  tax: 0,
-  shipping_address: {},
-  shipping_method: '',
-  tracking_number: '',
-  estimated_delivery: '',
-  payment_method: '',
-  payment_status: '',
-  transaction_id: '',
-  items: [],
-  timeline: []
+const order = ref(null)
+const loading = ref(true)
+const error = ref('')
+
+const isFarmer = computed(() => authStore.user?.role === 'farmer')
+const ordersListRoute = computed(() => (isFarmer.value ? '/marketplace/orders' : '/orders'))
+
+const orderSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
+
+const lineItems = computed(() => {
+  if (!order.value?.rice_product) return []
+  return [
+    {
+      id: order.value.rice_product.id,
+      name: order.value.rice_product.name,
+      description: order.value.rice_product.description,
+      quantity: order.value.quantity,
+      price: order.value.unit_price,
+      farmer: order.value.rice_product.farmer?.name,
+      location: order.value.rice_product.farmer?.address?.city,
+    },
+  ]
 })
 
-const orderSteps = ['Ordered', 'Processing', 'Shipped', 'Delivered']
+const orderSubtotal = computed(() => {
+  if (!order.value) return 0
+  return (order.value.unit_price || 0) * (order.value.quantity || 0)
+})
+
+const deliveryAddress = computed(() => order.value?.delivery_address || {})
+const currentUserId = computed(() => authStore.user?.id)
+
+const messages = ref([])
+const messagesLoading = ref(false)
+const sendingMessage = ref(false)
+const messageInput = ref('')
+const messageError = ref('')
 
 const getStatusBadgeClass = (status) => {
   const classes = {
     pending: 'bg-yellow-100 text-yellow-800',
-    processing: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-purple-100 text-purple-800',
+    confirmed: 'bg-blue-100 text-blue-800',
+    processing: 'bg-purple-100 text-purple-800',
+    shipped: 'bg-indigo-100 text-indigo-800',
     delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800'
+    cancelled: 'bg-red-100 text-red-800',
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const getCurrentStepIndex = () => {
+  if (!order.value?.status) return 0
+  const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
+  const idx = statusOrder.indexOf(order.value.status)
+  return idx >= 0 ? idx : 0
 }
 
 const getStepClass = (index) => {
@@ -297,161 +358,133 @@ const getStepClass = (index) => {
   return 'bg-gray-200 text-gray-600'
 }
 
-const getCurrentStepIndex = () => {
-  const statusMap = {
-    pending: 0,
-    processing: 1,
-    shipped: 2,
-    delivered: 3,
-    cancelled: -1
-  }
-  return statusMap[order.value.status] || 0
-}
-
-const getTimelineIcon = (type) => {
-  const icons = {
-    ordered: '📝',
-    processing: '⚙️',
-    shipped: '🚚',
-    delivered: '✅',
-    cancelled: '❌'
-  }
-  return icons[type] || '📅'
-}
-
 const formatDate = (date) => {
+  if (!date) return 'N/A'
   return new Date(date).toLocaleDateString()
 }
 
 const formatDateTime = (date) => {
+  if (!date) return 'N/A'
   return new Date(date).toLocaleString()
 }
 
-const leaveReview = () => {
-  // Navigate to review page
-  console.log('Leave review')
-}
+const orderTimeline = computed(() => {
+  if (!order.value) return []
+  const events = [
+    {
+      id: 'placed',
+      type: 'ordered',
+      title: 'Order Placed',
+      description: 'Order created by buyer',
+      date: order.value.order_date || order.value.created_at,
+    },
+  ]
 
-const cancelOrder = () => {
-  // Cancel order logic
-  console.log('Cancel order')
+  if (['confirmed', 'processing', 'shipped', 'delivered'].includes(order.value.status)) {
+    events.push({
+      id: 'confirmed',
+      type: 'processing',
+      title: 'Order Confirmed',
+      description: 'Farmer confirmed the order',
+      date: order.value.updated_at,
+    })
+  }
+
+  if (['shipped', 'delivered'].includes(order.value.status)) {
+    events.push({
+      id: 'shipped',
+      type: 'shipped',
+      title: 'Order Shipped',
+      description: 'Order is on the way',
+      date: order.value.actual_delivery_date || order.value.updated_at,
+    })
+  }
+
+  if (order.value.status === 'delivered') {
+    events.push({
+      id: 'delivered',
+      type: 'delivered',
+      title: 'Order Delivered',
+      description: 'Buyer received the order',
+      date: order.value.actual_delivery_date || order.value.updated_at,
+    })
+  }
+
+  if (order.value.status === 'cancelled') {
+    events.push({
+      id: 'cancelled',
+      type: 'cancelled',
+      title: 'Order Cancelled',
+      description: 'Order was cancelled',
+      date: order.value.updated_at,
+    })
+  }
+
+  return events
+})
+
+const contactSeller = () => {
+  const input = document.getElementById('order-message-input')
+  if (input) {
+    input.focus()
+  }
 }
 
 const printOrder = () => {
-  // Print order logic
   window.print()
 }
 
-const trackPackage = () => {
-  // Open tracking page
-  console.log('Track package')
+const loadOrderData = async (id) => {
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await riceMarketplaceAPI.getOrderById(id)
+    order.value = response.data.order
+    await loadMessages()
+  } catch (err) {
+    error.value = err.userMessage || err.response?.data?.message || 'Failed to load order'
+  } finally {
+    loading.value = false
+  }
 }
 
-const contactSeller = () => {
-  // Contact seller logic
-  console.log('Contact seller')
+const loadMessages = async () => {
+  if (!order.value) return
+  messagesLoading.value = true
+  messageError.value = ''
+  try {
+    const response = await riceMarketplaceAPI.getOrderMessages(order.value.id)
+    messages.value = response.data.messages || []
+  } catch (err) {
+    messageError.value = err.userMessage || err.response?.data?.message || 'Failed to load messages'
+  } finally {
+    messagesLoading.value = false
+  }
 }
 
-const reorderItems = () => {
-  // Reorder items logic
-  console.log('Reorder items')
-}
+const sendMessage = async () => {
+  if (!order.value || !messageInput.value.trim()) {
+    return
+  }
 
-const downloadInvoice = () => {
-  // Download invoice logic
-  console.log('Download invoice')
+  sendingMessage.value = true
+  messageError.value = ''
+  try {
+    const response = await riceMarketplaceAPI.sendOrderMessage(order.value.id, {
+      message: messageInput.value.trim(),
+    })
+    messages.value.push(response.data.data)
+    messageInput.value = ''
+  } catch (err) {
+    messageError.value = err.userMessage || err.response?.data?.message || 'Failed to send message'
+  } finally {
+    sendingMessage.value = false
+  }
 }
 
 onMounted(() => {
-  const orderId = route.params.id
-  // Load order data from API
-  loadOrderData(orderId)
+  loadOrderData(route.params.id)
 })
-
-const loadOrderData = async (id) => {
-  try {
-    // API call to load order data
-    // For now, using mock data
-    order.value = {
-      id: id,
-      date: '2024-03-25T10:00:00Z',
-      status: 'delivered',
-      updated_at: '2024-03-27T14:30:00Z',
-      total: 450.00,
-      subtotal: 420.00,
-      shipping_cost: 15.00,
-      tax: 15.00,
-      shipping_address: {
-        name: 'John Smith',
-        street: '123 Farm Road',
-        city: 'Springfield',
-        state: 'IL',
-        zip: '62701',
-        country: 'United States'
-      },
-      shipping_method: 'Standard Shipping',
-      tracking_number: 'TRK123456789',
-      estimated_delivery: '2024-03-27T18:00:00Z',
-      payment_method: 'Credit Card ending in 1234',
-      payment_status: 'paid',
-      transaction_id: 'TXN789012345',
-      items: [
-        {
-          id: 1,
-          name: 'Corn Seeds - Pioneer 1234',
-          description: 'High-yield corn seeds perfect for spring planting',
-          price: 180.00,
-          quantity: 2,
-          seller_name: 'AgriSupply Co.',
-          location: 'Springfield, IL',
-          icon: '🌱'
-        },
-        {
-          id: 2,
-          name: 'Nitrogen Fertilizer',
-          description: 'High-grade nitrogen fertilizer for optimal crop growth',
-          price: 450.00,
-          quantity: 1,
-          seller_name: 'Farm Depot',
-          location: 'Des Moines, IA',
-          icon: '🌿'
-        }
-      ],
-      timeline: [
-        {
-          id: 1,
-          type: 'ordered',
-          title: 'Order Placed',
-          description: 'Your order has been placed successfully',
-          date: '2024-03-25T10:00:00Z'
-        },
-        {
-          id: 2,
-          type: 'processing',
-          title: 'Order Processing',
-          description: 'Your order is being prepared for shipment',
-          date: '2024-03-25T14:30:00Z'
-        },
-        {
-          id: 3,
-          type: 'shipped',
-          title: 'Order Shipped',
-          description: 'Your order has been shipped',
-          date: '2024-03-26T09:15:00Z'
-        },
-        {
-          id: 4,
-          type: 'delivered',
-          title: 'Order Delivered',
-          description: 'Your order has been delivered',
-          date: '2024-03-27T14:30:00Z'
-        }
-      ]
-    }
-  } catch (error) {
-    console.error('Error loading order data:', error)
-  }
-}
 </script>
 
 <style scoped>

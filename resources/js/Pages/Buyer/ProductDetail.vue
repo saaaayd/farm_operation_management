@@ -153,6 +153,10 @@
               </div>
             </div>
 
+            <p class="text-xs text-gray-500 mb-4">
+              Payments are settled directly with the farmer. After placing your order, you’ll coordinate pickup or delivery details together.
+            </p>
+
             <!-- Pre-order Button -->
             <button
               v-if="product.production_status === 'in_production'"
@@ -357,7 +361,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import { riceMarketplaceAPI, authAPI } from '@/services/api'
 import { formatCurrency } from '@/utils/format'
 
 const route = useRoute()
@@ -381,7 +385,7 @@ const orderForm = ref({
 const loadProduct = async () => {
   loading.value = true
   try {
-    const response = await axios.get(`/api/rice-marketplace/products/${route.params.id}`)
+    const response = await riceMarketplaceAPI.getProductById(route.params.id)
     product.value = response.data.product
     quantity.value = 1
   } catch (error) {
@@ -408,7 +412,18 @@ const decreaseQuantity = () => {
   }
 }
 
-const submitPreOrder = async () => {
+const parseDeliveryAddress = () => {
+  const addressParts = orderForm.value.delivery_address.split(',').map(part => part.trim())
+  return {
+    street: addressParts[0] || orderForm.value.delivery_address,
+    city: addressParts[1] || '',
+    state: addressParts[2] || '',
+    postal_code: addressParts[3] || '',
+    country: 'Philippines'
+  }
+}
+
+const placeOrder = async (isPreOrder = false) => {
   if (!orderForm.value.delivery_address) {
     alert('Please fill in delivery address')
     return
@@ -416,75 +431,29 @@ const submitPreOrder = async () => {
 
   submitting.value = true
   try {
-    // Parse delivery address - expect format: Street, City, State, Postal Code
-    const addressParts = orderForm.value.delivery_address.split(',').map(part => part.trim())
-    const deliveryAddress = {
-      street: addressParts[0] || orderForm.value.delivery_address,
-      city: addressParts[1] || '',
-      state: addressParts[2] || '',
-      postal_code: addressParts[3] || '',
-      country: 'Philippines'
-    }
-
-    const response = await axios.post('/api/rice-marketplace/orders', {
+    await riceMarketplaceAPI.createOrder({
       rice_product_id: product.value.id,
       quantity: quantity.value,
-      delivery_address: deliveryAddress,
+      delivery_address: parseDeliveryAddress(),
       delivery_method: orderForm.value.delivery_method,
       payment_method: orderForm.value.payment_method,
       notes: orderForm.value.notes
     })
 
-    // Update user's phone number if provided
     if (orderForm.value.phone) {
       try {
-        await axios.put('/api/profile', {
-          phone: orderForm.value.phone
-        })
+        await authAPI.updateProfile({ phone: orderForm.value.phone })
       } catch (error) {
         console.warn('Failed to update phone number:', error)
       }
     }
 
-    alert('Pre-order placed successfully! You will be notified via SMS when the product is available.')
+    alert(
+      isPreOrder
+        ? 'Pre-order placed successfully! We will notify you once the product is ready.'
+        : 'Order placed successfully! Coordinate final details directly with the farmer.'
+    )
     showPreOrderModal.value = false
-    router.push('/orders')
-  } catch (error) {
-    console.error('Error placing pre-order:', error)
-    alert(error.response?.data?.message || 'Failed to place pre-order')
-  } finally {
-    submitting.value = false
-  }
-}
-
-const submitOrder = async () => {
-  if (!orderForm.value.delivery_address) {
-    alert('Please fill in delivery address')
-    return
-  }
-
-  submitting.value = true
-  try {
-    // Parse delivery address - expect format: Street, City, State, Postal Code
-    const addressParts = orderForm.value.delivery_address.split(',').map(part => part.trim())
-    const deliveryAddress = {
-      street: addressParts[0] || orderForm.value.delivery_address,
-      city: addressParts[1] || '',
-      state: addressParts[2] || '',
-      postal_code: addressParts[3] || '',
-      country: 'Philippines'
-    }
-
-    const response = await axios.post('/api/rice-marketplace/orders', {
-      rice_product_id: product.value.id,
-      quantity: quantity.value,
-      delivery_address: deliveryAddress,
-      delivery_method: orderForm.value.delivery_method,
-      payment_method: orderForm.value.payment_method,
-      notes: orderForm.value.notes
-    })
-
-    alert('Order placed successfully!')
     showOrderModal.value = false
     router.push('/orders')
   } catch (error) {
@@ -494,6 +463,9 @@ const submitOrder = async () => {
     submitting.value = false
   }
 }
+
+const submitPreOrder = () => placeOrder(true)
+const submitOrder = () => placeOrder(false)
 
 const goBack = () => {
   router.push('/buyer/products')

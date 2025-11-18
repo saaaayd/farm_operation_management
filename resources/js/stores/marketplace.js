@@ -6,9 +6,11 @@ import { useAuthStore } from './auth';
 export const useMarketplaceStore = defineStore('marketplace', {
   state: () => ({
     products: [],
+    productsPagination: null,
     categories: [],
     cart: [],
     orders: [],
+    ordersPagination: null,
     sales: [],
     farmerProducts: [],
     riceVarieties: [],
@@ -69,9 +71,22 @@ export const useMarketplaceStore = defineStore('marketplace', {
   actions: {
     async fetchProducts(filters = {}) {
       this.loading = true;
+      this.error = null;
       try {
-        const response = await axios.get('/api/marketplace/products', { params: filters });
-        this.products = response.data.available_products;
+        const response = await riceMarketplaceAPI.getProducts(filters);
+        const payload = response.data?.products;
+        const items = payload?.data || payload || [];
+
+        this.products = Array.isArray(items) ? items : [];
+        this.productsPagination = payload
+          ? {
+              current_page: payload.current_page,
+              last_page: payload.last_page,
+              per_page: payload.per_page,
+              total: payload.total,
+            }
+          : null;
+
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch products';
@@ -183,7 +198,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
 
     async getRiceProduct(productId) {
       try {
-        const response = await riceMarketplaceAPI.getProduct(productId);
+        const response = await riceMarketplaceAPI.getProductById(productId);
         return response.data?.product || response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to load product';
@@ -205,39 +220,30 @@ export const useMarketplaceStore = defineStore('marketplace', {
       }
     },
 
-    async fetchOrders() {
+    async fetchOrders(filters = {}) {
       this.loading = true;
       this.error = null;
-      
+
       try {
-        const response = await axios.get('/api/orders');
-        
-        if (!response.data) {
-          console.warn('No orders data received, using empty array');
-          this.orders = [];
-          return { orders: [] };
-        }
-        
-        // Handle different response formats
-        const orders = response.data.orders || response.data.data || [];
-        
-        if (!Array.isArray(orders)) {
-          console.warn('Invalid orders data received, using empty array');
-          this.orders = [];
-          return { orders: [] };
-        }
-        
-        this.orders = orders;
-        console.log(`✓ Loaded ${this.orders.length} orders`);
+        const response = await riceMarketplaceAPI.getOrders(filters);
+        const payload = response.data?.orders;
+        const items = payload?.data || payload || [];
+
+        this.orders = Array.isArray(items) ? items : [];
+        this.ordersPagination = payload
+          ? {
+              current_page: payload.current_page,
+              last_page: payload.last_page,
+              per_page: payload.per_page,
+              total: payload.total,
+            }
+          : null;
+
         return response.data;
       } catch (error) {
         console.error('Failed to fetch orders:', error);
         this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch orders';
-        
-        if (!this.orders.length) {
-          this.orders = [];
-        }
-        
+        this.orders = Array.isArray(this.orders) ? this.orders : [];
         throw error;
       } finally {
         this.loading = false;
@@ -314,7 +320,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
     async createOrder(orderData) {
       this.loading = true;
       try {
-        const response = await axios.post('/api/orders', orderData);
+        const response = await riceMarketplaceAPI.createOrder(orderData);
         this.clearCart(); // Clear cart after successful order
         return response.data;
       } catch (error) {

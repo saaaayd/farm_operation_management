@@ -183,11 +183,19 @@ Route::middleware('auth:sanctum')->group(function () {
         // Order management
         Route::get('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrders']);
         Route::get('/orders/{order}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrder']);
-        Route::middleware('farmer')->group(function () {
+
+        Route::middleware('buyer')->group(function () {
             Route::post('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'createOrder']);
+        });
+
+        Route::middleware('farmer')->group(function () {
             Route::post('/orders/{order}/confirm', [\App\Http\Controllers\RiceMarketplaceController::class, 'confirmOrder']);
             Route::post('/orders/{order}/cancel', [\App\Http\Controllers\RiceMarketplaceController::class, 'cancelOrder']);
         });
+
+        // Order messaging
+        Route::get('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'index']);
+        Route::post('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'store']);
     });
 
     // Legacy Marketplace routes (for backward compatibility)

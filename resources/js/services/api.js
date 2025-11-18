@@ -265,6 +265,8 @@ export const riceMarketplaceAPI = {
   createOrder: (orderData) => api.post('/rice-marketplace/orders', orderData),
   confirmOrder: (id, data = {}) => api.post(`/rice-marketplace/orders/${id}/confirm`, data),
   cancelOrder: (id, data) => api.post(`/rice-marketplace/orders/${id}/cancel`, data),
+  getOrderMessages: (id) => api.get(`/rice-marketplace/orders/${id}/messages`),
+  sendOrderMessage: (id, payload) => api.post(`/rice-marketplace/orders/${id}/messages`, payload),
 };
 
 // Legacy Marketplace API (for backward compatibility)
