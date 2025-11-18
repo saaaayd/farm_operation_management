@@ -1,6 +1,3 @@
--<template>
--  <div class="flex">Modal</div>
--</template>
 <template>
   <Teleport to="body">
     <transition name="fade">

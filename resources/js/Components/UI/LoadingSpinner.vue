@@ -1,6 +1,3 @@
--<template>
--  <div class="spinner">Loading Spinner</div>
--</template>
 <template>
   <div class="flex items-center justify-center gap-3 text-blue-600" role="status" aria-live="polite">
     <svg
