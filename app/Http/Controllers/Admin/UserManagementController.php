@@ -72,6 +72,7 @@ class UserManagementController extends Controller
             'role' => $requestedRole,
             'phone' => $request->phone,
             'address' => $request->address,
+            'approval_status' => $requestedRole === 'admin' ? 'approved' : 'pending', // Admins are auto-approved
         ]);
 
         return response()->json([

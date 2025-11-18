@@ -309,7 +309,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
 import LineChart from '@/Components/Charts/LineChart.vue';
-import axios from 'axios';
+import { adminAPI } from '@/services/api';
+import { formatCurrency } from '@/utils/format';
 
 const auth = useAuthStore();
 const router = useRouter()
@@ -575,19 +576,32 @@ const chartOptions = computed(() => ({
 const loadDashboardData = async () => {
   loading.value = true;
   try {
-    const response = await axios.get('/api/dashboard');
+    const response = await adminAPI.getDashboard();
     if (response.data) {
       if (response.data.stats) {
         metrics.value = {
           totalUsers: response.data.stats.total_users || 0,
           totalFields: response.data.stats.total_fields || 0,
           totalOrders: response.data.stats.total_orders || 0,
-          totalRevenue: response.data.monthly_revenue || 0,
-          activeUsers: response.data.stats.total_users || 0
+          totalRevenue: response.data.stats.total_revenue || response.data.stats.monthly_sales || 0,
+          activeUsers: response.data.stats.active_users || 0,
+          totalSalesVolume: response.data.stats.total_sales_volume || 0,
+          totalExpenses: response.data.stats.total_expenses || 0,
+          pendingUsers: response.data.stats.pending_users || 0,
+          pendingProducts: response.data.stats.pending_products || 0,
         };
       }
       if (response.data.user_growth) {
         userGrowthData.value = response.data.user_growth;
+      }
+      if (response.data.recent_users) {
+        recentActivity.value = response.data.recent_users.map(user => ({
+          id: user.id,
+          type: 'user',
+          title: `New ${user.role} registered: ${user.name}`,
+          description: user.email,
+          date: user.created_at
+        }));
       }
     }
   } catch (error) {

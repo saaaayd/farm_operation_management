@@ -309,6 +309,18 @@ const routes = [
     meta: { requiresAuth: true, roles: ['admin'] }
   },
   {
+    path: '/admin/user-approvals',
+    name: 'admin-user-approvals',
+    component: () => import('@/Pages/Admin/UserApprovals/Index.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/product-approvals',
+    name: 'admin-product-approvals',
+    component: () => import('@/Pages/Admin/ProductApprovals/Index.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
     path: '/admin/stats',
     name: 'admin-stats',
     component: SystemStats,
@@ -330,6 +342,18 @@ const routes = [
     path: '/admin/users/:id/edit',
     name: 'admin-users-edit',
     component: () => import('@/Pages/Admin/Users/Edit.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/laborers',
+    name: 'admin-laborers',
+    component: () => import('@/Pages/Admin/Laborers/Index.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/admin/messages',
+    name: 'admin-messages',
+    component: () => import('@/Pages/Admin/Messages/Index.vue'),
     meta: { requiresAuth: true, roles: ['admin'] }
   },
   {

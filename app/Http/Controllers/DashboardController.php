@@ -109,7 +109,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isBuyer()) {
+        if (!$user->isUser()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -150,6 +150,7 @@ class DashboardController extends Controller
 
     /**
      * Get admin dashboard data
+     * Delegates to AdminDashboardController for comprehensive admin dashboard
      */
     public function adminDashboard(Request $request): JsonResponse
     {
@@ -159,36 +160,9 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // System-wide stats
-        $stats = [
-            'total_users' => \App\Models\User::count(),
-            'total_farmers' => \App\Models\User::where('role', 'farmer')->count(),
-            'total_buyers' => \App\Models\User::where('role', 'buyer')->count(),
-            'total_fields' => Field::count(),
-            'active_plantings' => Planting::where('status', '!=', 'harvested')->count(),
-            'total_orders' => Order::count(),
-            'pending_orders' => Order::where('status', Order::STATUS_PENDING)->count(),
-        ];
-
-        // Recent activities
-        $recentUsers = \App\Models\User::orderBy('created_at', 'desc')->limit(5)->get();
-        $recentOrders = Order::with('buyer')->orderBy('created_at', 'desc')->limit(5)->get();
-
-        // Monthly revenue
-        $monthlyRevenue = Sale::whereMonth('sale_date', now()->month)
-            ->whereYear('sale_date', now()->year)
-            ->sum('total_amount');
-
-        // User growth data (last 30 days)
-        $userGrowth = $this->getUserGrowthData(30);
-
-        return response()->json([
-            'stats' => $stats,
-            'recent_users' => $recentUsers,
-            'recent_orders' => $recentOrders,
-            'monthly_revenue' => $monthlyRevenue,
-            'user_growth' => $userGrowth,
-        ]);
+        // Use the dedicated AdminDashboardController
+        $adminDashboardController = new \App\Http\Controllers\Admin\AdminDashboardController();
+        return $adminDashboardController->index($request);
     }
 
     /**

@@ -93,6 +93,7 @@
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variety</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th>
@@ -111,6 +112,21 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                   {{ product.rice_variety?.name || product.riceVariety?.name || '—' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    :class="{
+                      'bg-yellow-100 text-yellow-800': product.approval_status === 'pending',
+                      'bg-green-100 text-green-800': product.approval_status === 'approved',
+                      'bg-red-100 text-red-800': product.approval_status === 'rejected'
+                    }"
+                    class="px-2 py-1 text-xs font-medium rounded-full capitalize"
+                  >
+                    {{ product.approval_status || 'pending' }}
+                  </span>
+                  <p v-if="product.rejection_reason" class="text-xs text-red-600 mt-1 max-w-xs">
+                    {{ product.rejection_reason }}
+                  </p>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                   {{ formatQuantity(product.quantity_available, product.unit) }}

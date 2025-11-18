@@ -38,7 +38,6 @@
             Print Order
           </button>
         </div>
-        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main Content -->
@@ -268,16 +267,84 @@
           <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
             <div class="space-y-3">
+              <!-- Buyer Actions -->
               <button
+                v-if="!isFarmer"
                 @click="contactSeller"
                 class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
               >
                 💬 Contact Seller
               </button>
+              
+              <!-- Farmer Actions -->
+              <template v-if="isFarmer">
+                <button
+                  v-if="order.status === 'pending'"
+                  @click="confirmOrder"
+                  :disabled="processing"
+                  class="w-full bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  {{ processing ? 'Processing...' : '✓ Confirm Order' }}
+                </button>
+                <button
+                  v-if="order.status === 'pending'"
+                  @click="showCancelModal = true"
+                  :disabled="processing"
+                  class="w-full bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  ✕ Cancel Order
+                </button>
+                <button
+                  @click="contactBuyer"
+                  class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+                >
+                  💬 Contact Buyer
+                </button>
+              </template>
             </div>
           </div>
         </div>
       </div>
+      </div>
+
+      <!-- Cancel Order Modal -->
+      <div
+        v-if="showCancelModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        @click.self="showCancelModal = false"
+      >
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 class="text-xl font-semibold mb-4">Cancel Order</h3>
+          <p class="text-gray-600 mb-4">
+            Are you sure you want to cancel Order #{{ order?.id }}?
+          </p>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Cancellation Reason (required)
+            </label>
+            <textarea
+              v-model="cancelReason"
+              rows="4"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Enter reason for cancellation..."
+            ></textarea>
+          </div>
+          <div class="flex space-x-3">
+            <button
+              @click="cancelOrder"
+              :disabled="!cancelReason.trim() || processing"
+              class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {{ processing ? 'Processing...' : 'Confirm Cancel' }}
+            </button>
+            <button
+              @click="showCancelModal = false; cancelReason = ''"
+              class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -331,6 +398,9 @@ const messagesLoading = ref(false)
 const sendingMessage = ref(false)
 const messageInput = ref('')
 const messageError = ref('')
+const processing = ref(false)
+const showCancelModal = ref(false)
+const cancelReason = ref('')
 
 const getStatusBadgeClass = (status) => {
   const classes = {
@@ -427,6 +497,50 @@ const contactSeller = () => {
   const input = document.getElementById('order-message-input')
   if (input) {
     input.focus()
+  }
+}
+
+const contactBuyer = () => {
+  const input = document.getElementById('order-message-input')
+  if (input) {
+    input.focus()
+  }
+}
+
+const confirmOrder = async () => {
+  if (!confirm('Are you sure you want to confirm this order?')) return
+  
+  processing.value = true
+  try {
+    await riceMarketplaceAPI.confirmOrder(order.value.id)
+    await loadOrderData(order.value.id)
+    alert('Order confirmed successfully')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to confirm order')
+  } finally {
+    processing.value = false
+  }
+}
+
+const cancelOrder = async () => {
+  if (!cancelReason.value.trim()) {
+    alert('Please provide a reason for cancellation')
+    return
+  }
+
+  processing.value = true
+  try {
+    await riceMarketplaceAPI.cancelOrder(order.value.id, {
+      reason: cancelReason.value.trim()
+    })
+    showCancelModal.value = false
+    cancelReason.value = ''
+    await loadOrderData(order.value.id)
+    alert('Order cancelled successfully')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to cancel order')
+  } finally {
+    processing.value = false
   }
 }
 

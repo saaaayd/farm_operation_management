@@ -20,8 +20,9 @@ class RiceMarketplaceController extends Controller
     public function getProducts(Request $request)
     {
         try {
-            // For buyers, show available products and products in production (for pre-order)
+            // For buyers, show only approved products that are available or in production (for pre-order)
             $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews'])
+                ->where('approval_status', 'approved') // Only show approved products
                 ->availableOrPreOrder();
 
             // Apply filters
@@ -240,7 +241,11 @@ class RiceMarketplaceController extends Controller
             $product = RiceProduct::create(array_merge($validated, [
                 'farmer_id' => $user->id,
                 'is_available' => true,
+                'approval_status' => 'pending', // Products require admin approval
             ]));
+
+            // Log product creation
+            \App\Models\ActivityLog::log('product.created', $product, null, $product->toArray(), "New product listing pending approval");
 
             return response()->json([
                 'message' => 'Rice product created successfully',
