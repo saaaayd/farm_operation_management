@@ -179,12 +179,62 @@ class DashboardController extends Controller
             ->whereYear('sale_date', now()->year)
             ->sum('total_amount');
 
+        // User growth data (last 30 days)
+        $userGrowth = $this->getUserGrowthData(30);
+
         return response()->json([
             'stats' => $stats,
             'recent_users' => $recentUsers,
             'recent_orders' => $recentOrders,
             'monthly_revenue' => $monthlyRevenue,
+            'user_growth' => $userGrowth,
         ]);
+    }
+
+    /**
+     * Get user growth data for the last N days
+     */
+    private function getUserGrowthData(int $days = 30): array
+    {
+        $startDate = Carbon::now()->subDays($days)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        // Get total users before the start date (baseline)
+        $baselineUsers = \App\Models\User::where('created_at', '<', $startDate)->count();
+
+        // Get daily user registration counts
+        // Using database-agnostic date formatting
+        $dailyCounts = \App\Models\User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '<=', $endDate)
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->mapWithKeys(function ($item) {
+                return [$item->date => (int) $item->count];
+            });
+
+        // Generate labels for all days in the range
+        $labels = [];
+        $data = [];
+        $cumulative = $baselineUsers;
+
+        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+            $dateKey = $date->format('Y-m-d');
+            $labels[] = $date->format('M d');
+            
+            $count = $dailyCounts->get($dateKey, 0);
+            $cumulative += $count;
+            $data[] = $cumulative;
+        }
+
+        return [
+            'labels' => $labels,
+            'daily_registrations' => $dailyCounts->toArray(),
+            'cumulative_users' => $data,
+            'total_new_users' => $dailyCounts->sum(),
+            'baseline_users' => $baselineUsers,
+        ];
     }
 
     /**

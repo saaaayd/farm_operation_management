@@ -13,11 +13,18 @@ class Expense extends Model
         'category',
         'date',
         'planting_id',
+        'user_id',
+        'payment_method',
+        'receipt_number',
+        'notes',
+        'related_entity_type',
+        'related_entity_id',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'date' => 'datetime',
+        'related_entity_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -40,6 +47,14 @@ class Expense extends Model
     public function planting()
     {
         return $this->belongsTo(Planting::class);
+    }
+
+    /**
+     * The farmer that owns the expense entry
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

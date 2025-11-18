@@ -56,12 +56,14 @@
               v-model="filters.variety" 
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             >
-              <option value="">All Varieties</option>
-              <option value="IR64">IR64</option>
-              <option value="Jasmine">Jasmine Rice</option>
-              <option value="Basmati">Basmati Rice</option>
-              <option value="Arborio">Arborio Rice</option>
-              <option value="Brown Rice">Brown Rice</option>
+              <option :value="null">All Varieties</option>
+              <option 
+                v-for="option in varietyOptions" 
+                :key="option.key" 
+                :value="option"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
           
@@ -211,12 +213,61 @@ const farmStore = useFarmStore();
 const loading = ref(false);
 const filters = ref({
   status: '',
-  variety: '',
+  variety: null,
   field: ''
 });
 
 const plantings = computed(() => farmStore.plantings);
 const fields = computed(() => farmStore.fields);
+const varietyOptions = computed(() => {
+  const options = [];
+  const seen = new Set();
+
+  plantings.value.forEach((planting) => {
+    if (planting?.rice_variety) {
+      const varietyId = planting.rice_variety.id ?? planting.rice_variety_id;
+      if (varietyId) {
+        const key = `variety-${varietyId}`;
+        if (!seen.has(key)) {
+          options.push({
+            key,
+            label: planting.rice_variety.name || planting.crop_type || 'Rice Variety',
+            type: 'variety',
+            id: varietyId,
+          });
+          seen.add(key);
+        }
+      }
+    } else if (planting?.rice_variety_id) {
+      const key = `variety-${planting.rice_variety_id}`;
+      if (!seen.has(key)) {
+        options.push({
+          key,
+          label: planting.crop_type || `Variety #${planting.rice_variety_id}`,
+          type: 'variety',
+          id: planting.rice_variety_id,
+        });
+        seen.add(key);
+      }
+    }
+
+    if (planting?.crop_type) {
+      const normalized = planting.crop_type.trim();
+      const key = `crop-${normalized.toLowerCase()}`;
+      if (!seen.has(key)) {
+        options.push({
+          key,
+          label: normalized,
+          type: 'crop',
+          value: normalized.toLowerCase(),
+        });
+        seen.add(key);
+      }
+    }
+  });
+
+  return options.sort((a, b) => a.label.localeCompare(b.label));
+});
 
 const filteredPlantings = computed(() => {
   let filtered = plantings.value;
@@ -226,7 +277,15 @@ const filteredPlantings = computed(() => {
   }
 
   if (filters.value.variety) {
-    filtered = filtered.filter(p => p.crop_type === filters.value.variety);
+    const { type, id, value } = filters.value.variety;
+    filtered = filtered.filter((planting) => {
+      if (type === 'variety') {
+        const plantingVarietyId = planting.rice_variety_id ?? planting.rice_variety?.id;
+        return plantingVarietyId && Number(plantingVarietyId) === Number(id);
+      }
+      const cropType = planting.crop_type ? planting.crop_type.toLowerCase() : '';
+      return cropType === (value || '');
+    });
   }
 
   if (filters.value.field) {
@@ -288,7 +347,7 @@ const formatLabel = (value) => {
 const clearFilters = () => {
   filters.value = {
     status: '',
-    variety: '',
+    variety: null,
     field: ''
   };
 };

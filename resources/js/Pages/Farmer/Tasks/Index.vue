@@ -119,14 +119,13 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             >
               <option value="">All Types</option>
-              <option value="land_preparation">Land Preparation</option>
-              <option value="seedling">Seedling</option>
-              <option value="transplanting">Transplanting</option>
-              <option value="fertilizing">Fertilizing</option>
-              <option value="weeding">Weeding</option>
-              <option value="pesticide_application">Pesticide Application</option>
-              <option value="water_management">Water Management</option>
-              <option value="harvesting">Harvesting</option>
+              <option 
+                v-for="option in taskTypeOptions" 
+                :key="option.value" 
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
           
@@ -282,6 +281,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
+import { buildTaskTypeOptions, getTaskTypeLabel } from '@/utils/taskTypes';
 
 const router = useRouter();
 const farmStore = useFarmStore();
@@ -295,6 +295,7 @@ const filters = ref({
 
 const tasks = computed(() => farmStore.tasks);
 const plantings = computed(() => farmStore.plantings);
+const taskTypeOptions = computed(() => buildTaskTypeOptions(tasks.value, { includeBase: true }));
 
 const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'pending').length);
 const inProgressTasks = computed(() => tasks.value.filter(t => t.status === 'in_progress').length);
@@ -319,19 +320,7 @@ const filteredTasks = computed(() => {
   return filtered.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 });
 
-const formatTaskType = (type) => {
-  const types = {
-    land_preparation: 'Land Preparation',
-    seedling: 'Seedling',
-    transplanting: 'Transplanting',
-    fertilizing: 'Fertilizing',
-    weeding: 'Weeding',
-    pesticide_application: 'Pesticide Application',
-    water_management: 'Water Management',
-    harvesting: 'Harvesting'
-  };
-  return types[type] || type.replace('_', ' ').toUpperCase();
-};
+const formatTaskType = (type) => getTaskTypeLabel(type) || 'Task';
 
 const getStatusClass = (status) => {
   const classes = {

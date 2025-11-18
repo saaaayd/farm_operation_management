@@ -282,23 +282,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useWeatherStore } from '@/stores/weather';
 import { useFarmStore } from '@/stores/farm';
 import LineChart from '@/Components/Charts/LineChart.vue';
 import BarChart from '@/Components/Charts/BarChart.vue';
 
+const route = useRoute();
+const router = useRouter();
 const weatherStore = useWeatherStore();
 const farmStore = useFarmStore();
 
 const loading = ref(false);
-const selectedField = ref('');
+const normalizeFieldId = (value) => (value === null || value === undefined ? '' : String(value));
+const selectedField = ref(normalizeFieldId(route.query.field || route.query.fieldId || ''));
 
-const fields = computed(() => farmStore.fields);
-const currentWeather = computed(() => weatherStore.currentWeather);
-const forecast = computed(() => weatherStore.forecast);
-const weatherHistory = computed(() => weatherStore.weatherHistory);
-const alerts = computed(() => weatherStore.alerts);
+const fields = computed(() => Array.isArray(farmStore.fields) ? farmStore.fields : []);
+const currentWeather = computed(() => weatherStore.currentWeather || null);
+const forecast = computed(() => Array.isArray(weatherStore.forecast) ? weatherStore.forecast : []);
+const weatherHistory = computed(() => Array.isArray(weatherStore.weatherHistory) ? weatherStore.weatherHistory : []);
+const alerts = computed(() => Array.isArray(weatherStore.alerts) ? weatherStore.alerts : []);
 
 const isFavorableForFarming = computed(() => {
   if (!currentWeather.value) return false;
@@ -392,13 +396,23 @@ const formatDate = (date) => {
 const refreshWeatherData = async () => {
   loading.value = true;
   try {
-    const fieldId = selectedField.value || fields.value[0]?.id;
+    let fieldId = selectedField.value;
+
+    if (!fieldId && fields.value.length > 0) {
+      fieldId = normalizeFieldId(fields.value[0].id);
+      selectedField.value = fieldId;
+    }
+
     if (fieldId) {
+      const numericFieldId = Number(fieldId);
+      if (Number.isNaN(numericFieldId)) {
+        return;
+      }
       await Promise.all([
-        weatherStore.fetchCurrentWeather(fieldId),
-        weatherStore.fetchForecast(fieldId),
-        weatherStore.fetchWeatherHistory(fieldId),
-        weatherStore.fetchWeatherAlerts(fieldId)
+        weatherStore.fetchCurrentWeather(numericFieldId),
+        weatherStore.fetchForecast(numericFieldId),
+        weatherStore.fetchWeatherHistory(numericFieldId),
+        weatherStore.fetchWeatherAlerts(numericFieldId)
       ]);
     }
   } catch (error) {
@@ -412,11 +426,49 @@ onMounted(async () => {
   try {
     await farmStore.fetchFields();
     if (fields.value.length > 0) {
-      selectedField.value = fields.value[0].id;
+      const availableIds = fields.value.map(field => normalizeFieldId(field.id));
+      const routeFieldId = normalizeFieldId(route.query.field || route.query.fieldId || '');
+      if (routeFieldId && availableIds.includes(routeFieldId)) {
+        selectedField.value = routeFieldId;
+      } else {
+        selectedField.value = availableIds[0];
+      }
       await refreshWeatherData();
     }
   } catch (error) {
     console.error('Failed to load weather analytics:', error);
   }
 });
+
+const syncRouteQueryWithSelection = (fieldValue) => {
+  const nextQuery = { ...route.query };
+  if (fieldValue) {
+    nextQuery.field = fieldValue;
+  } else {
+    delete nextQuery.field;
+  }
+  router.replace({ query: nextQuery }).catch(() => {});
+};
+
+watch(
+  () => ({ field: route.query.field, fieldId: route.query.fieldId }),
+  (newQuery) => {
+    const incomingField = normalizeFieldId(newQuery.field || newQuery.fieldId || '');
+    if (incomingField !== selectedField.value) {
+      selectedField.value = incomingField;
+    }
+  }
+);
+
+watch(
+  selectedField,
+  (newValue, oldValue) => {
+    if (newValue === oldValue) return;
+    const normalized = normalizeFieldId(newValue);
+    const currentRouteValue = normalizeFieldId(route.query.field || route.query.fieldId || '');
+    if (normalized !== currentRouteValue) {
+      syncRouteQueryWithSelection(normalized);
+    }
+  }
+);
 </script>

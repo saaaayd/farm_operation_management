@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Field;
 use App\Models\WeatherLog;
 use App\Services\WeatherService;
+use App\Exceptions\WeatherServiceException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -36,23 +37,39 @@ class WeatherController extends Controller
             ], 400);
         }
 
-        $weatherData = $this->weatherService->getCurrentWeather(
-            $field->location['lat'],
-            $field->location['lon']
-        );
+        try {
+            $weatherData = $this->weatherService->getCurrentWeather(
+                (float) $field->location['lat'],
+                (float) $field->location['lon']
+            );
+        } catch (WeatherServiceException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Unable to fetch weather data: ' . $e->getMessage()
+            ], 500);
+        }
 
-        if (!$weatherData) {
+        if (!$weatherData || !isset($weatherData['main'])) {
             return response()->json([
                 'message' => 'Unable to fetch weather data'
             ], 500);
         }
 
         // Save weather data to database
-        $this->weatherService->updateFieldWeather($field);
+        $weatherLog = $this->weatherService->updateFieldWeather($field, $weatherData);
+
+        if (!$weatherLog) {
+            return response()->json([
+                'message' => 'Failed to store weather data'
+            ], 500);
+        }
 
         return response()->json([
             'field' => $field,
-            'weather' => $weatherData,
+            'weather' => $this->weatherService->formatWeatherLog($field->latestWeather ?? $weatherLog),
             'alerts' => $this->weatherService->getWeatherAlerts($field)
         ]);
     }
@@ -166,20 +183,18 @@ class WeatherController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $success = $this->weatherService->updateFieldWeather($field);
+        $weatherLog = $this->weatherService->updateFieldWeather($field);
 
-        if (!$success) {
+        if (!$weatherLog) {
             return response()->json([
                 'message' => 'Failed to update weather data'
             ], 500);
         }
 
-        $latestWeather = $field->latestWeather;
-
         return response()->json([
             'message' => 'Weather data updated successfully',
             'field' => $field,
-            'latest_weather' => $latestWeather,
+            'latest_weather' => $this->weatherService->formatWeatherLog($field->latestWeather ?? $weatherLog),
             'alerts' => $this->weatherService->getWeatherAlerts($field)
         ]);
     }
@@ -241,7 +256,7 @@ class WeatherController extends Controller
 
                 $dashboardData['field_weather'][] = [
                     'field' => $field,
-                    'weather' => $field->latestWeather,
+                    'weather' => $this->weatherService->formatWeatherLog($field->latestWeather),
                     'alerts_count' => count($alerts)
                 ];
             }
@@ -366,11 +381,11 @@ class WeatherController extends Controller
 
                 $dashboardData['field_details'][] = [
                     'field' => $field,
-                    'weather' => $field->latestWeather,
+                    'weather' => $this->weatherService->formatWeatherLog($field->latestWeather),
                     'is_rice_field' => $isRiceField,
                     'current_planting' => $currentPlanting,
                     'alerts_count' => count($riceAlerts),
-                    'critical_alerts' => count(array_filter($riceAlerts, fn($alert) => $alert['type'] === 'critical')),
+                    'critical_alerts' => count(array_filter($riceAlerts, fn($alert) => ($alert['severity'] ?? null) === 'critical')),
                 ];
             }
         }

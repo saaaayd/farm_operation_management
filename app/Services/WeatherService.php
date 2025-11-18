@@ -7,6 +7,7 @@ use App\Models\WeatherLog;
 use App\Exceptions\WeatherServiceException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class WeatherService
@@ -25,6 +26,23 @@ class WeatherService
      */
     public function getCurrentWeather(float $lat, float $lon): ?array
     {
+        // Validate API configuration
+        if (empty($this->apiKey)) {
+            Log::error('OpenWeather API key is not configured');
+            throw new WeatherServiceException(
+                'OpenWeather API key is not configured. Please set OPENWEATHER_API_KEY in your .env file.',
+                ['lat' => $lat, 'lon' => $lon]
+            );
+        }
+
+        if (empty($this->baseUrl)) {
+            Log::error('OpenWeather base URL is not configured');
+            throw new WeatherServiceException(
+                'OpenWeather base URL is not configured. Please set OPENWEATHER_BASE_URL in your .env file.',
+                ['lat' => $lat, 'lon' => $lon]
+            );
+        }
+
         try {
             $response = Http::get("{$this->baseUrl}/weather", [
                 'lat' => $lat,
@@ -37,12 +55,41 @@ class WeatherService
                 return $response->json();
             }
 
+            // Handle specific API errors
+            $statusCode = $response->status();
+            $errorBody = $response->json();
+            
+            if ($statusCode === 401) {
+                Log::error('OpenWeather API authentication failed', [
+                    'status' => $statusCode,
+                    'response' => $errorBody
+                ]);
+                throw new WeatherServiceException(
+                    'Invalid OpenWeather API key. Please check your OPENWEATHER_API_KEY in .env',
+                    ['lat' => $lat, 'lon' => $lon, 'status' => $statusCode]
+                );
+            }
+
+            if ($statusCode === 429) {
+                Log::error('OpenWeather API rate limit exceeded', [
+                    'status' => $statusCode,
+                    'response' => $errorBody
+                ]);
+                throw new WeatherServiceException(
+                    'OpenWeather API rate limit exceeded. Please try again later.',
+                    ['lat' => $lat, 'lon' => $lon, 'status' => $statusCode]
+                );
+            }
+
             Log::error('OpenWeatherMap API error', [
-                'status' => $response->status(),
+                'status' => $statusCode,
                 'response' => $response->body()
             ]);
 
             return null;
+        } catch (WeatherServiceException $e) {
+            // Re-throw our custom exceptions
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Weather API request failed', [
                 'error' => $e->getMessage(),
@@ -51,7 +98,7 @@ class WeatherService
             ]);
 
             throw new WeatherServiceException(
-                'Failed to fetch weather data',
+                'Failed to fetch weather data: ' . $e->getMessage(),
                 ['lat' => $lat, 'lon' => $lon, 'error' => $e->getMessage()]
             );
         }
@@ -95,33 +142,54 @@ class WeatherService
     /**
      * Update weather data for a field
      */
-    public function updateFieldWeather(Field $field): bool
+    public function updateFieldWeather(Field $field, ?array $weatherData = null): ?WeatherLog
     {
         if (!isset($field->location['lat']) || !isset($field->location['lon'])) {
             Log::warning('Field location coordinates missing', ['field_id' => $field->id]);
-            return false;
+            return null;
         }
 
-        $weatherData = $this->getCurrentWeather(
-            $field->location['lat'],
-            $field->location['lon']
-        );
+        if ($weatherData === null) {
+            $weatherData = $this->getCurrentWeather(
+                (float) $field->location['lat'],
+                (float) $field->location['lon']
+            );
+        }
 
         if (!$weatherData) {
-            return false;
+            return null;
+        }
+
+        if (!isset($weatherData['main']['temp'], $weatherData['main']['humidity'])) {
+            Log::warning('Incomplete weather payload from weather provider', [
+                'field_id' => $field->id,
+                'weather_data' => $weatherData,
+            ]);
+            return null;
         }
 
         try {
-            WeatherLog::create([
+            $windSpeed = isset($weatherData['wind']['speed'])
+                ? round($weatherData['wind']['speed'] * 3.6, 1) // convert m/s to km/h
+                : 0;
+
+            $recordedAt = isset($weatherData['dt'])
+                ? Carbon::createFromTimestamp($weatherData['dt'])
+                : now();
+
+            $weatherLog = WeatherLog::create([
                 'field_id' => $field->id,
-                'temperature' => $weatherData['main']['temp'],
+                'temperature' => round($weatherData['main']['temp'], 1),
                 'humidity' => $weatherData['main']['humidity'],
-                'wind_speed' => $weatherData['wind']['speed'] ?? 0,
-                'conditions' => $this->mapWeatherCondition($weatherData['weather'][0]['main']),
-                'recorded_at' => now(),
+                'wind_speed' => $windSpeed,
+                'conditions' => $this->mapWeatherCondition($weatherData['weather'][0]['main'] ?? 'clear'),
+                'recorded_at' => $recordedAt,
             ]);
 
-            return true;
+            // Ensure subsequent calls use the freshly created log without re-querying
+            $field->setRelation('latestWeather', $weatherLog);
+
+            return $weatherLog;
         } catch (\Exception $e) {
             Log::error('Failed to save weather data', [
                 'error' => $e->getMessage(),
@@ -129,8 +197,30 @@ class WeatherService
                 'weather_data' => $weatherData
             ]);
 
-            return false;
+            return null;
         }
+    }
+
+    /**
+     * Format a weather log for API responses
+     */
+    public function formatWeatherLog(?WeatherLog $weatherLog): ?array
+    {
+        if (!$weatherLog) {
+            return null;
+        }
+
+        return [
+            'id' => $weatherLog->id,
+            'field_id' => $weatherLog->field_id,
+            'temperature' => (float) $weatherLog->temperature,
+            'temperature_fahrenheit' => round(($weatherLog->temperature * 9/5) + 32, 1),
+            'humidity' => (float) $weatherLog->humidity,
+            'wind_speed' => (float) $weatherLog->wind_speed,
+            'conditions' => $weatherLog->conditions,
+            'recorded_at' => optional($weatherLog->recorded_at)->toIso8601String(),
+            'is_favorable_for_farming' => $weatherLog->isFavorableForFarming(),
+        ];
     }
 
     /**
@@ -170,22 +260,38 @@ class WeatherService
         $currentStage = $currentPlanting?->getCurrentStage();
 
         // Rice-specific temperature alerts
-        if ($latestWeather->temperature < 15) {
-            $alerts[] = [
-                'type' => 'warning',
-                'message' => 'Cold stress warning: Temperature below 15°C can slow rice growth and development.',
-                'category' => 'temperature',
-                'rice_specific' => true,
-                'recommendation' => 'Consider water management to maintain soil temperature.'
-            ];
-        } elseif ($latestWeather->temperature > 35) {
-            $alerts[] = [
-                'type' => 'warning',
-                'message' => 'Heat stress warning: Temperature above 35°C can reduce rice yield, especially during flowering.',
-                'category' => 'temperature',
-                'rice_specific' => true,
-                'recommendation' => 'Ensure adequate water depth (5-10cm) to cool the crop.'
-            ];
+        $recordedAt = optional($latestWeather->recorded_at)->toIso8601String();
+        $temperature = (float) $latestWeather->temperature;
+        $humidity = (float) $latestWeather->humidity;
+        $windSpeed = (float) $latestWeather->wind_speed;
+        $conditions = $latestWeather->conditions;
+
+        if ($temperature < 15) {
+            $alerts[] = $this->makeAlert(
+                type: 'extreme_temperature',
+                severity: 'high',
+                title: 'Cold Stress Warning',
+                message: 'Temperature below 15°C can slow rice growth and development.',
+                extra: [
+                    'category' => 'temperature',
+                    'rice_specific' => true,
+                    'recommendation' => 'Consider water management to maintain soil temperature.',
+                    'recorded_at' => $recordedAt,
+                ]
+            );
+        } elseif ($temperature > 35) {
+            $alerts[] = $this->makeAlert(
+                type: 'extreme_temperature',
+                severity: 'high',
+                title: 'Heat Stress Warning',
+                message: 'Temperature above 35°C can reduce rice yield, especially during flowering.',
+                extra: [
+                    'category' => 'temperature',
+                    'rice_specific' => true,
+                    'recommendation' => 'Ensure adequate water depth (5-10cm) to cool the crop.',
+                    'recorded_at' => $recordedAt,
+                ]
+            );
         }
 
         // Rice growth stage specific alerts
@@ -194,78 +300,122 @@ class WeatherService
             
             // Flowering stage alerts
             if ($stageCode === 'flowering') {
-                if ($latestWeather->temperature > 30) {
-                    $alerts[] = [
-                        'type' => 'critical',
-                        'message' => 'Critical: High temperature during flowering can cause spikelet sterility.',
-                        'category' => 'temperature',
-                        'rice_specific' => true,
-                        'growth_stage' => 'flowering',
-                        'recommendation' => 'Maintain 5-10cm water depth and consider early morning irrigation.'
-                    ];
+                if ($temperature > 30) {
+                    $alerts[] = $this->makeAlert(
+                        type: 'extreme_temperature',
+                        severity: 'critical',
+                        title: 'Critical Heat Stress (Flowering)',
+                        message: 'High temperature during flowering can cause spikelet sterility.',
+                        extra: [
+                            'category' => 'temperature',
+                            'rice_specific' => true,
+                            'growth_stage' => 'flowering',
+                            'recommendation' => 'Maintain 5-10cm water depth and consider early morning irrigation.',
+                            'recorded_at' => $recordedAt,
+                        ]
+                    );
                 }
                 
-                if ($latestWeather->humidity < 60) {
-                    $alerts[] = [
-                        'type' => 'warning',
-                        'message' => 'Low humidity during flowering may affect pollination.',
-                        'category' => 'humidity',
-                        'rice_specific' => true,
-                        'growth_stage' => 'flowering',
-                        'recommendation' => 'Increase water depth to maintain field humidity.'
-                    ];
+                if ($humidity < 60) {
+                    $alerts[] = $this->makeAlert(
+                        type: 'low_humidity',
+                        severity: 'medium',
+                        title: 'Low Humidity (Flowering)',
+                        message: 'Low humidity during flowering may affect pollination.',
+                        extra: [
+                            'category' => 'humidity',
+                            'rice_specific' => true,
+                            'growth_stage' => 'flowering',
+                            'recommendation' => 'Increase water depth to maintain field humidity.',
+                            'recorded_at' => $recordedAt,
+                        ]
+                    );
                 }
             }
             
             // Grain filling stage alerts
             if ($stageCode === 'grain_filling') {
-                if ($latestWeather->temperature > 32) {
-                    $alerts[] = [
-                        'type' => 'warning',
-                        'message' => 'High temperature during grain filling can reduce grain quality.',
-                        'category' => 'temperature',
-                        'rice_specific' => true,
-                        'growth_stage' => 'grain_filling',
-                        'recommendation' => 'Maintain consistent water supply and avoid water stress.'
-                    ];
+                if ($temperature > 32) {
+                    $alerts[] = $this->makeAlert(
+                        type: 'extreme_temperature',
+                        severity: 'high',
+                        title: 'Heat Stress (Grain Filling)',
+                        message: 'High temperature during grain filling can reduce grain quality.',
+                        extra: [
+                            'category' => 'temperature',
+                            'rice_specific' => true,
+                            'growth_stage' => 'grain_filling',
+                            'recommendation' => 'Maintain consistent water supply and avoid water stress.',
+                            'recorded_at' => $recordedAt,
+                        ]
+                    );
                 }
             }
         }
 
         // Wind alerts for rice
-        if ($latestWeather->wind_speed > 15) {
-            $alerts[] = [
-                'type' => 'caution',
-                'message' => 'Strong winds can cause lodging in rice plants, especially near harvest.',
-                'category' => 'wind',
-                'rice_specific' => true,
-                'recommendation' => 'Monitor for lodging and consider early harvest if plants are mature.'
-            ];
+        if ($windSpeed > 15) {
+            $alerts[] = $this->makeAlert(
+                type: 'typhoon',
+                severity: 'high',
+                title: 'Strong Wind Advisory',
+                message: 'Strong winds can cause lodging in rice plants, especially near harvest.',
+                extra: [
+                    'category' => 'wind',
+                    'rice_specific' => true,
+                    'recommendation' => 'Monitor for lodging and consider early harvest if plants are mature.',
+                    'recorded_at' => $recordedAt,
+                ]
+            );
         }
 
         // Humidity alerts for rice diseases
-        if ($latestWeather->humidity > 85) {
-            $alerts[] = [
-                'type' => 'warning',
-                'message' => 'High humidity increases risk of rice blast and other fungal diseases.',
-                'category' => 'humidity',
-                'rice_specific' => true,
-                'recommendation' => 'Monitor for disease symptoms and consider preventive fungicide application.'
-            ];
+        if ($humidity > 85) {
+            $alerts[] = $this->makeAlert(
+                type: 'high_humidity',
+                severity: 'medium',
+                title: 'High Humidity Disease Risk',
+                message: 'High humidity increases risk of rice blast and other fungal diseases.',
+                extra: [
+                    'category' => 'humidity',
+                    'rice_specific' => true,
+                    'recommendation' => 'Monitor for disease symptoms and consider preventive fungicide application.',
+                    'recorded_at' => $recordedAt,
+                ]
+            );
         }
 
         // Rainfall and flooding alerts
-        if (in_array($latestWeather->conditions, ['stormy', 'rainy'])) {
-            $alerts[] = [
-                'type' => 'info',
-                'message' => 'Heavy rainfall detected. Monitor field water levels to prevent flooding damage.',
-                'category' => 'conditions',
-                'rice_specific' => true,
-                'recommendation' => 'Ensure proper drainage and check bund integrity.'
-            ];
+        if (in_array($conditions, ['stormy', 'rainy'])) {
+            $alerts[] = $this->makeAlert(
+                type: 'heavy_rain',
+                severity: 'medium',
+                title: 'Heavy Rainfall Detected',
+                message: 'Heavy rainfall detected. Monitor field water levels to prevent flooding damage.',
+                extra: [
+                    'category' => 'conditions',
+                    'rice_specific' => true,
+                    'recommendation' => 'Ensure proper drainage and check bund integrity.',
+                    'recorded_at' => $recordedAt,
+                ]
+            );
         }
 
         return $alerts;
+    }
+
+    /**
+     * Helper to build consistent alert payloads
+     */
+    private function makeAlert(string $type, string $severity, string $title, string $message, array $extra = []): array
+    {
+        return array_merge([
+            'id' => (string) Str::uuid(),
+            'type' => $type,
+            'severity' => $severity,
+            'title' => $title,
+            'message' => $message,
+        ], $extra);
     }
 
     /**
@@ -546,7 +696,11 @@ class WeatherService
                     'type' => $alert['type'],
                     'category' => $alert['category'],
                     'recommendation' => $alert['recommendation'],
-                    'priority' => $alert['type'] === 'critical' ? 'high' : ($alert['type'] === 'warning' ? 'medium' : 'low')
+                    'priority' => match ($alert['severity'] ?? 'medium') {
+                        'critical' => 'high',
+                        'high' => 'medium',
+                        default => 'low',
+                    }
                 ];
             }
         }

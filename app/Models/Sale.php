@@ -10,15 +10,24 @@ class Sale extends Model
     protected $fillable = [
         'harvest_id',
         'buyer_id',
+        'user_id',
         'quantity',
+        'unit_price',
         'total_amount',
         'sale_date',
+        'payment_method',
+        'payment_status',
+        'delivery_date',
+        'delivery_address',
+        'notes',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
+        'unit_price' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'sale_date' => 'datetime',
+        'delivery_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -36,14 +45,26 @@ class Sale extends Model
      */
     public function buyer()
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(Buyer::class, 'buyer_id');
+    }
+
+    /**
+     * The farmer/farm owner who created the sale
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**
      * Get the unit price
      */
-    public function getUnitPriceAttribute()
+    public function getUnitPriceAttribute($value)
     {
+        if (!is_null($value)) {
+            return $value;
+        }
+
         return $this->quantity > 0 ? $this->total_amount / $this->quantity : 0;
     }
 
