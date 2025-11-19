@@ -27,18 +27,107 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     // Proxy routes for PSGC API
     Route::get('/locations/provinces', function () {
-        $response = Http::get('https://psgc.gitlab.io/api/provinces/');
-        return response()->json($response->json());
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 100)
+                ->get('https://psgc.gitlab.io/api/provinces/');
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+            
+            \Log::warning('PSGC API returned non-200 status', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to fetch provinces',
+                'message' => 'Location service temporarily unavailable'
+            ], 503);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('PSGC API connection failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Connection failed',
+                'message' => 'Unable to connect to location service'
+            ], 503);
+        } catch (\Exception $e) {
+            \Log::error('PSGC API error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Service error',
+                'message' => 'Location service error occurred'
+            ], 500);
+        }
     });
 
     Route::get('/locations/provinces/{code}/cities', function ($code) {
-        $response = Http::get("https://psgc.gitlab.io/api/provinces/{$code}/cities-municipalities/");
-        return response()->json($response->json());
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 100)
+                ->get("https://psgc.gitlab.io/api/provinces/{$code}/cities-municipalities/");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+            
+            \Log::warning('PSGC API returned non-200 status', [
+                'status' => $response->status(),
+                'code' => $code,
+                'body' => $response->body()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to fetch cities',
+                'message' => 'Location service temporarily unavailable'
+            ], 503);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('PSGC API connection failed', ['error' => $e->getMessage(), 'code' => $code]);
+            return response()->json([
+                'error' => 'Connection failed',
+                'message' => 'Unable to connect to location service'
+            ], 503);
+        } catch (\Exception $e) {
+            \Log::error('PSGC API error', ['error' => $e->getMessage(), 'code' => $code]);
+            return response()->json([
+                'error' => 'Service error',
+                'message' => 'Location service error occurred'
+            ], 500);
+        }
     });
 
     Route::get('/locations/cities/{code}/barangays', function ($code) {
-        $response = Http::get("https://psgc.gitlab.io/api/cities-municipalities/{$code}/barangays/");
-        return response()->json($response->json());
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 100)
+                ->get("https://psgc.gitlab.io/api/cities-municipalities/{$code}/barangays/");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+            
+            \Log::warning('PSGC API returned non-200 status', [
+                'status' => $response->status(),
+                'code' => $code,
+                'body' => $response->body()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to fetch barangays',
+                'message' => 'Location service temporarily unavailable'
+            ], 503);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('PSGC API connection failed', ['error' => $e->getMessage(), 'code' => $code]);
+            return response()->json([
+                'error' => 'Connection failed',
+                'message' => 'Unable to connect to location service'
+            ], 503);
+        } catch (\Exception $e) {
+            \Log::error('PSGC API error', ['error' => $e->getMessage(), 'code' => $code]);
+            return response()->json([
+                'error' => 'Service error',
+                'message' => 'Location service error occurred'
+            ], 500);
+        }
     });
 
     // Geocoding proxy for Nominatim (to avoid CORS and set User-Agent)
@@ -48,16 +137,56 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['error' => 'Query parameter "q" is required'], 400);
         }
 
-        $response = Http::withHeaders([
-            'User-Agent' => 'RiceFARM Application (https://ricefarm.app)',
-        ])->get('https://nominatim.openstreetmap.org/search', [
-            'q' => $query,
-            'format' => 'json',
-            'limit' => 1,
-            'countrycodes' => 'ph',
-        ]);
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 100)
+                ->withHeaders([
+                    'User-Agent' => 'RiceFARM Application (https://ricefarm.app)',
+                ])->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $query,
+                    'format' => 'json',
+                    'limit' => 1,
+                    'countrycodes' => 'ph',
+                ]);
 
-        return response()->json($response->json());
+            if ($response->successful()) {
+                $data = $response->json();
+                if (is_array($data)) {
+                    return response()->json($data);
+                }
+                \Log::warning('Nominatim API returned invalid JSON', [
+                    'query' => $query,
+                    'response' => $response->body()
+                ]);
+                return response()->json([
+                    'error' => 'Invalid response format',
+                    'message' => 'Geocoding service returned invalid data'
+                ], 502);
+            }
+            
+            \Log::warning('Nominatim API returned non-200 status', [
+                'status' => $response->status(),
+                'query' => $query,
+                'body' => $response->body()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to geocode location',
+                'message' => 'Geocoding service temporarily unavailable'
+            ], 503);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('Nominatim API connection failed', ['error' => $e->getMessage(), 'query' => $query]);
+            return response()->json([
+                'error' => 'Connection failed',
+                'message' => 'Unable to connect to geocoding service'
+            ], 503);
+        } catch (\Exception $e) {
+            \Log::error('Nominatim API error', ['error' => $e->getMessage(), 'query' => $query]);
+            return response()->json([
+                'error' => 'Service error',
+                'message' => 'Geocoding service error occurred'
+            ], 500);
+        }
     });
 
     // Authentication routes

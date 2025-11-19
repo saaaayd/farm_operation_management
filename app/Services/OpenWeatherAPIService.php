@@ -115,6 +115,14 @@ class OpenWeatherAPIService
     {
         $alerts = [];
 
+        // Validate input data structure
+        if (!isset($weatherData['main']) || !is_array($weatherData['main'])) {
+            Log::warning('Invalid weather data structure in checkWeatherAlerts', [
+                'data' => $weatherData
+            ]);
+            return $alerts; // Return empty alerts if data is invalid
+        }
+
         // Heavy rain alert
         if (isset($weatherData['rain']['1h']) && $weatherData['rain']['1h'] > 20) {
             $alerts[] = [
@@ -126,21 +134,23 @@ class OpenWeatherAPIService
         }
 
         // Extreme temperature alerts
-        $temp = $weatherData['main']['temp'];
-        if ($temp > 35) {
-            $alerts[] = [
-                'type' => 'extreme_temperature',
-                'severity' => 'critical',
-                'message' => "Extreme heat warning: {$temp}°C. Ensure adequate irrigation and crop protection.",
-                'data' => ['temperature' => $temp]
-            ];
-        } elseif ($temp < 5) {
-            $alerts[] = [
-                'type' => 'extreme_temperature',
-                'severity' => 'critical',
-                'message' => "Freezing temperature warning: {$temp}°C. Protect sensitive crops from frost damage.",
-                'data' => ['temperature' => $temp]
-            ];
+        $temp = $weatherData['main']['temp'] ?? null;
+        if ($temp !== null) {
+            if ($temp > 35) {
+                $alerts[] = [
+                    'type' => 'extreme_temperature',
+                    'severity' => 'critical',
+                    'message' => "Extreme heat warning: {$temp}°C. Ensure adequate irrigation and crop protection.",
+                    'data' => ['temperature' => $temp]
+                ];
+            } elseif ($temp < 5) {
+                $alerts[] = [
+                    'type' => 'extreme_temperature',
+                    'severity' => 'critical',
+                    'message' => "Freezing temperature warning: {$temp}°C. Protect sensitive crops from frost damage.",
+                    'data' => ['temperature' => $temp]
+                ];
+            }
         }
 
         // High wind alert
@@ -171,19 +181,36 @@ class OpenWeatherAPIService
      */
     private function formatWeatherData($data)
     {
+        // Validate required structure
+        if (!isset($data['main']) || !is_array($data['main'])) {
+            Log::error('Invalid weather data structure in formatWeatherData', ['data' => $data]);
+            return $this->getDefaultWeatherData();
+        }
+        
+        if (!isset($data['weather']) || !is_array($data['weather']) || empty($data['weather'])) {
+            Log::error('Missing weather conditions in data', ['data' => $data]);
+            return $this->getDefaultWeatherData();
+        }
+        
         return [
-            'temperature' => round($data['main']['temp'], 1),
-            'humidity' => $data['main']['humidity'],
-            'pressure' => $data['main']['pressure'],
-            'wind_speed' => round($data['wind']['speed'] * 3.6, 1), // Convert m/s to km/h
+            'temperature' => round($data['main']['temp'] ?? 0, 1),
+            'humidity' => $data['main']['humidity'] ?? 0,
+            'pressure' => $data['main']['pressure'] ?? 0,
+            'wind_speed' => isset($data['wind']['speed']) 
+                ? round($data['wind']['speed'] * 3.6, 1) 
+                : 0,
             'wind_direction' => $data['wind']['deg'] ?? 0,
-            'conditions' => strtolower($data['weather'][0]['main']),
-            'description' => $data['weather'][0]['description'],
+            'conditions' => strtolower($data['weather'][0]['main'] ?? 'unknown'),
+            'description' => $data['weather'][0]['description'] ?? 'No description',
             'visibility' => $data['visibility'] ?? 0,
             'rain' => $data['rain'] ?? [],
             'clouds' => $data['clouds']['all'] ?? 0,
-            'sunrise' => date('H:i', $data['sys']['sunrise']),
-            'sunset' => date('H:i', $data['sys']['sunset']),
+            'sunrise' => isset($data['sys']['sunrise']) 
+                ? date('H:i', $data['sys']['sunrise']) 
+                : '06:00',
+            'sunset' => isset($data['sys']['sunset']) 
+                ? date('H:i', $data['sys']['sunset']) 
+                : '18:00',
             'recorded_at' => now()->toISOString(),
         ];
     }
@@ -195,14 +222,29 @@ class OpenWeatherAPIService
     {
         $forecast = [];
         
+        if (!isset($data['list']) || !is_array($data['list'])) {
+            Log::error('Invalid forecast data structure', ['data' => $data]);
+            return [];
+        }
+        
         foreach ($data['list'] as $item) {
+            if (!isset($item['main']) || !is_array($item['main'])) {
+                continue; // Skip invalid items
+            }
+            
+            if (!isset($item['weather']) || !is_array($item['weather']) || empty($item['weather'])) {
+                continue; // Skip items without weather info
+            }
+            
             $forecast[] = [
-                'date' => date('Y-m-d H:i:s', $item['dt']),
-                'temperature' => round($item['main']['temp'], 1),
-                'humidity' => $item['main']['humidity'],
-                'wind_speed' => round($item['wind']['speed'] * 3.6, 1),
-                'conditions' => strtolower($item['weather'][0]['main']),
-                'description' => $item['weather'][0]['description'],
+                'date' => isset($item['dt']) ? date('Y-m-d H:i:s', $item['dt']) : now()->toDateTimeString(),
+                'temperature' => round($item['main']['temp'] ?? 0, 1),
+                'humidity' => $item['main']['humidity'] ?? 0,
+                'wind_speed' => isset($item['wind']['speed']) 
+                    ? round($item['wind']['speed'] * 3.6, 1) 
+                    : 0,
+                'conditions' => strtolower($item['weather'][0]['main'] ?? 'unknown'),
+                'description' => $item['weather'][0]['description'] ?? 'No description',
                 'rain' => $item['rain']['3h'] ?? 0,
                 'clouds' => $item['clouds']['all'] ?? 0,
             ];

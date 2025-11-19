@@ -82,9 +82,18 @@ class MarketplaceService
             foreach ($orderData['items'] as $itemData) {
                 $inventoryItem = InventoryItem::find($itemData['id']);
                 
-                if (!$inventoryItem || $inventoryItem->quantity < $itemData['quantity']) {
+                // Check if inventory item exists
+                if (!$inventoryItem) {
                     throw new MarketplaceException(
-                        "Insufficient stock for {$inventoryItem->name}",
+                        "Inventory item not found (ID: {$itemData['id']})",
+                        $order->id ?? null
+                    );
+                }
+                
+                // Check if sufficient stock is available
+                if ($inventoryItem->quantity < $itemData['quantity']) {
+                    throw new MarketplaceException(
+                        "Insufficient stock for {$inventoryItem->name}. Available: {$inventoryItem->quantity}, Requested: {$itemData['quantity']}",
                         $order->id ?? null
                     );
                 }
