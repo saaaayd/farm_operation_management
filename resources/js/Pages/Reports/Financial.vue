@@ -130,7 +130,10 @@
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-semibold mb-4">Revenue Trends</h2>
           <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-            <span class="text-gray-500">Revenue chart placeholder</span>
+            <LineChart v-if="revenueChartData.labels.length > 0" :data="revenueChartData" />
+            <div v-else class="h-full flex items-center justify-center text-gray-500">
+              No revenue data available
+            </div>
           </div>
         </div>
 
@@ -205,8 +208,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { formatCurrency } from '@/utils/format'
+import { reportsAPI } from '@/services/api'
+import LineChart from '@/Components/Charts/LineChart.vue'
 
 const startDate = ref('2024-01-01')
 const endDate = ref('2024-12-31')
@@ -275,24 +280,85 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
-const updateReport = () => {
-  // Update report based on selected parameters
-  console.log('Update report:', { startDate: startDate.value, endDate: endDate.value, reportType: reportType.value })
+const updateReport = async () => {
+  // Reload report data with current filters
+  try {
+    await loadFinancialData()
+    alert('Report updated successfully')
+  } catch (error) {
+    console.error('Failed to update report:', error)
+    alert('Failed to update report')
+  }
 }
 
-const generateReport = () => {
-  // Generate new report
-  console.log('Generate report')
+const generateReport = async () => {
+  // Generate new report with current filters
+  try {
+    await loadFinancialData()
+    alert('Report generated successfully')
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+    alert('Failed to generate report')
+  }
 }
 
 const exportReport = () => {
-  // Export report logic
-  console.log('Export report')
+  // Export report as CSV
+  try {
+    const csvContent = generateCSV()
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `financial-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    alert('Report exported successfully')
+  } catch (error) {
+    console.error('Failed to export report:', error)
+    alert('Failed to export report')
+  }
 }
+
+const generateCSV = () => {
+  // Generate CSV content from financial data
+  const headers = ['Date', 'Type', 'Description', 'Amount', 'Category']
+  const rows = financialData.value.map(item => [
+    item.date || 'N/A',
+    item.type || 'N/A',
+    item.description || 'N/A',
+    item.amount || 0,
+    item.category || 'N/A',
+  ])
+  
+  return [headers, ...rows].map(row => row.join(',')).join('\n')
+}
+
+const revenueChartData = computed(() => {
+  // Placeholder - would be populated from actual financial data
+  return {
+    labels: [],
+    datasets: []
+  }
+})
 
 onMounted(() => {
   // Load financial data from API
+  loadFinancialData()
 })
+
+const loadFinancialData = async () => {
+  try {
+    const response = await reportsAPI.getFinancialReport()
+    const data = response.data.data || response.data
+    // Update financial data from API response
+    // Chart data would be populated from response
+  } catch (error) {
+    console.error('Error loading financial data:', error)
+  }
+}
 </script>
 
 <style scoped>

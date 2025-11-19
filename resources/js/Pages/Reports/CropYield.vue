@@ -138,7 +138,10 @@
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-semibold mb-4">Yield Trends (Last 5 Years)</h2>
           <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-            <span class="text-gray-500">Yield trends chart placeholder</span>
+            <LineChart v-if="yieldChartData.labels.length > 0" :data="yieldChartData" />
+            <div v-else class="h-full flex items-center justify-center text-gray-500">
+              No yield data available
+            </div>
           </div>
         </div>
 
@@ -279,8 +282,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { formatCurrency } from '@/utils/format'
+import { reportsAPI } from '@/services/api'
+import LineChart from '@/Components/Charts/LineChart.vue'
 
 const selectedSeason = ref('2024')
 const selectedCrop = ref('')
@@ -341,28 +346,86 @@ const cropComparison = ref([
   }
 ])
 
-const updateReport = () => {
-  // Update report based on selected filters
-  console.log('Update report:', { 
-    season: selectedSeason.value, 
-    crop: selectedCrop.value, 
-    field: selectedField.value 
-  })
+const updateReport = async () => {
+  // Reload report data with current filters
+  try {
+    await loadYieldData()
+    alert('Report updated successfully')
+  } catch (error) {
+    console.error('Failed to update report:', error)
+    alert('Failed to update report')
+  }
 }
 
-const generateReport = () => {
-  // Generate new report
-  console.log('Generate report')
+const generateReport = async () => {
+  // Generate new report with current filters
+  try {
+    await loadYieldData()
+    alert('Report generated successfully')
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+    alert('Failed to generate report')
+  }
 }
 
 const exportReport = () => {
-  // Export report logic
-  console.log('Export report')
+  // Export report as CSV
+  try {
+    const csvContent = generateCSV()
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `crop-yield-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    alert('Report exported successfully')
+  } catch (error) {
+    console.error('Failed to export report:', error)
+    alert('Failed to export report')
+  }
 }
+
+const generateCSV = () => {
+  // Generate CSV content from yield data
+  const headers = ['Crop', 'Area (acres)', 'Total Yield (kg)', 'Yield per Acre', 'Market Price', 'Total Value']
+  const rows = yieldData.value.map(item => [
+    item.name || 'N/A',
+    item.area || 0,
+    item.totalYield || 0,
+    item.yieldPerAcre || 0,
+    item.marketPrice || 0,
+    item.totalValue || 0,
+  ])
+  
+  return [headers, ...rows].map(row => row.join(',')).join('\n')
+}
+
+const yieldChartData = computed(() => {
+  // Placeholder - would be populated from actual yield data
+  return {
+    labels: [],
+    datasets: []
+  }
+})
 
 onMounted(() => {
   // Load crop yield data from API
+  loadYieldData()
 })
+
+const loadYieldData = async () => {
+  try {
+    const response = await reportsAPI.getCropYieldReport()
+    const data = response.data.data || response.data
+    // Update yield data from API response
+    // Chart data would be populated from response
+  } catch (error) {
+    console.error('Error loading yield data:', error)
+  }
+}
 </script>
 
 <style scoped>

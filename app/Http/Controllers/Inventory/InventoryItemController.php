@@ -15,28 +15,45 @@ class InventoryItemController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        
-        $query = InventoryItem::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
+        try {
+            $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+            
+            $query = InventoryItem::query();
+            
+            if (!$user->isAdmin()) {
+                $query->where('user_id', $user->id);
+            }
+            
+            // Apply filters
+            if ($request->has('category')) {
+                $query->where('category', $request->category);
+            }
+            
+            if ($request->has('low_stock')) {
+                $query->whereRaw('COALESCE(current_stock, 0) <= COALESCE(minimum_stock, 0)');
+            }
+            
+            $inventoryItems = $query->orderBy('name')->get();
+            
+            return response()->json([
+                'inventory_items' => $inventoryItems
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Inventory index error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to fetch inventory items',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
-        
-        // Apply filters
-        if ($request->has('category')) {
-            $query->where('category', $request->category);
-        }
-        
-        if ($request->has('low_stock')) {
-            $query->whereRaw('current_stock <= minimum_stock');
-        }
-        
-        $inventoryItems = $query->orderBy('name')->get();
-        
-        return response()->json([
-            'inventory_items' => $inventoryItems
-        ]);
     }
 
     /**

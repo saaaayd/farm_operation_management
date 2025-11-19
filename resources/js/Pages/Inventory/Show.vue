@@ -401,14 +401,32 @@ const removeStock = async () => {
   }
 }
 
-const setReorderPoint = () => {
-  // Show reorder point modal
-  console.log('Set reorder point')
+const setReorderPoint = async () => {
+  const currentReorderPoint = item.value.reorder_point || 0
+  const newReorderPoint = prompt('Set reorder point (minimum stock level):', currentReorderPoint.toString())
+  if (newReorderPoint === null) return
+  
+  const reorderPoint = Number(newReorderPoint)
+  if (isNaN(reorderPoint) || reorderPoint < 0) {
+    alert('Please enter a valid positive number')
+    return
+  }
+  
+  try {
+    await inventoryStore.updateItem(item.value.id, { reorder_point: reorderPoint })
+    await reloadFromStore()
+    alert('Reorder point updated successfully')
+  } catch (error) {
+    console.error('Failed to set reorder point:', error)
+    alert('Failed to set reorder point: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
 const viewSuppliers = () => {
-  // Navigate to suppliers page
-  console.log('View suppliers')
+  // Navigate to suppliers page if route exists
+  router.push('/suppliers').catch(() => {
+    alert('Suppliers page is not available yet')
+  })
 }
 
 onMounted(async () => {

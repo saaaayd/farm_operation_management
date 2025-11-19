@@ -1,6 +1,35 @@
 <template>
   <div class="product-detail-page">
     <div class="container mx-auto px-4 py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Loading product data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Error Loading Product</h3>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+            <button
+              @click="loadProductData(route.params.id)"
+              class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div v-else>
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
@@ -239,6 +268,7 @@
         </div>
       </div>
     </div>
+      </div>
   </div>
 </template>
 
@@ -246,10 +276,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
+import { riceMarketplaceAPI } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
 const quantity = ref(1)
+const loading = ref(true)
+const error = ref(null)
 
 const product = ref({
   id: null,
@@ -271,44 +304,8 @@ const product = ref({
   products_sold: 0
 })
 
-const reviews = ref([
-  {
-    id: 1,
-    author: 'John Smith',
-    rating: 5,
-    comment: 'Excellent quality seeds. Great germination rate and healthy plants.',
-    date: '2024-03-20T10:00:00Z'
-  },
-  {
-    id: 2,
-    author: 'Mike Johnson',
-    rating: 4,
-    comment: 'Good product, fast shipping. Would recommend to other farmers.',
-    date: '2024-03-18T14:30:00Z'
-  },
-  {
-    id: 3,
-    author: 'Sarah Wilson',
-    rating: 5,
-    comment: 'Perfect for my farm. High yield and disease resistant.',
-    date: '2024-03-15T09:15:00Z'
-  }
-])
-
-const relatedProducts = ref([
-  {
-    id: 2,
-    name: 'Nitrogen Fertilizer',
-    price: 450.00,
-    icon: '🌿'
-  },
-  {
-    id: 3,
-    name: 'Garden Tools Set',
-    price: 89.99,
-    icon: '🔧'
-  }
-])
+const reviews = ref([])
+const relatedProducts = ref([])
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
@@ -348,36 +345,51 @@ onMounted(() => {
 
 const loadProductData = async (id) => {
   try {
-    // API call to load product data
-    // For now, using mock data
+    loading.value = true
+    error.value = null
+    
+    // Load product data from API
+    const response = await riceMarketplaceAPI.getProductById(id)
+    const data = response.data.data || response.data
+    
+    // Map API response to component data
     product.value = {
-      id: id,
-      name: 'Corn Seeds - Pioneer 1234',
-      description: 'High-yield corn seeds perfect for spring planting. These seeds offer excellent disease resistance and are specifically bred for optimal performance in various soil conditions. Perfect for both commercial and small-scale farming operations.',
-      price: 180.00,
-      unit: 'per bag',
-      category: 'seeds',
-      seller_name: 'AgriSupply Co.',
-      location: 'Springfield, IL',
-      rating: 4.8,
-      icon: '🌱',
-      stock: 50,
+      id: data.id,
+      name: data.name || '',
+      description: data.description || '',
+      price: data.price_per_unit || data.price || 0,
+      unit: data.unit || 'kg',
+      category: 'rice', // Rice marketplace products
+      seller_name: data.farmer?.name || 'Farmer',
+      location: data.farmer?.location || '',
+      rating: data.average_rating || data.rating || 0,
+      icon: '🌾',
+      stock: data.quantity_available || data.quantity || 0,
       specifications: [
-        { name: 'Variety', value: 'Pioneer 1234' },
-        { name: 'Germination Rate', value: '95%' },
-        { name: 'Maturity', value: '110 days' },
-        { name: 'Yield Potential', value: '200+ bushels/acre' },
-        { name: 'Disease Resistance', value: 'High' },
-        { name: 'Drought Tolerance', value: 'Good' }
+        { name: 'Variety', value: data.rice_variety?.name || 'N/A' },
+        { name: 'Quality Grade', value: data.quality_grade || 'N/A' },
+        { name: 'Organic', value: data.is_organic ? 'Yes' : 'No' },
+        { name: 'Harvest Date', value: data.harvest_date ? formatDate(data.harvest_date) : 'N/A' },
+        { name: 'Available From', value: data.available_from ? formatDate(data.available_from) : 'Now' },
       ],
-      shipping_cost: 15.00,
-      delivery_time: '3-5 business days',
+      shipping_cost: 0, // Not in API
+      delivery_time: 'Contact seller',
       pickup_available: true,
-      member_since: '2020',
-      products_sold: 1250
+      member_since: data.farmer?.created_at ? new Date(data.farmer.created_at).getFullYear().toString() : 'N/A',
+      products_sold: 0, // Not in API
+      rice_variety: data.rice_variety,
+      farmer: data.farmer,
+      quality_grade: data.quality_grade,
+      is_organic: data.is_organic,
+      production_status: data.production_status,
+      minimum_order_quantity: data.minimum_order_quantity,
     }
-  } catch (error) {
-    console.error('Error loading product data:', error)
+    
+  } catch (err) {
+    console.error('Error loading product data:', err)
+    error.value = err.response?.data?.message || 'Failed to load product data'
+  } finally {
+    loading.value = false
   }
 }
 </script>

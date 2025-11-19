@@ -90,7 +90,11 @@
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Weather Map</h2>
             <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">Interactive weather map placeholder</span>
+              <div class="w-full" style="height: 400px;">
+                <div class="h-full flex items-center justify-center text-gray-500">
+                  Weather map integration coming soon
+                </div>
+              </div>
             </div>
           </div>
 

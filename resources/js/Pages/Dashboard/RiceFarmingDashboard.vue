@@ -6,6 +6,25 @@
       <p class="text-gray-600 mt-2">Welcome back, {{ authStore.user?.name }}! Here's your farm overview.</p>
     </div>
 
+    <!-- Error State -->
+    <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">Error Loading Dashboard</h3>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          <button
+            @click="loadDashboardData"
+            class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white rounded-lg shadow p-6">
@@ -608,6 +627,7 @@ const weatherData = ref([]);
 const upcomingTasks = ref([]);
 const recentActivity = ref([]);
 const loading = ref(true);
+const error = ref(null);
 
 // Methods
 const formatDate = (date) => {
@@ -650,6 +670,7 @@ const getActivityTypeColor = (type) => {
 const loadDashboardData = async () => {
   try {
     loading.value = true;
+    error.value = null;
     
     // Load actual dashboard data from multiple APIs
     const [
@@ -743,10 +764,15 @@ const loadDashboardData = async () => {
       inventoryData
     );
     
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-    // Fallback to sample data if API calls fail
-    loadSampleData();
+  } catch (err) {
+    console.error('Error loading dashboard data:', err);
+    error.value = err.response?.data?.message || 'Failed to load dashboard data';
+    // Set empty defaults on error instead of sample data
+    stats.value = {};
+    plantings.value = [];
+    weatherData.value = [];
+    upcomingTasks.value = [];
+    recentActivity.value = [];
   } finally {
     loading.value = false;
   }

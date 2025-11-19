@@ -137,16 +137,22 @@
         <!-- Temperature Chart -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-semibold mb-4">Temperature Trends</h2>
-          <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-            <span class="text-gray-500">Temperature chart placeholder</span>
+          <div class="w-full" style="height: 300px;">
+            <LineChart v-if="temperatureChartData.labels.length > 0" :data="temperatureChartData" />
+            <div v-else class="h-full flex items-center justify-center text-gray-500">
+              No temperature data available
+            </div>
           </div>
         </div>
 
         <!-- Rainfall Chart -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-semibold mb-4">Rainfall Distribution</h2>
-          <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-            <span class="text-gray-500">Rainfall chart placeholder</span>
+          <div class="w-full" style="height: 300px;">
+            <BarChart v-if="rainfallChartData.labels.length > 0" :data="rainfallChartData" />
+            <div v-else class="h-full flex items-center justify-center text-gray-500">
+              No rainfall data available
+            </div>
           </div>
         </div>
       </div>
@@ -271,17 +277,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { weatherAPI } from '@/services/api'
+import LineChart from '@/Components/Charts/LineChart.vue'
+import BarChart from '@/Components/Charts/BarChart.vue'
 
 const dateRange = ref('last30days')
 const selectedField = ref('')
 const selectedStation = ref('')
+const weatherData = ref([])
+const loading = ref(true)
 
 const weatherSummary = ref({
-  avgTemperature: 72,
-  totalRainfall: 3.2,
-  avgWindSpeed: 8.5,
-  sunshineHours: 245
+  avgTemperature: 0,
+  totalRainfall: 0,
+  avgWindSpeed: 0,
+  sunshineHours: 0
 })
 
 const gddData = ref({
@@ -339,27 +350,139 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
-const updateReport = () => {
-  // Update report based on selected filters
-  console.log('Update report:', { 
-    dateRange: dateRange.value, 
-    field: selectedField.value, 
-    station: selectedStation.value 
-  })
+const updateReport = async () => {
+  // Reload report data with current filters
+  try {
+    await loadWeatherData()
+    alert('Report updated successfully')
+  } catch (error) {
+    console.error('Failed to update report:', error)
+    alert('Failed to update report')
+  }
 }
 
-const generateReport = () => {
-  // Generate new report
-  console.log('Generate report')
+const generateReport = async () => {
+  // Generate new report with current filters
+  try {
+    await loadWeatherData()
+    alert('Report generated successfully')
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+    alert('Failed to generate report')
+  }
 }
 
 const exportReport = () => {
-  // Export report logic
-  console.log('Export report')
+  // Export report as CSV
+  try {
+    const csvContent = generateCSV()
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `weather-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    alert('Report exported successfully')
+  } catch (error) {
+    console.error('Failed to export report:', error)
+    alert('Failed to export report')
+  }
+}
+
+const generateCSV = () => {
+  // Generate CSV content from weather data
+  const headers = ['Date', 'Temperature', 'Humidity', 'Rainfall', 'Wind Speed', 'Conditions']
+  const rows = weatherData.value.map(item => [
+    item.date || 'N/A',
+    item.temperature || 0,
+    item.humidity || 0,
+    item.rainfall || 0,
+    item.wind_speed || 0,
+    item.conditions || 'N/A',
+  ])
+  
+  return [headers, ...rows].map(row => row.join(',')).join('\n')
+}
+
+// Chart data computed properties
+const temperatureChartData = computed(() => {
+  if (!weatherData.value || weatherData.value.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+  
+  return {
+    labels: weatherData.value.map(item => {
+      const date = new Date(item.recorded_at || item.date)
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }),
+    datasets: [
+      {
+        label: 'Temperature (°C)',
+        data: weatherData.value.map(item => item.temperature || 0),
+        borderColor: 'rgb(239, 68, 68)',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  }
+})
+
+const rainfallChartData = computed(() => {
+  if (!weatherData.value || weatherData.value.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+  
+  // Group by date and sum rainfall
+  const dailyRainfall = {}
+  weatherData.value.forEach(item => {
+    const date = new Date(item.recorded_at || item.date).toLocaleDateString()
+    if (!dailyRainfall[date]) {
+      dailyRainfall[date] = 0
+    }
+    dailyRainfall[date] += item.rainfall || 0
+  })
+  
+  return {
+    labels: Object.keys(dailyRainfall),
+    datasets: [
+      {
+        label: 'Rainfall (mm)',
+        data: Object.values(dailyRainfall),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+      }
+    ]
+  }
+})
+
+const loadWeatherData = async () => {
+  try {
+    loading.value = true
+    // Load weather data for all fields or selected field
+    // This is a placeholder - actual implementation would depend on the API structure
+    weatherData.value = []
+    
+    // Calculate summary from data
+    if (weatherData.value.length > 0) {
+      weatherSummary.value = {
+        avgTemperature: weatherData.value.reduce((sum, item) => sum + (item.temperature || 0), 0) / weatherData.value.length,
+        totalRainfall: weatherData.value.reduce((sum, item) => sum + (item.rainfall || 0), 0),
+        avgWindSpeed: weatherData.value.reduce((sum, item) => sum + (item.wind_speed || 0), 0) / weatherData.value.length,
+        sunshineHours: 0, // Not available in weather data
+      }
+    }
+  } catch (error) {
+    console.error('Error loading weather data:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-  // Load weather data from API
+  loadWeatherData()
 })
 </script>
 

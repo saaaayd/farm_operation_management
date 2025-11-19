@@ -90,7 +90,10 @@
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Response Time (Last 24h)</h2>
             <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">Response time chart placeholder</span>
+              <LineChart v-if="responseTimeChartData.labels.length > 0" :data="responseTimeChartData" />
+              <div v-else class="h-full flex items-center justify-center text-gray-500">
+                No response time data available
+              </div>
             </div>
           </div>
 
@@ -147,7 +150,10 @@
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">User Activity (Last 7 Days)</h2>
             <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">User activity chart placeholder</span>
+              <BarChart v-if="userActivityChartData.labels.length > 0" :data="userActivityChartData" />
+              <div v-else class="h-full flex items-center justify-center text-gray-500">
+                No user activity data available
+              </div>
             </div>
           </div>
 
@@ -243,7 +249,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { adminAPI } from '@/services/api'
+import LineChart from '@/Components/Charts/LineChart.vue'
+import BarChart from '@/Components/Charts/BarChart.vue'
 
 const loading = ref(false)
 
@@ -334,9 +343,41 @@ const exportStats = () => {
   console.log('Export stats')
 }
 
+// Chart data computed properties
+const responseTimeChartData = computed(() => {
+  // Placeholder - would be populated from actual system stats
+  return {
+    labels: [],
+    datasets: []
+  }
+})
+
+const userActivityChartData = computed(() => {
+  // Placeholder - would be populated from actual system stats
+  return {
+    labels: [],
+    datasets: []
+  }
+})
+
 onMounted(() => {
   // Load system stats from API
+  loadSystemStats()
 })
+
+const loadSystemStats = async () => {
+  try {
+    loading.value = true
+    const response = await adminAPI.getSystemStats()
+    const data = response.data.data || response.data
+    // Update stats from API response
+    // Chart data would be populated from response
+  } catch (error) {
+    console.error('Error loading system stats:', error)
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped>

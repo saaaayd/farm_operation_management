@@ -94,20 +94,28 @@
 
             <div class="space-y-2">
               <label class="form-label">Assign to (optional)</label>
-              <div class="relative">
-                <input
-                  v-model="form.assigned_to"
-                  type="number"
-                  min="1"
-                  class="form-input pr-16"
-                  placeholder="Laborer ID"
-                />
-                <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-xs text-gray-400">
-                  soon
-                </span>
-              </div>
-              <p class="text-xs text-gray-400">
-                Labor assignment is coming soon. Leave blank if you want to assign later.
+              <select
+                v-model="form.assigned_to"
+                class="form-input"
+                :disabled="loadingLaborers"
+              >
+                <option value="">No assignment</option>
+                <option
+                  v-for="laborer in laborers"
+                  :key="laborer.id"
+                  :value="laborer.id"
+                >
+                  {{ laborer.name }}{{ laborer.phone ? ` (${laborer.phone})` : '' }}
+                </option>
+              </select>
+              <p v-if="loadingLaborers" class="text-xs text-gray-400">
+                Loading laborers...
+              </p>
+              <p v-else-if="laborers.length === 0" class="text-xs text-gray-400">
+                No laborers available. You can assign a laborer later or create one in the Laborers section.
+              </p>
+              <p v-else class="text-xs text-gray-400">
+                Select a laborer to assign this task to, or leave blank to assign later.
               </p>
             </div>
           </div>
@@ -160,12 +168,15 @@ import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
 import { buildTaskTypeOptions } from '@/utils/taskTypes'
+import { laborAPI } from '@/services/api'
 
 const router = useRouter()
 const farmStore = useFarmStore()
 
 const submitting = ref(false)
 const errors = ref({})
+const loadingLaborers = ref(false)
+const laborers = ref([])
 
 const form = reactive({
   task_type: '',
@@ -202,15 +213,40 @@ const submitTask = async () => {
   errors.value = {}
 
   try {
-    const payload = {
-      task_type: form.task_type,
-      planting_id: Number(form.planting_id),
-      due_date: form.due_date,
-      description: form.description,
-      assigned_to: form.assigned_to || null
+    // Validate required fields before submitting
+    if (!form.task_type || !form.planting_id || !form.due_date || !form.description.trim()) {
+      errors.value = {
+        ...(form.task_type ? {} : { task_type: ['Task type is required'] }),
+        ...(form.planting_id ? {} : { planting_id: ['Linked planting is required'] }),
+        ...(form.due_date ? {} : { due_date: ['Due date is required'] }),
+        ...(form.description.trim() ? {} : { description: ['Description is required'] }),
+      }
+      submitting.value = false
+      return
     }
 
-    if (!payload.assigned_to) delete payload.assigned_to
+    // Ensure planting_id is a valid positive integer
+    const plantingId = Number(form.planting_id)
+    if (isNaN(plantingId) || plantingId <= 0) {
+      errors.value = { planting_id: ['Please select a valid planting'] }
+      submitting.value = false
+      return
+    }
+
+    const payload = {
+      task_type: form.task_type,
+      planting_id: plantingId,
+      due_date: form.due_date,
+      description: form.description.trim(),
+    }
+
+    // Only include assigned_to if a laborer is selected
+    if (form.assigned_to && form.assigned_to.toString().trim()) {
+      const assignedToNum = Number(form.assigned_to)
+      if (!isNaN(assignedToNum) && assignedToNum > 0) {
+        payload.assigned_to = assignedToNum
+      }
+    }
 
     await farmStore.createTask(payload)
     router.push('/tasks')
@@ -220,6 +256,19 @@ const submitTask = async () => {
     }
   } finally {
     submitting.value = false
+  }
+}
+
+const loadLaborers = async () => {
+  try {
+    loadingLaborers.value = true
+    const response = await laborAPI.getLaborers()
+    laborers.value = response.data.laborers || response.data || []
+  } catch (error) {
+    console.error('Failed to load laborers:', error)
+    laborers.value = []
+  } finally {
+    loadingLaborers.value = false
   }
 }
 
@@ -233,6 +282,9 @@ onMounted(async () => {
   if (!(farmStore.tasks && farmStore.tasks.length)) {
     loaders.push(farmStore.fetchTasks())
   }
+
+  // Load laborers for assignment
+  loadLaborers()
 
   if (!loaders.length) {
     return

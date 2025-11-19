@@ -6,6 +6,34 @@
       <p class="text-gray-600 mt-2">Welcome back, {{ authStore.user?.name }}! Discover fresh rice products from local farmers.</p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+      <p class="mt-4 text-gray-600">Loading dashboard data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">Error Loading Dashboard</h3>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          <button
+            @click="loadDashboardData"
+            class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div v-else>
+
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white rounded-lg shadow p-6">
@@ -305,6 +333,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -322,7 +351,9 @@ import {
   MagnifyingGlassIcon,
   ShoppingBagIcon,
   UserCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
+import { dashboardAPI, riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -333,6 +364,7 @@ const featuredProducts = ref([]);
 const recentOrders = ref([]);
 const popularVarieties = ref([]);
 const loading = ref(true);
+const error = ref(null);
 
 // Methods
 const formatDate = (date) => {
@@ -390,93 +422,78 @@ const searchByVariety = (varietyId) => {
 const loadDashboardData = async () => {
   try {
     loading.value = true;
+    error.value = null;
     
-    // Mock data for user dashboard
+    // Load dashboard stats
+    const dashboardResponse = await dashboardAPI.getBuyerStats();
+    const dashboardData = dashboardResponse.data;
+    
+    // Map API response to component data
     stats.value = {
-      total_orders: 12,
-      pending_orders: 2,
-      favorites: 8,
-      total_spent: 1250,
-      available_products: 156,
+      total_orders: dashboardData.stats?.total_orders || 0,
+      pending_orders: dashboardData.stats?.pending_orders || 0,
+      completed_orders: dashboardData.stats?.completed_orders || 0,
+      total_spent: dashboardData.stats?.total_spent || 0,
+      favorites: 0, // Not available in API yet
+      available_products: dashboardData.available_products?.length || 0,
     };
     
-    featuredProducts.value = [
-      {
-        id: 1,
-        name: 'Premium Jasmine Rice',
-        rice_variety: { name: 'Jasmine' },
-        price_per_unit: 25.99,
-        unit: 'kg',
-        quantity_available: 150,
-        quality_grade: 'premium',
-        is_organic: true,
-        average_rating: 4.8,
-        images: null,
+    // Load recent orders
+    recentOrders.value = (dashboardData.recent_orders || []).map(order => ({
+      id: order.id,
+      rice_product: {
+        name: order.orderItems?.[0]?.inventoryItem?.name || 'Product',
+        unit: order.orderItems?.[0]?.inventoryItem?.unit || 'kg',
       },
-      {
-        id: 2,
-        name: 'Organic Brown Rice',
-        rice_variety: { name: 'Brown Rice' },
-        price_per_unit: 18.50,
-        unit: 'kg',
-        quantity_available: 200,
-        quality_grade: 'grade_a',
-        is_organic: true,
-        average_rating: 4.6,
-        images: null,
-      },
-    ];
+      quantity: order.orderItems?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0,
+      total_amount: order.total_amount || 0,
+      status: order.status || 'pending',
+      order_date: order.created_at || order.order_date,
+      progress_percentage: getOrderProgress(order.status),
+    }));
     
-    recentOrders.value = [
-      {
-        id: 1001,
-        rice_product: { name: 'Premium Basmati Rice', unit: 'kg' },
-        quantity: 5,
-        total_amount: 89.95,
-        status: 'shipped',
-        order_date: '2024-09-28',
-        progress_percentage: 75,
-      },
-      {
-        id: 1002,
-        rice_product: { name: 'Organic Jasmine Rice', unit: 'kg' },
-        quantity: 10,
-        total_amount: 259.90,
-        status: 'confirmed',
-        order_date: '2024-10-01',
-        progress_percentage: 40,
-      },
-    ];
+    // Load featured products (top products from marketplace)
+    const productsResponse = await riceMarketplaceAPI.getProducts({ 
+      sort_by: 'rating',
+      sort_order: 'desc',
+      per_page: 4 
+    });
+    featuredProducts.value = (productsResponse.data.data || productsResponse.data || []).slice(0, 4);
     
-    popularVarieties.value = [
-      {
-        id: 1,
-        name: 'Jasmine Rice',
-        description: 'Aromatic long-grain rice',
-        product_count: 23,
-        maturity_days: 120,
-      },
-      {
-        id: 2,
-        name: 'Basmati Rice',
-        description: 'Premium aromatic rice',
-        product_count: 18,
-        maturity_days: 130,
-      },
-      {
-        id: 3,
-        name: 'Brown Rice',
-        description: 'Nutritious whole grain',
-        product_count: 15,
-        maturity_days: 110,
-      },
-    ];
+    // Load popular rice varieties
+    const varietiesResponse = await riceVarietiesAPI.getAll();
+    const varieties = varietiesResponse.data.data || varietiesResponse.data || [];
+    popularVarieties.value = varieties.slice(0, 5).map(variety => ({
+      id: variety.id,
+      name: variety.name,
+      description: variety.description || 'High-quality rice variety',
+      product_count: 0, // Would need to count products per variety
+      maturity_days: variety.maturity_days || 120,
+    }));
     
-  } catch (error) {
-    console.error('Error loading user dashboard data:', error);
+  } catch (err) {
+    console.error('Error loading user dashboard data:', err);
+    error.value = err.response?.data?.message || 'Failed to load dashboard data';
+    // Set empty defaults on error
+    stats.value = {};
+    featuredProducts.value = [];
+    recentOrders.value = [];
+    popularVarieties.value = [];
   } finally {
     loading.value = false;
   }
+};
+
+const getOrderProgress = (status) => {
+  const progressMap = {
+    'pending': 10,
+    'confirmed': 30,
+    'prepared': 50,
+    'shipped': 75,
+    'delivered': 100,
+    'cancelled': 0,
+  };
+  return progressMap[status] || 0;
 };
 
 onMounted(() => {

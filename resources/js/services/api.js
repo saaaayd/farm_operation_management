@@ -177,6 +177,9 @@ export const farmProfileAPI = {
       farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
       farm_description: data.farm_description || null,
       
+      // Field Information
+      field_name: data.field_name || 'Main Rice Field',
+      
       // Soil Information
       soil_type: data.soil_type,
       soil_ph: data.soil_ph ? parseFloat(data.soil_ph) : null,

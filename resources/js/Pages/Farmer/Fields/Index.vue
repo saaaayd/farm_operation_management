@@ -174,11 +174,11 @@ const refreshFields = async () => {
 }
 
 const goToFieldSetup = () => {
-  // Reuse onboarding flow for adding first field if profile incomplete
+  // Send farmers to the dedicated field creation flow
   if (!farmStore.fields?.length) {
     router.push('/onboarding')
   } else {
-    router.push('/plantings/create')
+    router.push('/fields/create')
   }
 }
 

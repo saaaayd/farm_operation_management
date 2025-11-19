@@ -94,16 +94,22 @@
           <!-- Weather Chart -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Temperature & Humidity (24h)</h2>
-            <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">Temperature and humidity chart placeholder</span>
+            <div class="w-full" style="height: 300px;">
+              <LineChart v-if="temperatureHumidityChartData.labels.length > 0" :data="temperatureHumidityChartData" />
+              <div v-else class="h-full flex items-center justify-center text-gray-500">
+                No temperature/humidity data available
+              </div>
             </div>
           </div>
 
           <!-- Rainfall Chart -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Rainfall (7 days)</h2>
-            <div class="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span class="text-gray-500">Rainfall chart placeholder</span>
+            <div class="w-full" style="height: 300px;">
+              <BarChart v-if="rainfallChartData.labels.length > 0" :data="rainfallChartData" />
+              <div v-else class="h-full flex items-center justify-center text-gray-500">
+                No rainfall data available
+              </div>
             </div>
           </div>
 
@@ -273,8 +279,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { weatherAPI, fieldsAPI } from '@/services/api'
+import LineChart from '@/Components/Charts/LineChart.vue'
+import BarChart from '@/Components/Charts/BarChart.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -296,48 +305,9 @@ const currentWeather = ref({
   wind_speed: 5
 })
 
-const weatherHistory = ref([
-  {
-    date: '2024-03-25',
-    high: 75,
-    low: 55,
-    rainfall: 0.1,
-    humidity: 60,
-    wind_speed: 8
-  },
-  {
-    date: '2024-03-24',
-    high: 73,
-    low: 52,
-    rainfall: 0.0,
-    humidity: 58,
-    wind_speed: 6
-  },
-  {
-    date: '2024-03-23',
-    high: 70,
-    low: 48,
-    rainfall: 0.3,
-    humidity: 72,
-    wind_speed: 12
-  },
-  {
-    date: '2024-03-22',
-    high: 68,
-    low: 45,
-    rainfall: 0.0,
-    humidity: 55,
-    wind_speed: 4
-  },
-  {
-    date: '2024-03-21',
-    high: 72,
-    low: 50,
-    rainfall: 0.0,
-    humidity: 62,
-    wind_speed: 7
-  }
-])
+const weatherHistory = ref([])
+const weatherData24h = ref([])
+const weatherData7d = ref([])
 
 const gdd = ref({
   today: 15,
@@ -425,20 +395,111 @@ onMounted(() => {
 
 const loadFieldWeatherData = async (id) => {
   try {
-    // API call to load field weather data
-    // For now, using mock data
+    loading.value = true
+    
+    // Load field data
+    const fieldResponse = await fieldsAPI.getById(id)
+    const fieldData = fieldResponse.data.data || fieldResponse.data
     field.value = {
-      id: id,
-      name: 'North Field',
-      size: 25.5,
-      soil_type: 'loamy',
-      current_crop: 'corn',
-      weather_station: 'North Station'
+      id: fieldData.id,
+      name: fieldData.name || '',
+      size: fieldData.area || fieldData.size || 0,
+      soil_type: fieldData.soil_type || '',
+      current_crop: null,
+      weather_station: 'Field Weather Station'
     }
+    
+    // Load weather history (last 7 days)
+    const historyResponse = await weatherAPI.getHistory(id, 7)
+    const historyData = historyResponse.data.data || historyResponse.data || []
+    weatherHistory.value = historyData
+    weatherData7d.value = historyData
+    
+    // Load current weather
+    try {
+      const currentResponse = await weatherAPI.getCurrentWeather(id)
+      const currentData = currentResponse.data.data || currentResponse.data
+      if (currentData) {
+        currentWeather.value = {
+          temperature: currentData.temperature || 0,
+          humidity: currentData.humidity || 0,
+          rainfall: currentData.rainfall || 0,
+          wind_speed: currentData.wind_speed || 0,
+        }
+      }
+    } catch (weatherError) {
+      console.error('Error loading current weather:', weatherError)
+    }
+    
   } catch (error) {
     console.error('Error loading field weather data:', error)
+  } finally {
+    loading.value = false
   }
 }
+
+// Chart data computed properties
+const temperatureHumidityChartData = computed(() => {
+  if (!weatherData24h.value || weatherData24h.value.length === 0) {
+    // Use 7-day data if 24h not available
+    const data = weatherData7d.value.slice(-24) || []
+    if (data.length === 0) {
+      return { labels: [], datasets: [] }
+    }
+    
+    return {
+      labels: data.map(item => {
+        const date = new Date(item.recorded_at || item.date)
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      }),
+      datasets: [
+        {
+          label: 'Temperature (°C)',
+          data: data.map(item => item.temperature || 0),
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          yAxisID: 'y',
+        },
+        {
+          label: 'Humidity (%)',
+          data: data.map(item => item.humidity || 0),
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          yAxisID: 'y1',
+        }
+      ]
+    }
+  }
+  
+  return { labels: [], datasets: [] }
+})
+
+const rainfallChartData = computed(() => {
+  if (!weatherData7d.value || weatherData7d.value.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+  
+  // Group by date and sum rainfall
+  const dailyRainfall = {}
+  weatherData7d.value.forEach(item => {
+    const date = new Date(item.recorded_at || item.date).toLocaleDateString()
+    if (!dailyRainfall[date]) {
+      dailyRainfall[date] = 0
+    }
+    dailyRainfall[date] += item.rainfall || 0
+  })
+  
+  return {
+    labels: Object.keys(dailyRainfall),
+    datasets: [
+      {
+        label: 'Rainfall (mm)',
+        data: Object.values(dailyRainfall),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+      }
+    ]
+  }
+})
 </script>
 
 <style scoped>

@@ -41,6 +41,25 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json($response->json());
     });
 
+    // Geocoding proxy for Nominatim (to avoid CORS and set User-Agent)
+    Route::get('/geocode', function (Request $request) {
+        $query = $request->query('q');
+        if (!$query) {
+            return response()->json(['error' => 'Query parameter "q" is required'], 400);
+        }
+
+        $response = Http::withHeaders([
+            'User-Agent' => 'RiceFARM Application (https://ricefarm.app)',
+        ])->get('https://nominatim.openstreetmap.org/search', [
+            'q' => $query,
+            'format' => 'json',
+            'limit' => 1,
+            'countrycodes' => 'ph',
+        ]);
+
+        return response()->json($response->json());
+    });
+
     // Authentication routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);

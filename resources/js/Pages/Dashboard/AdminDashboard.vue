@@ -6,6 +6,34 @@
       <p class="text-gray-600 mt-2">System overview and management tools</p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+      <p class="mt-4 text-gray-600">Loading dashboard data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">Error Loading Dashboard</h3>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          <button
+            @click="loadDashboardData"
+            class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div v-else>
+
     <!-- System Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white rounded-lg shadow p-6">
@@ -122,28 +150,41 @@
           </div>
         </div>
 
-        <!-- System Activity -->
+        <!-- User Growth Chart -->
         <div class="bg-white rounded-lg shadow">
           <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">System Activity</h2>
+            <h2 class="text-lg font-semibold text-gray-900">User Growth (Last 30 Days)</h2>
           </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div v-for="activity in systemActivity" :key="activity.id" class="flex items-start space-x-3">
-                <div class="flex-shrink-0">
-                  <div class="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm text-gray-900">{{ activity.description }}</p>
-                  <p class="text-xs text-gray-500">{{ formatDate(activity.created_at) }}</p>
-                </div>
-                <div class="flex-shrink-0">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                        :class="getActivityTypeClass(activity.type)">
-                    {{ activity.type }}
-                  </span>
-                </div>
-              </div>
+          <div class="p-6" style="height: 300px;">
+            <LineChart v-if="userGrowthChartData.labels.length > 0" :data="userGrowthChartData" />
+            <div v-else class="text-center text-gray-500 py-8">
+              <p>No user growth data available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sales Trends Chart -->
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Sales Trends (Last 12 Months)</h2>
+          </div>
+          <div class="p-6" style="height: 300px;">
+            <LineChart v-if="salesTrendsChartData.labels.length > 0" :data="salesTrendsChartData" />
+            <div v-else class="text-center text-gray-500 py-8">
+              <p>No sales data available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expense Trends Chart -->
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Expense Trends (Last 12 Months)</h2>
+          </div>
+          <div class="p-6" style="height: 300px;">
+            <LineChart v-if="expenseTrendsChartData.labels.length > 0" :data="expenseTrendsChartData" />
+            <div v-else class="text-center text-gray-500 py-8">
+              <p>No expense data available</p>
             </div>
           </div>
         </div>
@@ -260,11 +301,12 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import {
   UsersIcon,
   UserGroupIcon,
@@ -278,13 +320,20 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
+import { adminAPI } from '@/services/api';
+import LineChart from '@/Components/Charts/LineChart.vue';
 
 // Reactive data
 const stats = ref({});
 const recentUsers = ref([]);
-const systemActivity = ref([]);
+const recentOrders = ref([]);
+const recentProducts = ref([]);
+const userGrowth = ref(null);
+const salesTrends = ref(null);
+const expenseTrends = ref(null);
 const systemAlerts = ref([]);
 const loading = ref(true);
+const error = ref(null);
 
 // Methods
 const formatDate = (date) => {
@@ -353,68 +402,154 @@ const exportData = () => {
 const loadDashboardData = async () => {
   try {
     loading.value = true;
+    error.value = null;
     
-    // Mock data for admin dashboard
+    const response = await adminAPI.getDashboard();
+    const data = response.data;
+    
+    // Map API response to component data
     stats.value = {
-      total_users: 156,
-      active_users: 142,
-      total_farmers: 89,
-      active_farmers: 76,
-      total_fields: 234,
-      total_area: 1250.5,
-      total_orders: 1834,
-      pending_orders: 23,
+      total_users: data.stats?.total_users || 0,
+      active_users: data.stats?.active_users || 0,
+      total_farmers: data.stats?.total_farmers || 0,
+      active_farmers: data.stats?.total_farmers || 0, // Use total_farmers as active
+      total_buyers: data.stats?.total_buyers || 0,
+      total_fields: data.stats?.total_fields || 0,
+      active_plantings: data.stats?.active_plantings || 0,
+      total_products: data.stats?.total_products || 0,
+      approved_products: data.stats?.approved_products || 0,
+      pending_products: data.stats?.pending_products || 0,
+      total_orders: data.stats?.total_orders || 0,
+      pending_orders: data.stats?.pending_orders || 0,
+      completed_orders: data.stats?.completed_orders || 0,
+      total_revenue: data.stats?.total_revenue || 0,
+      total_sales_volume: data.stats?.total_sales_volume || 0,
+      total_expenses: data.stats?.total_expenses || 0,
+      monthly_sales: data.stats?.monthly_sales || 0,
+      monthly_expenses: data.stats?.monthly_expenses || 0,
+      total_inventory_items: data.stats?.total_inventory_items || 0,
+      low_stock_items: data.stats?.low_stock_items || 0,
     };
     
-    recentUsers.value = [
-      {
-        id: 1,
-        name: 'John Farmer',
-        email: 'john@example.com',
-        role: 'farmer',
-        created_at: '2024-10-01',
-        is_active: true,
-      },
-      {
-        id: 2,
-        name: 'Jane Buyer',
-        email: 'jane@example.com',
-        role: 'user',
-        created_at: '2024-09-30',
-        is_active: true,
-      },
-    ];
+    recentUsers.value = (data.recent_users || []).map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      is_active: user.approval_status === 'approved',
+      approval_status: user.approval_status,
+    }));
     
-    systemActivity.value = [
-      {
-        id: 1,
-        description: 'New farmer registered: John Farmer',
-        type: 'user_registration',
-        created_at: '2024-10-02',
-      },
-      {
-        id: 2,
-        description: 'Rice farm created in North Region',
-        type: 'farm_creation',
-        created_at: '2024-10-01',
-      },
-    ];
+    recentOrders.value = data.recent_orders || [];
+    recentProducts.value = data.recent_products || [];
+    userGrowth.value = data.user_growth || null;
+    salesTrends.value = data.sales_trends || null;
+    expenseTrends.value = data.expense_trends || null;
     
-    systemAlerts.value = [
-      {
+    // Generate system alerts based on data
+    systemAlerts.value = [];
+    if (data.stats?.pending_users > 10) {
+      systemAlerts.value.push({
         id: 1,
-        title: 'Weather API Rate Limit',
-        message: 'Approaching daily API limit for weather service',
+        title: 'High Pending Users',
+        message: `${data.stats.pending_users} users awaiting approval`,
         level: 'warning',
-      },
-    ];
+      });
+    }
+    if (data.stats?.low_stock_items > 20) {
+      systemAlerts.value.push({
+        id: 2,
+        title: 'Low Stock Alert',
+        message: `${data.stats.low_stock_items} inventory items are low on stock`,
+        level: 'warning',
+      });
+    }
     
-  } catch (error) {
-    console.error('Error loading admin dashboard data:', error);
+  } catch (err) {
+    console.error('Error loading admin dashboard data:', err);
+    error.value = err.response?.data?.message || 'Failed to load dashboard data';
+    // Set empty defaults on error
+    stats.value = {};
+    recentUsers.value = [];
+    recentOrders.value = [];
+    recentProducts.value = [];
   } finally {
     loading.value = false;
   }
 };
+
+// Chart data for user growth
+const userGrowthChartData = computed(() => {
+  if (!userGrowth.value || !userGrowth.value.labels) {
+    return {
+      labels: [],
+      datasets: []
+    };
+  }
+  
+  return {
+    labels: userGrowth.value.labels,
+    datasets: [
+      {
+        label: 'Total Users',
+        data: userGrowth.value.cumulative_users,
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  };
+});
+
+// Chart data for sales trends
+const salesTrendsChartData = computed(() => {
+  if (!salesTrends.value || !salesTrends.value.labels) {
+    return {
+      labels: [],
+      datasets: []
+    };
+  }
+  
+  return {
+    labels: salesTrends.value.labels,
+    datasets: [
+      {
+        label: 'Sales (₱)',
+        data: salesTrends.value.data,
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  };
+});
+
+// Chart data for expense trends
+const expenseTrendsChartData = computed(() => {
+  if (!expenseTrends.value || !expenseTrends.value.labels) {
+    return {
+      labels: [],
+      datasets: []
+    };
+  }
+  
+  return {
+    labels: expenseTrends.value.labels,
+    datasets: [
+      {
+        label: 'Expenses (₱)',
+        data: expenseTrends.value.data,
+        borderColor: 'rgb(239, 68, 68)',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  };
+});
 
 onMounted(() => {
   loadDashboardData();

@@ -1,5 +1,5 @@
 <template>
-  <Modal :show="show" @close="closeModal">
+  <Modal :modelValue="show" @update:modelValue="handleModelValueUpdate" @close="closeModal">
     <div class="p-6">
       <h2 class="text-2xl font-semibold mb-4 text-gray-900">
         {{ isEditMode ? 'Edit Field' : 'Add New Field' }}
@@ -194,5 +194,11 @@ const submitForm = async () => {
 
 const closeModal = () => {
   emit('close')
+}
+
+const handleModelValueUpdate = (value) => {
+  if (!value) {
+    closeModal()
+  }
 }
 </script>

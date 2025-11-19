@@ -156,15 +156,15 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Quantity:</span>
-                <span class="font-medium">{{ item.quantity }} {{ item.unit }}</span>
+                <span class="font-medium">{{ getItemQuantity(item) }} {{ item.unit }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Unit Price:</span>
-                <span class="font-medium">{{ formatCurrency(item.unit_price) }}</span>
+                <span class="font-medium">{{ formatCurrency(item.unit_price || 0) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Total Value:</span>
-                <span class="font-medium">{{ formatCurrency(item.quantity * item.unit_price) }}</span>
+                <span class="font-medium">{{ formatCurrency(getItemQuantity(item) * (item.unit_price || 0)) }}</span>
               </div>
             </div>
 
@@ -341,6 +341,7 @@ import { useRouter } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import FormAlert from '@/Components/UI/FormAlert.vue'
 import { extractFormErrors, resetFormErrors } from '@/utils/form'
+import { formatCurrency } from '@/utils/format'
 
 const router = useRouter()
 const inventoryStore = useInventoryStore()
@@ -377,10 +378,30 @@ const fieldError = (field) => {
   return messages || ''
 }
 
+// Helper functions for item data
+const getItemQuantity = (item) => {
+  return item.current_stock || item.quantity || 0
+}
+
+const getItemStatus = (item) => {
+  const quantity = getItemQuantity(item)
+  const minStock = item.minimum_stock || item.min_stock || 0
+  
+  if (quantity <= 0) return 'out_of_stock'
+  if (quantity <= minStock) return 'low_stock'
+  return 'in_stock'
+}
+
 const filteredItems = computed(() => {
-  return (items.value || []).filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+  return (items.value || []).map(item => ({
+    ...item,
+    quantity: item.current_stock || item.quantity || 0,
+    status: getItemStatus(item)
+  })).filter(item => {
+    const searchLower = searchQuery.value.toLowerCase()
+    const matchesSearch = !searchQuery.value || 
+                         item.name?.toLowerCase().includes(searchLower) ||
+                         (item.description || '').toLowerCase().includes(searchLower)
     const matchesCategory = !categoryFilter.value || item.category === categoryFilter.value
     const matchesStatus = !statusFilter.value || item.status === statusFilter.value
     
@@ -389,9 +410,9 @@ const filteredItems = computed(() => {
 })
 
 const totalItems = computed(() => items.value.length)
-const inStockItems = computed(() => items.value.filter(item => item.status === 'in_stock').length)
-const lowStockItems = computed(() => items.value.filter(item => item.status === 'low_stock').length)
-const outOfStockItems = computed(() => items.value.filter(item => item.status === 'out_of_stock').length)
+const inStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'in_stock').length)
+const lowStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'low_stock').length)
+const outOfStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'out_of_stock').length)
 
 const getStatusBadgeClass = (status) => {
   const classes = {
@@ -403,8 +424,10 @@ const getStatusBadgeClass = (status) => {
 }
 
 const getStockPercentage = (item) => {
-  if (item.max_stock === 0) return 0
-  return Math.min((item.quantity / item.max_stock) * 100, 100)
+  const quantity = getItemQuantity(item)
+  const maxStock = item.max_stock || item.maximum_stock || 0
+  if (maxStock === 0) return 0
+  return Math.min((quantity / maxStock) * 100, 100)
 }
 
 const getStockBarClass = (item) => {

@@ -1,6 +1,35 @@
 <template>
   <div class="planting-detail-page">
     <div class="container mx-auto px-4 py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Loading planting data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Error Loading Planting</h3>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+            <button
+              @click="loadPlantingData(route.params.id)"
+              class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div v-else>
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
@@ -249,6 +278,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -256,6 +286,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { plantingsAPI, tasksAPI } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -273,59 +304,16 @@ const planting = ref({
   germination_rate: 0,
   flowering_rate: 0,
   seed_rate: 0,
-  row_spacing: 0
+  row_spacing: 0,
+  field: null,
+  rice_variety: null,
+  planting_stages: [],
 })
 
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'planting',
-    title: 'Seeds planted',
-    description: 'Planted corn seeds in rows',
-    date: '2024-03-15'
-  },
-  {
-    id: 2,
-    type: 'fertilizer',
-    title: 'Fertilizer applied',
-    description: 'Applied nitrogen fertilizer',
-    date: '2024-03-20'
-  },
-  {
-    id: 3,
-    type: 'irrigation',
-    title: 'Irrigation completed',
-    description: 'Watered field for 2 hours',
-    date: '2024-03-25'
-  }
-])
-
-const relatedTasks = ref([
-  {
-    id: 1,
-    title: 'Apply herbicide',
-    description: 'Apply pre-emergent herbicide',
-    status: 'pending',
-    due_date: '2024-04-01',
-    completed: false
-  },
-  {
-    id: 2,
-    title: 'Check soil moisture',
-    description: 'Monitor soil moisture levels',
-    status: 'in_progress',
-    due_date: '2024-03-30',
-    completed: false
-  },
-  {
-    id: 3,
-    title: 'Fertilizer application',
-    description: 'Apply side-dress fertilizer',
-    status: 'completed',
-    due_date: '2024-03-20',
-    completed: true
-  }
-])
+const recentActivities = ref([])
+const relatedTasks = ref([])
+const loading = ref(true)
+const error = ref(null)
 
 const daysToHarvest = computed(() => {
   if (!planting.value.expected_harvest) return 'N/A'
@@ -372,8 +360,7 @@ const formatDate = (date) => {
 }
 
 const editPlanting = () => {
-  // Navigate to edit page or show edit modal
-  console.log('Edit planting')
+  router.push(`/plantings/${planting.value.id}/edit`)
 }
 
 const addTask = () => {
@@ -381,14 +368,33 @@ const addTask = () => {
   router.push('/tasks/create')
 }
 
-const updateProgress = () => {
-  // Show update progress modal
-  console.log('Update progress')
+const updateProgress = async () => {
+  const newStatus = prompt('Update planting status:\n(planted, growing, ready, harvested, failed)', planting.value.status || 'growing')
+  if (!newStatus) return
+  
+  try {
+    await plantingsAPI.update(planting.value.id, { status: newStatus })
+    await loadPlantingData(planting.value.id)
+    alert('Planting status updated successfully')
+  } catch (error) {
+    console.error('Failed to update progress:', error)
+    alert('Failed to update progress: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
-const addNote = () => {
-  // Show add note modal
-  console.log('Add note')
+const addNote = async () => {
+  const currentNotes = planting.value.notes || ''
+  const newNote = prompt('Add a note to this planting:', currentNotes)
+  if (newNote === null) return
+  
+  try {
+    await plantingsAPI.update(planting.value.id, { notes: newNote })
+    await loadPlantingData(planting.value.id)
+    alert('Note added successfully')
+  } catch (error) {
+    console.error('Failed to add note:', error)
+    alert('Failed to add note: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
 const viewField = () => {
@@ -417,26 +423,129 @@ onMounted(() => {
 
 const loadPlantingData = async (id) => {
   try {
-    // API call to load planting data
-    // For now, using mock data
+    loading.value = true
+    error.value = null
+    
+    // Load planting data from API
+    const response = await plantingsAPI.getById(id)
+    const data = response.data.data || response.data
+    
+    // Map API response to component data
     planting.value = {
-      id: id,
-      field_id: 1,
-      field_name: 'North Field',
-      crop_type: 'corn',
-      variety: 'Pioneer 1234',
-      planted_date: '2024-03-15',
-      expected_harvest: '2024-08-15',
-      status: 'growing',
-      growth_progress: 45,
-      germination_rate: 95,
-      flowering_rate: 20,
-      seed_rate: 32,
-      row_spacing: 30
+      id: data.id,
+      field_id: data.field_id,
+      field_name: data.field?.name || '',
+      field: data.field,
+      crop_type: data.crop_type || 'rice',
+      variety: data.rice_variety?.name || data.variety || '',
+      rice_variety: data.rice_variety,
+      planted_date: data.planting_date || data.planted_date,
+      expected_harvest: data.expected_harvest_date || data.expected_harvest,
+      status: data.status || 'growing',
+      growth_progress: calculateGrowthProgress(data),
+      germination_rate: data.germination_rate || 0,
+      flowering_rate: data.flowering_rate || 0,
+      seed_rate: data.seed_rate || 0,
+      row_spacing: data.row_spacing || 0,
+      planting_stages: data.planting_stages || [],
+      area_planted: data.area_planted,
+      planting_method: data.planting_method,
+      notes: data.notes,
     }
-  } catch (error) {
-    console.error('Error loading planting data:', error)
+    
+    // Load related tasks for this planting
+    try {
+      const tasksResponse = await tasksAPI.getAll()
+      const allTasks = tasksResponse.data.data || tasksResponse.data.tasks || tasksResponse.data || []
+      relatedTasks.value = allTasks
+        .filter(task => task.planting_id === id)
+        .map(task => ({
+          id: task.id,
+          title: task.description || task.title,
+          description: task.description,
+          status: task.status,
+          due_date: task.due_date,
+          completed: task.status === 'completed',
+        }))
+    } catch (taskError) {
+      console.error('Error loading tasks:', taskError)
+      relatedTasks.value = []
+    }
+    
+    // Generate recent activities from planting stages and tasks
+    recentActivities.value = generateActivitiesFromData(data, relatedTasks.value)
+    
+  } catch (err) {
+    console.error('Error loading planting data:', err)
+    error.value = err.response?.data?.message || 'Failed to load planting data'
+  } finally {
+    loading.value = false
   }
+}
+
+const calculateGrowthProgress = (data) => {
+  if (data.planting_stages && data.planting_stages.length > 0) {
+    const completedStages = data.planting_stages.filter(stage => stage.status === 'completed').length
+    return Math.round((completedStages / data.planting_stages.length) * 100)
+  }
+  // Fallback calculation based on status
+  const statusProgress = {
+    'planned': 0,
+    'planted': 20,
+    'growing': 50,
+    'ready': 80,
+    'harvested': 100,
+  }
+  return statusProgress[data.status] || 0
+}
+
+const generateActivitiesFromData = (plantingData, tasks) => {
+  const activities = []
+  
+  // Add planting creation
+  if (plantingData.created_at) {
+    activities.push({
+      id: 'planting-created',
+      type: 'planting',
+      title: 'Planting created',
+      description: `Started ${plantingData.crop_type} planting`,
+      date: plantingData.created_at,
+    })
+  }
+  
+  // Add completed stages
+  if (plantingData.planting_stages) {
+    plantingData.planting_stages
+      .filter(stage => stage.status === 'completed')
+      .forEach(stage => {
+        activities.push({
+          id: `stage-${stage.id}`,
+          type: 'planting',
+          title: `Stage completed: ${stage.rice_growth_stage?.name || 'Stage'}`,
+          description: stage.notes || 'Growth stage completed',
+          date: stage.completed_at || stage.updated_at,
+        })
+      })
+  }
+  
+  // Add completed tasks
+  tasks
+    .filter(task => task.completed)
+    .slice(0, 5)
+    .forEach(task => {
+      activities.push({
+        id: `task-${task.id}`,
+        type: 'maintenance',
+        title: task.title,
+        description: task.description,
+        date: task.due_date,
+      })
+    })
+  
+  // Sort by date and return most recent
+  return activities
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10)
 }
 </script>
 

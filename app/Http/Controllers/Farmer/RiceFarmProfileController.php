@@ -28,6 +28,7 @@ class RiceFarmProfileController extends Controller
             'rice_area' => 'required|numeric|min:0|lte:total_area',
             'farming_experience' => 'nullable|integer|min:0',
             'farm_description' => 'nullable|string|max:1000',
+            'field_name' => 'required|string|max:255',
             
             // Soil Information
             'soil_type' => 'required|string|in:clay,loam,sandy,silt,clay_loam,sandy_loam,silty_clay,silty_loam',
@@ -88,11 +89,12 @@ class RiceFarmProfileController extends Controller
             }
             
             // Create main rice field with comprehensive data
+            $fieldName = $request->field_name ?? 'Main Rice Field';
             $field = Field::updateOrCreate(
                 [
                     'user_id' => $user->id,
                     'farm_id' => $farm->id,
-                    'name' => 'Main Rice Field'
+                    'name' => $fieldName
                 ],
                 [
                     'location' => $locationData,

@@ -14,6 +14,7 @@ import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
 
 // Farm Management
 import FarmerFieldsIndex from '@/Pages/Farmer/Fields/Index.vue';
+import FarmerFieldsCreate from '@/Pages/Farmer/Fields/Create.vue';
 import PlantingsIndex from '@/Pages/Farmer/Plantings/Index.vue';
 import PlantingsCreate from '@/Pages/Farmer/Plantings/Create.vue';
 import PlantingsShow from '@/Pages/Farmer/Plantings/Show.vue';
@@ -103,6 +104,12 @@ const routes = [
     path: '/fields',
     name: 'fields',
     component: FarmerFieldsIndex,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/fields/create',
+    name: 'fields-create',
+    component: FarmerFieldsCreate,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {

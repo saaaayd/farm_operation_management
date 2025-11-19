@@ -29,27 +29,28 @@
       </div>
     </div>
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
+    <header class="bg-gradient-to-r from-white to-green-50 shadow-md border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
+        <div class="flex justify-between items-center py-5">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
             </div>
-            <div class="ml-3">
-              <h1 class="text-xl font-semibold text-gray-900">RiceFARM Dashboard</h1>
-              <p class="text-sm text-gray-500">Welcome back, {{ authStore.user?.name }}</p>
+            <div class="ml-4">
+              <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">RiceFARM Dashboard</h1>
+              <p class="text-sm text-gray-600 mt-0.5">Welcome back, <span class="font-semibold text-gray-800">{{ authStore.user?.name }}</span></p>
             </div>
           </div>
           
           <div class="flex items-center space-x-4">
             <button
               @click="logout"
-              class="text-gray-500 hover:text-gray-700 transition-colors"
+              class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              title="Logout"
             >
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -72,66 +73,74 @@
     <main v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
+        <div class="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-green-100 transition-all duration-200 transform hover:-translate-y-1">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="h-12 w-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-500">Total Planted Area</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ totalPlantedArea }} ha</p>
+              <div class="ml-4">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Planted Area</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ totalPlantedArea }} <span class="text-sm font-normal text-gray-600">ha</span></p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
+        <div class="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-blue-100 transition-all duration-200 transform hover:-translate-y-1">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="h-12 w-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-500">Tasks Due Today</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ tasksDueToday }}</p>
+              <div class="ml-4">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tasks Due Today</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ tasksDueToday }}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+        <div class="bg-gradient-to-br from-white to-yellow-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-yellow-100 transition-all duration-200 transform hover:-translate-y-1">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="h-12 w-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-500">Low Stock Alerts</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ lowStockCount }}</p>
+              <div class="ml-4">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Low Stock Alerts</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ lowStockCount }}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
+        <div class="bg-gradient-to-br from-white to-purple-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-purple-100 transition-all duration-200 transform hover:-translate-y-1">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="h-12 w-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-500">Pending Orders</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ pendingOrders }}</p>
+              <div class="ml-4">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Orders</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ pendingOrders }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -143,14 +152,17 @@
         <div class="lg:col-span-1">
           <!-- Field Selector Dropdown -->
           <div v-if="fieldsWithCoordinates.length > 1" class="mb-4">
-            <label for="field-selector" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="field-selector" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+              <svg class="h-4 w-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
               Select Field for Weather
             </label>
             <select
               id="field-selector"
               v-model="selectedFieldId"
               @change="onFieldChange"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white text-sm"
+              class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm transition-all duration-200 hover:border-gray-400"
             >
               <option v-for="field in fieldsWithCoordinates" :key="field.id" :value="field.id">
                 {{ field.name }} {{ field.location?.address ? `(${field.location.address})` : '' }}

@@ -1,6 +1,35 @@
 <template>
   <div class="task-detail-page">
     <div class="container mx-auto px-4 py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Loading task data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Error Loading Task</h3>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+            <button
+              @click="loadTaskData(route.params.id)"
+              class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div v-else>
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
@@ -245,6 +274,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -252,6 +282,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { tasksAPI, fieldsAPI, laborAPI } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -269,62 +300,18 @@ const task = ref({
   estimated_hours: 0,
   actual_hours: 0,
   completed: false,
-  created_at: ''
+  created_at: '',
+  planting: null,
+  laborer: null,
 })
 
 const timerRunning = ref(false)
 const newComment = ref('')
-
-const comments = ref([
-  {
-    id: 1,
-    author: 'John Smith',
-    content: 'Started working on this task. Will need to check weather conditions first.',
-    created_at: '2024-03-25T10:00:00Z'
-  },
-  {
-    id: 2,
-    author: 'Mike Johnson',
-    content: 'Weather looks good for tomorrow. Should be able to complete this task.',
-    created_at: '2024-03-25T14:30:00Z'
-  }
-])
-
-const taskHistory = ref([
-  {
-    id: 1,
-    type: 'created',
-    description: 'Task created',
-    created_at: '2024-03-20T09:00:00Z'
-  },
-  {
-    id: 2,
-    type: 'assigned',
-    description: 'Assigned to John Smith',
-    created_at: '2024-03-20T09:15:00Z'
-  },
-  {
-    id: 3,
-    type: 'started',
-    description: 'Task started',
-    created_at: '2024-03-25T10:00:00Z'
-  }
-])
-
-const relatedTasks = ref([
-  {
-    id: 2,
-    title: 'Check irrigation system',
-    status: 'in_progress',
-    due_date: '2024-03-30'
-  },
-  {
-    id: 4,
-    title: 'Monitor field conditions',
-    status: 'pending',
-    due_date: '2024-04-05'
-  }
-])
+const comments = ref([])
+const taskHistory = ref([])
+const relatedTasks = ref([])
+const loading = ref(true)
+const error = ref(null)
 
 const daysUntilDue = computed(() => {
   if (!task.value.due_date) return 'N/A'
@@ -363,8 +350,7 @@ const toggleTaskCompletion = () => {
 }
 
 const editTask = () => {
-  // Navigate to edit page or show edit modal
-  console.log('Edit task')
+  router.push(`/tasks/${task.value.id}/edit`)
 }
 
 const startTimer = () => {
@@ -377,9 +363,25 @@ const stopTimer = () => {
   // Stop timer and add time to actual_hours
 }
 
-const addTime = () => {
-  // Show modal to manually add time
-  console.log('Add time')
+const addTime = async () => {
+  const hours = prompt('Enter hours worked:', '0')
+  if (hours === null) return
+  
+  const hoursNum = Number(hours)
+  if (isNaN(hoursNum) || hoursNum < 0) {
+    alert('Please enter a valid number of hours')
+    return
+  }
+  
+  try {
+    // Update task with hours worked
+    await tasksAPI.update(task.value.id, { hours_worked: hoursNum })
+    await loadTaskData(task.value.id)
+    alert('Time logged successfully')
+  } catch (error) {
+    console.error('Failed to add time:', error)
+    alert('Failed to log time: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
 const addComment = () => {
@@ -395,14 +397,57 @@ const addComment = () => {
   newComment.value = ''
 }
 
-const assignTask = () => {
-  // Show assign task modal
-  console.log('Assign task')
+const assignTask = async () => {
+  // Load laborers for assignment
+  try {
+    const laborersResponse = await laborAPI.getLaborers()
+    const laborers = laborersResponse.data.laborers || laborersResponse.data || []
+    
+    if (laborers.length === 0) {
+      alert('No laborers available. Please create a laborer first.')
+      return
+    }
+    
+    const laborerNames = laborers.map(l => `${l.id}: ${l.name}`).join('\n')
+    const laborerId = prompt(`Select laborer ID:\n\n${laborerNames}`, task.value.assigned_to?.toString() || '')
+    
+    if (laborerId === null) return
+    
+    const id = Number(laborerId)
+    if (isNaN(id) || id <= 0) {
+      alert('Please enter a valid laborer ID')
+      return
+    }
+    
+    await tasksAPI.update(task.value.id, { assigned_to: id })
+    await loadTaskData(task.value.id)
+    alert('Task assigned successfully')
+  } catch (error) {
+    console.error('Failed to assign task:', error)
+    alert('Failed to assign task: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
-const duplicateTask = () => {
-  // Duplicate task logic
-  console.log('Duplicate task')
+const duplicateTask = async () => {
+  if (!confirm('Create a duplicate of this task?')) return
+  
+  try {
+    const taskData = {
+      planting_id: task.value.planting_id,
+      task_type: task.value.task_type,
+      description: task.value.description + ' (Copy)',
+      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
+      status: 'pending',
+      assigned_to: task.value.assigned_to || null,
+    }
+    
+    await tasksAPI.create(taskData)
+    alert('Task duplicated successfully')
+    router.push('/tasks')
+  } catch (error) {
+    console.error('Failed to duplicate task:', error)
+    alert('Failed to duplicate task: ' + (error.response?.data?.message || 'Unknown error'))
+  }
 }
 
 const viewField = () => {
@@ -424,25 +469,92 @@ onMounted(() => {
 
 const loadTaskData = async (id) => {
   try {
-    // API call to load task data
-    // For now, using mock data
+    loading.value = true
+    error.value = null
+    
+    // Load task data from API
+    const response = await tasksAPI.getById(id)
+    const data = response.data.data || response.data
+    
+    // Map API response to component data
     task.value = {
-      id: id,
-      title: 'Apply herbicide to North Field',
-      description: 'Apply pre-emergent herbicide to prevent weed growth',
-      field_id: 1,
-      field_name: 'North Field',
-      priority: 'high',
-      status: 'pending',
-      due_date: '2024-04-01',
-      assigned_to: 'John Smith',
-      estimated_hours: 4,
-      actual_hours: 1.5,
-      completed: false,
-      created_at: '2024-03-20T09:00:00Z'
+      id: data.id,
+      title: data.description || data.title || 'Task',
+      description: data.description || '',
+      field_id: data.planting?.field_id || data.field_id,
+      field_name: data.planting?.field?.name || data.field?.name || '',
+      priority: data.priority || 'medium',
+      status: data.status || 'pending',
+      due_date: data.due_date,
+      assigned_to: data.assigned_to,
+      estimated_hours: data.estimated_hours || 0,
+      actual_hours: data.actual_hours || 0,
+      completed: data.status === 'completed',
+      created_at: data.created_at,
+      planting: data.planting,
+      laborer: data.laborer,
     }
-  } catch (error) {
-    console.error('Error loading task data:', error)
+    
+    // Generate task history from task data
+    taskHistory.value = []
+    if (data.created_at) {
+      taskHistory.value.push({
+        id: 'created',
+        type: 'created',
+        description: 'Task created',
+        created_at: data.created_at,
+      })
+    }
+    if (data.assigned_to && data.laborer) {
+      taskHistory.value.push({
+        id: 'assigned',
+        type: 'assigned',
+        description: `Assigned to ${data.laborer.name || 'laborer'}`,
+        created_at: data.updated_at || data.created_at,
+      })
+    }
+    if (data.status === 'in_progress') {
+      taskHistory.value.push({
+        id: 'started',
+        type: 'started',
+        description: 'Task started',
+        created_at: data.updated_at || data.created_at,
+      })
+    }
+    if (data.status === 'completed') {
+      taskHistory.value.push({
+        id: 'completed',
+        type: 'completed',
+        description: 'Task completed',
+        created_at: data.updated_at || data.created_at,
+      })
+    }
+    
+    // Load related tasks (tasks for the same planting)
+    if (data.planting_id) {
+      try {
+        const tasksResponse = await tasksAPI.getAll()
+        const allTasks = tasksResponse.data.data || tasksResponse.data.tasks || tasksResponse.data || []
+        relatedTasks.value = allTasks
+          .filter(t => t.planting_id === data.planting_id && t.id !== id)
+          .slice(0, 5)
+          .map(t => ({
+            id: t.id,
+            title: t.description || t.title,
+            status: t.status,
+            due_date: t.due_date,
+          }))
+      } catch (taskError) {
+        console.error('Error loading related tasks:', taskError)
+        relatedTasks.value = []
+      }
+    }
+    
+  } catch (err) {
+    console.error('Error loading task data:', err)
+    error.value = err.response?.data?.message || 'Failed to load task data'
+  } finally {
+    loading.value = false
   }
 }
 </script>

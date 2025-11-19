@@ -13,6 +13,7 @@ use App\Models\RiceProduct;
 use App\Models\InventoryItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class AdminDashboardController extends Controller
@@ -119,11 +120,12 @@ class AdminDashboardController extends Controller
             ->where('role', '!=', 'admin')
             ->count();
 
-        $dailyCounts = User::selectRaw('DATE(created_at)::text as date, COUNT(*) as count')
+        // Using database-agnostic date formatting
+        $dailyCounts = User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
             ->where('role', '!=', 'admin')
-            ->groupByRaw('DATE(created_at)')
+            ->groupBy('date')
             ->orderBy('date', 'asc')
             ->get()
             ->mapWithKeys(function ($item) {
@@ -160,13 +162,29 @@ class AdminDashboardController extends Controller
         $startDate = Carbon::now()->subMonths($months)->startOfMonth();
         $endDate = Carbon::now()->endOfMonth();
 
-        $monthlySales = Sale::selectRaw('EXTRACT(YEAR FROM sale_date)::integer as year, EXTRACT(MONTH FROM sale_date)::integer as month, SUM(total_amount) as total')
+        // Using database-agnostic date formatting
+        $driver = DB::connection()->getDriverName();
+        $dateFormat = match($driver) {
+            'mysql' => 'DATE_FORMAT(sale_date, "%Y-%m")',
+            'pgsql' => "TO_CHAR(sale_date, 'YYYY-MM')",
+            'sqlite' => "strftime('%Y-%m', sale_date)",
+            default => 'DATE_FORMAT(sale_date, "%Y-%m")',
+        };
+        
+        $monthlySales = Sale::selectRaw("{$dateFormat} as period, SUM(total_amount) as total")
             ->where('sale_date', '>=', $startDate)
             ->where('sale_date', '<=', $endDate)
-            ->groupByRaw('EXTRACT(YEAR FROM sale_date), EXTRACT(MONTH FROM sale_date)')
-            ->orderBy('year', 'asc')
-            ->orderBy('month', 'asc')
-            ->get();
+            ->groupBy('period')
+            ->orderBy('period', 'asc')
+            ->get()
+            ->map(function ($item) {
+                [$year, $month] = explode('-', $item->period);
+                return [
+                    'year' => (int) $year,
+                    'month' => (int) $month,
+                    'total' => (float) $item->total,
+                ];
+            });
 
         $labels = [];
         $data = [];
@@ -193,13 +211,29 @@ class AdminDashboardController extends Controller
         $startDate = Carbon::now()->subMonths($months)->startOfMonth();
         $endDate = Carbon::now()->endOfMonth();
 
-        $monthlyExpenses = Expense::selectRaw('EXTRACT(YEAR FROM date)::integer as year, EXTRACT(MONTH FROM date)::integer as month, SUM(amount) as total')
+        // Using database-agnostic date formatting
+        $driver = DB::connection()->getDriverName();
+        $dateFormat = match($driver) {
+            'mysql' => 'DATE_FORMAT(date, "%Y-%m")',
+            'pgsql' => "TO_CHAR(date, 'YYYY-MM')",
+            'sqlite' => "strftime('%Y-%m', date)",
+            default => 'DATE_FORMAT(date, "%Y-%m")',
+        };
+        
+        $monthlyExpenses = Expense::selectRaw("{$dateFormat} as period, SUM(amount) as total")
             ->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate)
-            ->groupByRaw('EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)')
-            ->orderBy('year', 'asc')
-            ->orderBy('month', 'asc')
-            ->get();
+            ->groupBy('period')
+            ->orderBy('period', 'asc')
+            ->get()
+            ->map(function ($item) {
+                [$year, $month] = explode('-', $item->period);
+                return [
+                    'year' => (int) $year,
+                    'month' => (int) $month,
+                    'total' => (float) $item->total,
+                ];
+            });
 
         $labels = [];
         $data = [];
