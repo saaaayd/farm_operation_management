@@ -8,21 +8,21 @@
         aria-modal="true"
         @keydown.esc.prevent="closeOnEscape"
       >
-        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="handleBackdrop" />
+        <div class="absolute inset-0 bg-gray-900/70 backdrop-blur-md" @click="handleBackdrop" />
         <div
-          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-black/5"
+          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-strong ring-1 ring-gray-100 transform transition-all"
           :class="contentClass"
         >
-          <header v-if="withHeader" class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+          <header v-if="withHeader" class="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-5">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">
+              <h3 class="text-lg font-bold text-gray-900">
                 <slot name="title">{{ title }}</slot>
               </h3>
-              <p v-if="subtitle" class="mt-1 text-sm text-gray-500">{{ subtitle }}</p>
+              <p v-if="subtitle" class="mt-1 text-sm text-gray-600 font-medium">{{ subtitle }}</p>
             </div>
             <button
               type="button"
-              class="inline-flex items-center justify-center rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="inline-flex items-center justify-center rounded-lg p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               @click="emitClose"
             >
               <span class="sr-only">Close modal</span>
@@ -36,11 +36,11 @@
             </button>
           </header>
 
-          <section class="px-6 py-5 text-left text-gray-700">
+          <section class="px-6 py-6 text-left text-gray-700">
             <slot />
           </section>
 
-          <footer v-if="$slots.footer" class="flex items-center justify-end gap-3 bg-gray-50 px-6 py-4">
+          <footer v-if="$slots.footer" class="flex items-center justify-end gap-3 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 px-6 py-4">
             <slot name="footer" />
           </footer>
         </div>
@@ -110,9 +110,12 @@ const closeOnEscape = event => {
 </script>
 
 <style scoped>
-.fade-enter-active,
+.fade-enter-active {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .fade-enter-from,
