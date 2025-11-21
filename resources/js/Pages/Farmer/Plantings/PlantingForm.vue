@@ -1,25 +1,25 @@
 <template>
-  <form @submit.prevent="submitForm" class="space-y-6">
+  <form @submit.prevent="submitForm" class="space-y-6 w-full">
     <div v-if="form.errors.general" class="p-4 bg-red-50 border border-red-300 text-red-800 rounded-md">
       <h3 class="font-medium">An error occurred:</h3>
       <p>{{ form.errors.general }}</p>
     </div>
 
-    <div class="bg-white shadow sm:rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">Planting Details</h3>
-        <p class="mt-1 text-sm text-gray-500">
+    <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+      <div class="px-6 py-6 sm:px-8 sm:py-8">
+        <h3 class="text-xl font-semibold text-gray-900">Planting Details</h3>
+        <p class="mt-1 text-sm text-gray-600">
           Provide the core details about this planting cycle.
         </p>
 
-        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div class="sm:col-span-1">
-            <label for="field_id" class="block text-sm font-medium text-gray-700">Field</label>
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div>
+            <label for="field_id" class="block text-sm font-semibold text-gray-700 mb-2">Field</label>
             <select
               id="field_id"
               v-model="form.data.field_id"
               required
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.field_id }"
             >
               <option value="" disabled>Select a field</option>
@@ -30,91 +30,122 @@
             <p v-if="form.errors.field_id" class="mt-1 text-xs text-red-600">{{ form.errors.field_id }}</p>
           </div>
 
-          <div class="sm:col-span-1">
-            <label for="crop_type" class="block text-sm font-medium text-gray-700">Crop Name</label>
+          <div>
+            <label for="crop_type" class="block text-sm font-semibold text-gray-700 mb-2">Crop Name</label>
             <input
               type="text"
               id="crop_type"
               v-model="form.data.crop_type"
               placeholder="e.g., Rice"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.crop_type }"
             />
             <p v-if="form.errors.crop_type" class="mt-1 text-xs text-red-600">{{ form.errors.crop_type }}</p>
           </div>
           
-          <div class="sm:col-span-1">
-            <label for="rice_variety_id" class="block text-sm font-medium text-gray-700">Rice Variety</label>
-            <input
-              type="text"
+          <div>
+            <label for="rice_variety_id" class="block text-sm font-semibold text-gray-700 mb-2">Rice Variety</label>
+            <select
               id="rice_variety_id"
               v-model="form.data.rice_variety_id"
-              placeholder="e.g., RC 216 (testing, replace with dropdown)"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.rice_variety_id }"
-            />
-             <p v-if="form.errors.rice_variety_id" class="mt-1 text-xs text-red-600">{{ form.errors.rice_variety_id }}</p>
+            >
+              <option value="">Select rice variety</option>
+              <option
+                v-for="variety in riceVarieties"
+                :key="variety.id"
+                :value="variety.id"
+              >
+                {{ variety.name }}
+              </option>
+            </select>
+            <p v-if="form.errors.rice_variety_id" class="mt-1 text-xs text-red-600">{{ form.errors.rice_variety_id }}</p>
           </div>
 
-          <div class="sm:col-span-1">
-            <label for="season" class="block text-sm font-medium text-gray-700">Season</label>
+          <div>
+            <label for="season" class="block text-sm font-semibold text-gray-700 mb-2">Season</label>
             <select
               id="season"
               v-model="form.data.season"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.season }"
             >
-              <option value="wet">Wet Season (May - Oct)</option>
-              <option value="dry">Dry Season (Nov - Apr)</option>
+              <option value="wet">Rainy Season (Jun - Nov)</option>
+              <option value="dry">Dry Season (Dec - May)</option>
             </select>
             <p v-if="form.errors.season" class="mt-1 text-xs text-red-600">{{ form.errors.season }}</p>
+            <p class="mt-1 text-xs text-gray-500">
+              Based on Philippines climate. Auto-detected from planting date.
+            </p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white shadow sm:rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">Schedule & Status</h3>
+    <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+      <div class="px-6 py-6 sm:px-8 sm:py-8">
+        <h3 class="text-xl font-semibold text-gray-900">Schedule & Status</h3>
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
-            <label for="planting_date" class="block text-sm font-medium text-gray-700">Planting Date</label>
+            <label for="planting_date" class="block text-sm font-semibold text-gray-700 mb-2">Planting Date</label>
             <input
               type="date"
               id="planting_date"
               v-model="form.data.planting_date"
               required
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.planting_date }"
             />
             <p v-if="form.errors.planting_date" class="mt-1 text-xs text-red-600">{{ form.errors.planting_date }}</p>
           </div>
           
           <div>
-            <label for="expected_harvest_date" class="block text-sm font-medium text-gray-700">Expected Harvest Date</label>
+            <label for="expected_harvest_date" class="block text-sm font-semibold text-gray-700 mb-2">
+              Expected Harvest Date
+              <span v-if="isAutoCalculated" class="text-xs font-normal text-gray-500 ml-2">(Auto-calculated)</span>
+            </label>
             <input
               type="date"
               id="expected_harvest_date"
               v-model="form.data.expected_harvest_date"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-              :class="{ 'border-red-500': form.errors.expected_harvest_date }"
+              :min="minHarvestDate"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+              :class="{ 'border-red-500': form.errors.expected_harvest_date, 'bg-gray-50': isAutoCalculated }"
+              @input="onHarvestDateManualChange"
             />
             <p v-if="form.errors.expected_harvest_date" class="mt-1 text-xs text-red-600">{{ form.errors.expected_harvest_date }}</p>
+            <p v-if="isAutoCalculated && !form.errors.expected_harvest_date" class="mt-1 text-xs text-gray-500">
+              Calculated from planting date + {{ selectedRiceVariety?.maturity_days || 'variety' }} days maturity
+            </p>
+            <p v-else-if="!isAutoCalculated && form.data.planting_date && form.data.expected_harvest_date" class="mt-1 text-xs text-gray-500">
+              You can manually adjust this date if needed
+            </p>
           </div>
 
           <div>
-            <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+            <label for="status" class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
             <select
               id="status"
               v-model="form.data.status"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.status }"
             >
-              <option value="planted">Planted</option>
-              <option value="growing">Growing</option>
-              <option value="ready">Ready for Harvest</option>
-              <option value="harvested">Harvested</option>
-              <option value="failed">Failed</option>
+              <!-- When creating new planting -->
+              <template v-if="!isEditMode">
+                <option value="planned">Planned (Future planting)</option>
+                <option value="planted">Planted</option>
+              </template>
+              
+              <!-- When editing existing planting -->
+              <template v-else>
+                <option value="planned">Planned</option>
+                <option value="planted">Planted</option>
+                <option value="growing">Growing</option>
+                <option value="ready">Ready for Harvest</option>
+                <option value="harvested">Harvested</option>
+                <option value="failed">Failed</option>
+              </template>
             </select>
             <p v-if="form.errors.status" class="mt-1 text-xs text-red-600">{{ form.errors.status }}</p>
           </div>
@@ -122,16 +153,16 @@
       </div>
     </div>
     
-    <div class="bg-white shadow sm:rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">Method & Quantity</h3>
+    <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+      <div class="px-6 py-6 sm:px-8 sm:py-8">
+        <h3 class="text-xl font-semibold text-gray-900">Method & Quantity</h3>
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
-            <label for="planting_method" class="block text-sm font-medium text-gray-700">Planting Method</label>
+            <label for="planting_method" class="block text-sm font-semibold text-gray-700 mb-2">Planting Method</label>
             <select
               id="planting_method"
               v-model="form.data.planting_method"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.planting_method }"
             >
               <option value="transplanting">Transplanting</option>
@@ -142,28 +173,28 @@
           </div>
           
           <div>
-            <label for="area_planted" class="block text-sm font-medium text-gray-700">Area Planted (ha)</label>
+            <label for="area_planted" class="block text-sm font-semibold text-gray-700 mb-2">Area Planted (ha)</label>
             <input
               type="number"
               step="0.1"
               min="0"
               id="area_planted"
               v-model.number="form.data.area_planted"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.area_planted }"
             />
             <p v-if="form.errors.area_planted" class="mt-1 text-xs text-red-600">{{ form.errors.area_planted }}</p>
           </div>
 
           <div>
-            <label for="seed_rate" class="block text-sm font-medium text-gray-700">Seed Quantity (kg)</label>
+            <label for="seed_rate" class="block text-sm font-semibold text-gray-700 mb-2">Seed Quantity (kg)</label>
             <input
               type="number"
               step="1"
               min="0"
               id="seed_rate"
               v-model.number="form.data.seed_rate"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               :class="{ 'border-red-500': form.errors.seed_rate }"
             />
             <p v-if="form.errors.seed_rate" class="mt-1 text-xs text-red-600">{{ form.errors.seed_rate }}</p>
@@ -172,15 +203,15 @@
       </div>
     </div>
 
-    <div class="bg-white shadow sm:rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">Notes</h3>
+    <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+      <div class="px-6 py-6 sm:px-8 sm:py-8">
+        <h3 class="text-xl font-semibold text-gray-900">Notes</h3>
         <div class="mt-4">
           <textarea
             id="notes"
             v-model="form.data.notes"
             rows="4"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+            class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition resize-none"
             :class="{ 'border-red-500': form.errors.notes }"
             placeholder="Any additional notes about this planting..."
           ></textarea>
@@ -189,7 +220,7 @@
       </div>
     </div>
     
-    <div class="flex justify-end gap-3 pt-4">
+    <div class="flex justify-end gap-3 pt-6 border-t border-gray-200 bg-white rounded-xl px-6 py-4">
       <button
         type="button"
         @click="cancelForm"
@@ -213,7 +244,8 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
-import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue' // Assuming you have this
+import { useMarketplaceStore } from '@/stores/marketplace'
+import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 
 const props = defineProps({
   planting: {
@@ -224,8 +256,35 @@ const props = defineProps({
 
 const router = useRouter()
 const farmStore = useFarmStore()
+const marketplaceStore = useMarketplaceStore()
 
 const isEditMode = computed(() => !!props.planting)
+const riceVarieties = computed(() => marketplaceStore.riceVarieties || [])
+
+// Get selected rice variety
+const selectedRiceVariety = computed(() => {
+  if (!form.value.data.rice_variety_id) return null
+  return riceVarieties.value.find(v => v.id == form.value.data.rice_variety_id)
+})
+
+// Track if harvest date was manually changed
+const harvestDateManuallyChanged = ref(false)
+
+// Check if harvest date is auto-calculated
+const isAutoCalculated = computed(() => {
+  return !harvestDateManuallyChanged.value && 
+         form.value.data.planting_date && 
+         form.value.data.rice_variety_id &&
+         selectedRiceVariety.value?.maturity_days
+})
+
+// Minimum harvest date (must be after planting date)
+const minHarvestDate = computed(() => {
+  if (!form.value.data.planting_date) return ''
+  const plantingDate = new Date(form.value.data.planting_date)
+  plantingDate.setDate(plantingDate.getDate() + 1) // At least 1 day after planting
+  return plantingDate.toISOString().split('T')[0]
+})
 
 // Helper to format dates for <input type="date">
 const formatDateForInput = (dateString) => {
@@ -238,19 +297,65 @@ const formatDateForInput = (dateString) => {
   }
 }
 
-const getInitialFormData = () => ({
-  field_id: props.planting?.field_id || '',
-  rice_variety_id: props.planting?.rice_variety_id || null, // <-- Use null
-  crop_type: props.planting?.crop_type || 'Rice',
-  planting_date: formatDateForInput(props.planting?.planting_date),
-  expected_harvest_date: formatDateForInput(props.planting?.expected_harvest_date) || null, // <-- Use null
-  planting_method: props.planting?.planting_method || 'transplanting',
-  seed_rate: props.planting?.seed_rate || null, // <-- Use null
-  area_planted: props.planting?.area_planted || null, // <-- Use null
-  season: props.planting?.season || 'wet',
-  status: props.planting?.status || 'planted',
-  notes: props.planting?.notes || null, // <-- Use null
-})
+// Helper function to determine season based on month (Philippines)
+const getSeasonFromDate = (dateString) => {
+  if (!dateString) return 'wet'; // Default to rainy season
+  
+  try {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    // Philippines seasons according to PAGASA:
+    // Rainy season: June (6) to November (11)
+    // Dry season: December (12) to May (5)
+    if (month >= 6 && month <= 11) {
+      return 'wet'; // Rainy season
+    } else {
+      return 'dry'; // Dry season
+    }
+  } catch (e) {
+    return 'wet'; // Default fallback
+  }
+}
+
+const getInitialFormData = () => {
+  // Auto-set status based on planting date for new plantings
+  let defaultStatus = 'planted';
+  
+  // Get planting date (either from existing planting or will be set later)
+  const plantingDateStr = formatDateForInput(props.planting?.planting_date);
+  
+  // For new plantings, we'll default to 'planted' and let the watcher adjust it
+  // For existing plantings, use their current status
+  if (props.planting) {
+    defaultStatus = props.planting.status || 'planted';
+  }
+  
+  // Auto-detect season from planting date (Philippines)
+  let defaultSeason = 'wet';
+  if (props.planting?.season) {
+    defaultSeason = props.planting.season;
+  } else if (plantingDateStr) {
+    defaultSeason = getSeasonFromDate(plantingDateStr);
+  } else {
+    // If no planting date, use current month to suggest season
+    defaultSeason = getSeasonFromDate(new Date().toISOString());
+  }
+  
+  return {
+    field_id: props.planting?.field_id || '',
+    rice_variety_id: props.planting?.rice_variety_id || '',
+    crop_type: props.planting?.crop_type || 'Rice',
+    planting_date: plantingDateStr,
+    expected_harvest_date: formatDateForInput(props.planting?.expected_harvest_date) || null,
+    planting_method: props.planting?.planting_method || 'transplanting',
+    seed_rate: props.planting?.seed_rate || null,
+    area_planted: props.planting?.area_planted || null,
+    season: defaultSeason,
+    status: defaultStatus,
+    notes: props.planting?.notes || null,
+  }
+}
 
 const form = ref({
   data: getInitialFormData(),
@@ -262,20 +367,109 @@ const form = ref({
 watch(() => props.planting, () => {
   form.value.data = getInitialFormData()
   form.value.errors = {}
+  harvestDateManuallyChanged.value = false // Reset manual change flag
 })
 
-// Fetch fields if not already in store
-onMounted(() => {
-  if (farmStore.fields.length === 0) {
-    farmStore.fetchFields().catch(err => {
-      form.value.errors.general = "Could not load fields. Please refresh."
-    })
+// Calculate expected harvest date when planting date or rice variety changes
+const calculateExpectedHarvestDate = () => {
+  if (!harvestDateManuallyChanged.value && 
+      form.value.data.planting_date && 
+      selectedRiceVariety.value?.maturity_days) {
+    const plantingDate = new Date(form.value.data.planting_date)
+    const harvestDate = new Date(plantingDate)
+    harvestDate.setDate(harvestDate.getDate() + selectedRiceVariety.value.maturity_days)
+    form.value.data.expected_harvest_date = formatDateForInput(harvestDate.toISOString())
+  }
+}
+
+// Watch for planting date changes
+watch(() => form.value.data.planting_date, (newDate) => {
+  if (newDate) {
+    // Auto-update status based on date
+    if (!isEditMode.value) {
+      const plantingDate = new Date(newDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      plantingDate.setHours(0, 0, 0, 0);
+      
+      // If planting date is in the future, suggest 'planned'
+      // If today or past, suggest 'planted'
+      if (plantingDate > today && form.value.data.status === 'planted') {
+        form.value.data.status = 'planned';
+      } else if (plantingDate <= today && form.value.data.status === 'planned') {
+        form.value.data.status = 'planted';
+      }
+    }
+    
+    // Auto-update season based on planting date month (Philippines)
+    const detectedSeason = getSeasonFromDate(newDate);
+    if (detectedSeason !== form.value.data.season) {
+      form.value.data.season = detectedSeason;
+    }
+    
+    // Auto-calculate harvest date if not manually changed
+    calculateExpectedHarvestDate()
+  }
+})
+
+// Watch for rice variety changes
+watch(() => form.value.data.rice_variety_id, () => {
+  // Auto-calculate harvest date if not manually changed
+  calculateExpectedHarvestDate()
+})
+
+// Handle manual changes to harvest date
+const onHarvestDateManualChange = () => {
+  harvestDateManuallyChanged.value = true
+}
+
+// Fetch fields and rice varieties if not already in store
+onMounted(async () => {
+  try {
+    if (farmStore.fields.length === 0) {
+      await farmStore.fetchFields()
+    }
+    if (marketplaceStore.riceVarieties.length === 0) {
+      await marketplaceStore.fetchRiceVarieties()
+    }
+    
+    // If in edit mode and harvest date exists, mark as manually changed to preserve it
+    if (isEditMode.value && form.value.data.expected_harvest_date) {
+      harvestDateManuallyChanged.value = true
+    }
+    
+    // For new plantings, try to auto-calculate if we have the data
+    if (!isEditMode.value && form.value.data.planting_date && form.value.data.rice_variety_id) {
+      calculateExpectedHarvestDate()
+    }
+  } catch (err) {
+    form.value.errors.general = "Could not load required data. Please refresh."
+    console.error('Error loading form data:', err)
   }
 })
 
 const submitForm = async () => {
   form.value.processing = true
   form.value.errors = {}
+
+  // Validate expected harvest date is after planting date
+  if (form.value.data.planting_date && form.value.data.expected_harvest_date) {
+    const plantingDate = new Date(form.value.data.planting_date)
+    const harvestDate = new Date(form.value.data.expected_harvest_date)
+    
+    if (harvestDate <= plantingDate) {
+      form.value.errors.expected_harvest_date = 'Expected harvest date must be after the planting date'
+      form.value.processing = false
+      return
+    }
+  }
+
+  // Auto-calculate harvest date if not set and we have the required data
+  if (!form.value.data.expected_harvest_date && 
+      form.value.data.planting_date && 
+      selectedRiceVariety.value?.maturity_days) {
+    calculateExpectedHarvestDate()
+  }
 
   // --- DATA CLEANING STEP ---
   // Create a copy of the data to send
@@ -288,6 +482,13 @@ const submitForm = async () => {
       payload[key] = null;
     }
   }
+  
+  // Convert rice_variety_id to number if it exists, otherwise set to null
+  if (payload.rice_variety_id && payload.rice_variety_id !== '') {
+    payload.rice_variety_id = Number(payload.rice_variety_id);
+  } else {
+    payload.rice_variety_id = null;
+  }
   // --- END CLEANING STEP ---
 
   try {
@@ -297,6 +498,8 @@ const submitForm = async () => {
     } else {
       // Send the cleaned payload
       await farmStore.createPlanting(payload)
+      // Refresh fields so current_crop updates in the fields view
+      await farmStore.fetchFields()
     }
     // Success - navigate back to the index page
     router.push('/plantings')

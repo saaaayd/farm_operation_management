@@ -26,7 +26,7 @@ class HarvestController extends Controller
             });
         }
         
-        $harvests = $query->with(['planting.field', 'planting.crop'])->get();
+        $harvests = $query->with(['planting.field', 'planting.riceVariety'])->get();
         
         return response()->json([
             'harvests' => $harvests
@@ -70,6 +70,7 @@ class HarvestController extends Controller
             'planting_id' => $request->planting_id,
             'harvest_date' => $request->harvest_date,
             'quantity' => $request->quantity,
+            'yield' => $request->quantity, // Also set yield for backward compatibility
             'unit' => $request->unit,
             'quality_grade' => $request->quality_grade,
             'price_per_unit' => $request->price_per_unit,
@@ -79,7 +80,7 @@ class HarvestController extends Controller
 
         return response()->json([
             'message' => 'Harvest created successfully',
-            'harvest' => $harvest->load(['planting.field', 'planting.crop'])
+            'harvest' => $harvest->load(['planting.field', 'planting.riceVariety'])
         ], 201);
     }
 
@@ -96,7 +97,7 @@ class HarvestController extends Controller
             ], 403);
         }
 
-        $harvest->load(['planting.field', 'planting.crop']);
+        $harvest->load(['planting.field', 'planting.riceVariety']);
 
         return response()->json([
             'harvest' => $harvest
@@ -133,14 +134,21 @@ class HarvestController extends Controller
             ], 422);
         }
 
-        $harvest->update($request->only([
+        $updateData = $request->only([
             'harvest_date', 'quantity', 'unit', 'quality_grade',
             'price_per_unit', 'total_value', 'notes'
-        ]));
+        ]);
+        
+        // Map quantity to yield if provided for backward compatibility
+        if (isset($updateData['quantity'])) {
+            $updateData['yield'] = $updateData['quantity'];
+        }
+        
+        $harvest->update($updateData);
 
         return response()->json([
             'message' => 'Harvest updated successfully',
-            'harvest' => $harvest->load(['planting.field', 'planting.crop'])
+            'harvest' => $harvest->load(['planting.field', 'planting.riceVariety'])
         ]);
     }
 

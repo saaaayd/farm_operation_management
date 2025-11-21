@@ -18,7 +18,7 @@
       <!-- Global Loading -->
       <transition name="fade">
         <div v-if="loading || authStore.loading" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div class="bg-white p-8 rounded-2xl shadow-strong max-w-sm w-full mx-4 transform transition-all">
+          <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
             <div class="flex flex-col items-center">
               <div class="relative">
                 <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-200"></div>
@@ -34,7 +34,7 @@
       <!-- Global Error Toast -->
       <transition name="slide-fade">
         <div v-if="authStore.error" class="fixed top-4 right-4 z-50 max-w-sm w-full">
-          <div class="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-800 px-5 py-4 rounded-lg shadow-strong flex items-start justify-between animate-slide-in">
+          <div class="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-800 px-5 py-4 rounded-lg shadow-2xl flex items-start justify-between animate-slide-in">
             <div class="flex items-start">
               <svg class="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />

@@ -20,8 +20,30 @@ export const useFarmStore = defineStore('farm', {
   getters: {
     hasFarmProfile: (state) => !!state.farmProfile,
     // Getter to find plantings that can be harvested
+    // Include all active plantings (not failed) as they can potentially be harvested
     harvestablePlantings: (state) => {
-      return state.plantings.filter(p => ['growing', 'ready', 'harvested'].includes(p.status));
+      if (!Array.isArray(state.plantings)) {
+        console.warn('harvestablePlantings: state.plantings is not an array', state.plantings);
+        return [];
+      }
+      const filtered = state.plantings.filter(p => {
+        if (!p) {
+          console.warn('harvestablePlantings: found null/undefined planting');
+          return false;
+        }
+        if (!p.id) {
+          console.warn('harvestablePlantings: planting missing id', p);
+          return false;
+        }
+        // Only exclude explicitly failed plantings - include everything else
+        const isFailed = p.status === 'failed';
+        if (isFailed) {
+          console.log('harvestablePlantings: excluding failed planting', p.id, p.status);
+        }
+        return !isFailed;
+      });
+      console.log('harvestablePlantings: filtered', filtered.length, 'from', state.plantings.length, 'plantings');
+      return filtered;
     },
     activePlantings: (state) => state.plantings.filter(p => p.status !== 'harvested'),
     upcomingTasks: (state) => {

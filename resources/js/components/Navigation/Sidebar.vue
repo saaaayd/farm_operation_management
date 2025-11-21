@@ -2,7 +2,7 @@
   <div class="flex h-screen bg-gray-100">
     <!-- Sidebar -->
     <div 
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-strong transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto lg:overflow-y-auto border-r border-gray-100"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto lg:overflow-y-auto border-r border-gray-100"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
       <!-- Sidebar Header -->

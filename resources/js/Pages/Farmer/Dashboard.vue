@@ -147,9 +147,9 @@
       </div>
 
       <!-- Main Dashboard Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
         <!-- Weather Widget -->
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1 flex flex-col">
           <!-- Field Selector Dropdown -->
           <div v-if="fieldsWithCoordinates.length > 1" class="mb-4">
             <label for="field-selector" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
@@ -171,13 +171,14 @@
           </div>
           
           <!-- Show weather if we have a field with valid coordinates -->
-          <CurrentWeather 
-            v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)" 
-            :field-id="primaryField.id" 
-          />
+          <div v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)" class="flex-1 flex flex-col">
+            <CurrentWeather 
+              :field-id="primaryField.id" 
+            />
+          </div>
           <!-- Show message if field exists but lacks coordinates -->
-          <div v-else-if="primaryField && primaryField.id && !hasValidCoordinates(primaryField)" class="bg-white rounded-lg shadow-lg p-6">
-            <div class="text-center text-gray-500">
+          <div v-else-if="primaryField && primaryField.id && !hasValidCoordinates(primaryField)" class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
+            <div class="text-center text-gray-500 flex-1 flex flex-col justify-center">
               <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -196,8 +197,8 @@
             </div>
           </div>
           <!-- Show message if no fields exist -->
-          <div v-else class="bg-white rounded-lg shadow-lg p-6">
-            <div class="text-center text-gray-500">
+          <div v-else class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
+            <div class="text-center text-gray-500 flex-1 flex flex-col justify-center">
               <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
               </svg>
@@ -214,8 +215,8 @@
         </div>
 
         <!-- Upcoming Tasks -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="lg:col-span-2 flex flex-col">
+          <div class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-900">Upcoming Tasks</h3>
               <button 
@@ -227,7 +228,7 @@
               </button>
             </div>
             
-            <div v-if="upcomingTasks.length > 0" class="space-y-3">
+            <div v-if="upcomingTasks.length > 0" class="space-y-3 flex-1">
               <div 
                 v-for="task in upcomingTasks.slice(0, 5)" 
                 :key="task.id"
@@ -259,7 +260,7 @@
               </div>
             </div>
             
-            <div v-else class="text-center py-8 text-gray-500">
+            <div v-else class="text-center py-8 text-gray-500 flex-1 flex flex-col justify-center">
               <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>

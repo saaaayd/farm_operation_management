@@ -53,7 +53,7 @@ class PlantingController extends Controller
             'seed_quantity' => 'nullable|numeric|min:0',
             'area_planted' => 'nullable|numeric|min:0',
             'season' => 'nullable|string|in:wet,dry',
-            'status' => 'nullable|string|in:planted,growing,ready,harvested,failed',
+            'status' => 'nullable|string|in:planned,planted,growing,ready,harvested,failed',
             'notes' => 'nullable|string',
         ]);
 
@@ -180,7 +180,7 @@ class PlantingController extends Controller
             'seed_rate' => 'nullable|numeric|min:0',
             'area_planted' => 'nullable|numeric|min:0',
             'season' => 'nullable|string|in:wet,dry',
-            'status' => 'nullable|string|in:planted,growing,ready,harvested,failed',
+            'status' => 'nullable|string|in:planned,planted,growing,ready,harvested,failed',
             'notes' => 'nullable|string',
         ]);
 
@@ -327,6 +327,9 @@ class PlantingController extends Controller
 
         $month = (int) $date->format('n');
 
-        return ($month >= 5 && $month <= 10) ? 'wet' : 'dry';
+        // Philippines seasons according to PAGASA:
+        // Rainy season: June (6) to November (11)
+        // Dry season: December (12) to May (5)
+        return ($month >= 6 && $month <= 11) ? 'wet' : 'dry';
     }
 }

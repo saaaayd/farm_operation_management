@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-gray-50 w-full">
+    <header class="bg-white shadow-sm border-b border-gray-200 w-full">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="py-6">
           <div class="flex items-center gap-3">
-            <button @click="goBack" class="text-gray-500 hover:text-gray-700">
+            <button @click="goBack" class="text-gray-500 hover:text-gray-700 transition-colors">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -20,18 +20,18 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="max-w-3xl mx-auto">
-        <div v-if="loading" class="bg-white shadow sm:rounded-lg p-12 text-center">
+    <main class="w-full py-8">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
+        <div v-if="loading" class="bg-white shadow-lg rounded-xl p-12 text-center">
           <LoadingSpinner text="Loading planting data..." />
         </div>
         
-        <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-6">
+        <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
           <h3 class="text-lg font-medium text-red-800">Failed to load planting</h3>
           <p class="mt-2 text-sm text-red-700">{{ error }}</p>
           <button
             @click="fetchPlantingData"
-            class="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700"
+            class="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
           >
             Try Again
           </button>

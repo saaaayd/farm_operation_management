@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="py-6">
           <div class="flex items-center gap-3">
-            <button @click="goBack" class="text-gray-500 hover:text-gray-700">
+            <button @click="goBack" class="text-gray-500 hover:text-gray-700 transition-colors">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -20,8 +20,8 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="max-w-3xl mx-auto">
+    <main class="w-full py-8">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
         <PlantingForm />
       </div>
     </main>

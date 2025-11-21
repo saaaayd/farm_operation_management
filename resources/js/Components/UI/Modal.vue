@@ -10,7 +10,7 @@
       >
         <div class="absolute inset-0 bg-gray-900/70 backdrop-blur-md" @click="handleBackdrop" />
         <div
-          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-strong ring-1 ring-gray-100 transform transition-all"
+          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-100 transform transition-all"
           :class="contentClass"
         >
           <header v-if="withHeader" class="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-5">
@@ -36,7 +36,7 @@
             </button>
           </header>
 
-          <section class="px-6 py-6 text-left text-gray-700">
+          <section class="px-0 py-0 text-left text-gray-700">
             <slot />
           </section>
 

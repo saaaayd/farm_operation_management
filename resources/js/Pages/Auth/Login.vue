@@ -15,40 +15,40 @@
         </p>
       </div>
       
-      <div class="bg-white rounded-2xl shadow-strong p-8 border border-gray-100">
+      <div class="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
         <form class="space-y-6" @submit.prevent="handleLogin">
           <div class="space-y-4">
-            <div>
+          <div>
               <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
                 Email address
               </label>
-              <input
-                id="email"
-                v-model="form.email"
-                name="email"
-                type="email"
-                autocomplete="email"
-                required
+            <input
+              id="email"
+              v-model="form.email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
                 class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm transition-all duration-200 bg-gray-50 focus:bg-white"
                 placeholder="Enter your email"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
-              <input
-                id="password"
-                v-model="form.password"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                required
+            <input
+              id="password"
+              v-model="form.password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
                 class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm transition-all duration-200 bg-gray-50 focus:bg-white"
                 placeholder="Enter your password"
-              />
-            </div>
+            />
           </div>
+        </div>
 
           <div v-if="authStore.error" class="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-lg">
             <div class="flex items-center">
@@ -57,30 +57,30 @@
               </svg>
               <p class="text-sm font-medium">{{ authStore.error }}</p>
             </div>
-          </div>
+        </div>
 
-          <div>
-            <button
-              type="submit"
-              :disabled="authStore.loading"
+        <div>
+          <button
+            type="submit"
+            :disabled="authStore.loading"
               class="btn-primary w-full flex justify-center items-center py-3 px-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
+          >
               <span v-if="authStore.loading" class="absolute left-0 inset-y-0 flex items-center pl-4">
                 <div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-              </span>
+            </span>
               <span class="font-semibold">{{ authStore.loading ? 'Signing in...' : 'Sign in' }}</span>
-            </button>
-          </div>
+          </button>
+        </div>
 
-          <div class="text-center">
-            <p class="text-sm text-gray-600">
-              Don't have an account?
+        <div class="text-center">
+          <p class="text-sm text-gray-600">
+            Don't have an account?
               <router-link to="/register" class="font-semibold text-green-600 hover:text-green-700 transition-colors">
-                Sign up here
-              </router-link>
-            </p>
-          </div>
-        </form>
+              Sign up here
+            </router-link>
+          </p>
+        </div>
+      </form>
       </div>
     </div>
   </div>

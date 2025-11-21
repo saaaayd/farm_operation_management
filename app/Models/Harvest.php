@@ -12,10 +12,19 @@ class Harvest extends Model
         'yield',
         'harvest_date',
         'quality',
+        'quantity',
+        'unit',
+        'quality_grade',
+        'price_per_unit',
+        'total_value',
+        'notes',
     ];
 
     protected $casts = [
         'yield' => 'decimal:2',
+        'quantity' => 'decimal:2',
+        'price_per_unit' => 'decimal:2',
+        'total_value' => 'decimal:2',
         'harvest_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

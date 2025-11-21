@@ -92,8 +92,8 @@
               >
                 <option value="">Select crop or variety</option>
                 <optgroup label="Rice Varieties">
-                  <option v-for="variety in riceVarieties" :key="variety.value" :value="variety.value">
-                    {{ variety.label }}
+                  <option v-for="variety in riceVarieties" :key="variety.id" :value="variety.name">
+                    {{ variety.name }}
                   </option>
                 </optgroup>
                 <optgroup label="Other Crops">
@@ -462,8 +462,8 @@
               >
                 <option value="">Select previous crop</option>
                 <optgroup label="Rice Varieties">
-                  <option v-for="variety in riceVarieties" :key="variety.value" :value="variety.value">
-                    {{ variety.label }}
+                  <option v-for="variety in riceVarieties" :key="variety.id" :value="variety.name">
+                    {{ variety.name }}
                   </option>
                 </optgroup>
                 <optgroup label="Other Crops">
@@ -517,9 +517,11 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 import { useFarmStore } from '@/stores/farm'
+import { useMarketplaceStore } from '@/stores/marketplace'
 
 const router = useRouter()
 const farmStore = useFarmStore()
+const marketplaceStore = useMarketplaceStore()
 
 const loading = ref(false)
 const error = ref('')
@@ -590,16 +592,8 @@ const croppingSeasonOptions = [
   { value: '3', label: '3 Seasons (Continuous)' },
 ]
 
-const riceVarieties = [
-  { value: 'ir64', label: 'IR64 - High yielding variety' },
-  { value: 'jasmine', label: 'Jasmine Rice - Aromatic' },
-  { value: 'basmati', label: 'Basmati - Premium aromatic' },
-  { value: 'brown_rice', label: 'Brown Rice - Nutritious' },
-  { value: 'glutinous', label: 'Glutinous Rice - Sticky' },
-  { value: 'red_rice', label: 'Red Rice - Antioxidant rich' },
-  { value: 'black_rice', label: 'Black Rice - Superfood' },
-  { value: 'local_variety', label: 'Local Traditional Variety' },
-]
+// Use rice varieties from the marketplace store (same as planting form)
+const riceVarieties = computed(() => marketplaceStore.riceVarieties || [])
 
 const nutrientInputs = [
   { id: 'nitrogen', label: 'Nitrogen', model: 'nitrogen_level', placeholder: '20' },
@@ -913,8 +907,16 @@ const updateMapMarker = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadProvinces()
+  // Fetch rice varieties if not already loaded
+  if (marketplaceStore.riceVarieties.length === 0) {
+    try {
+      await marketplaceStore.fetchRiceVarieties()
+    } catch (err) {
+      console.warn('Failed to load rice varieties:', err)
+    }
+  }
   // Initialize map after a short delay to ensure DOM is ready
   setTimeout(() => {
     initMap()

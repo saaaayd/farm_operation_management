@@ -1,19 +1,28 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+    <header class="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
           <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Fields</h1>
-            <p class="text-sm text-gray-500">
-              Track field boundaries, soil data, and readiness for planting.
-            </p>
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Rice Fields</h1>
+                <p class="text-sm text-gray-600 mt-0.5">
+                  Track field boundaries, soil data, and readiness for planting.
+                </p>
+              </div>
+            </div>
           </div>
           <div class="flex items-center gap-3">
             <button
               @click="refreshFields"
               :disabled="loading"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              class="inline-flex items-center px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow"
             >
               <svg
                 :class="['h-4 w-4 mr-2', { 'animate-spin': loading }]"
@@ -32,8 +41,11 @@
             </button>
             <button
               @click="goToFieldSetup"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+              class="inline-flex items-center px-5 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
+              <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
               Add Field
             </button>
           </div>
@@ -78,17 +90,24 @@
       </div>
 
       <div v-else>
-        <div v-if="fields.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-          <div class="text-5xl mb-4">🌾</div>
-          <h2 class="text-lg font-semibold text-gray-900 mb-2">No fields yet</h2>
-          <p class="text-sm text-gray-600 mb-6">
-            Add your first field to start tracking planting schedules and weather insights.
+        <div v-if="fields.length === 0" class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-12 text-center border border-gray-100">
+          <div class="inline-flex items-center justify-center h-20 w-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl mb-6">
+            <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">No fields yet</h2>
+          <p class="text-sm text-gray-600 mb-8 max-w-md mx-auto">
+            Add your first field to start tracking planting schedules, weather insights, and crop management.
           </p>
           <button
             @click="goToFieldSetup"
-            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+            class="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            Add Field
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Create Your First Field
           </button>
         </div>
 
@@ -96,47 +115,113 @@
           <article
             v-for="field in fields"
             :key="field.id"
-            class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            class="group bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 overflow-hidden"
           >
             <div class="p-6 h-full flex flex-col">
-              <div class="flex items-start justify-between mb-4">
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900">{{ field.name }}</h3>
-                  <p class="text-xs text-gray-500">
-                    {{ formatLocation(field.location || field.address) }}
-                  </p>
+              <!-- Header -->
+              <div class="flex items-start justify-between mb-5">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                      <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 group-hover:text-green-700 transition-colors">{{ field.name }}</h3>
+                  </div>
+                  <div class="flex items-center text-xs text-gray-500 mb-3">
+                    <svg class="h-4 w-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="truncate">{{ formatLocation(field.location || field.address) }}</span>
+                  </div>
                 </div>
                 <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm"
                   :class="statusClass(field.status)"
                 >
                   {{ field.status ? statusLabel(field.status) : 'Active' }}
                 </span>
               </div>
 
-              <dl class="grid grid-cols-2 gap-y-2 text-sm text-gray-600 mb-4">
-                <div>
-                  <dt class="font-medium text-gray-500">Size</dt>
-                  <dd class="text-gray-900 font-semibold">
-                    {{ formatArea(field.size || field.area || field.field_size) }}
-                  </dd>
+              <!-- Current Crop Highlight -->
+              <div v-if="field.current_crop" class="mb-5 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                <div class="flex items-center gap-2">
+                  <div class="h-8 w-8 bg-green-500 rounded-lg flex items-center justify-center">
+                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Current Crop</p>
+                    <p class="text-sm font-bold text-green-700">{{ field.current_crop }}</p>
+                  </div>
                 </div>
-                <div>
-                  <dt class="font-medium text-gray-500">Soil Type</dt>
-                  <dd>{{ field.soil_type || 'Not specified' }}</dd>
+              </div>
+
+              <!-- Field Details Grid -->
+              <dl class="grid grid-cols-2 gap-4 mb-5">
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5">
+                    <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Size</dt>
+                    <dd class="text-sm font-bold text-gray-900 mt-0.5">
+                      {{ formatArea(field.size || field.area || field.field_size) }}
+                    </dd>
+                  </div>
                 </div>
-                <div>
-                  <dt class="font-medium text-gray-500">Current Crop</dt>
-                  <dd>{{ field.current_crop || 'None' }}</dd>
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5">
+                    <svg class="h-4 w-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Soil</dt>
+                    <dd class="text-sm font-semibold text-gray-700 mt-0.5 truncate">
+                      {{ field.soil_type || 'Not set' }}
+                    </dd>
+                  </div>
                 </div>
-                <div>
-                  <dt class="font-medium text-gray-500">Irrigation</dt>
-                  <dd>{{ field.irrigation_type || 'Not specified' }}</dd>
+                <div v-if="!field.current_crop" class="flex items-start gap-2 col-span-2">
+                  <div class="mt-0.5">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Current Crop</dt>
+                    <dd class="text-sm font-semibold text-gray-400 mt-0.5">None</dd>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5">
+                    <svg class="h-4 w-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 002-2V6a1 1 0 011-1h2m6 0h2a1 1 0 011 1v3a2 2 0 002 2h1.945M15 21v-6a3 3 0 00-3-3 3 3 0 00-3 3v6m6 0H9" />
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Irrigation</dt>
+                    <dd class="text-sm font-semibold text-gray-700 mt-0.5 truncate">
+                      {{ field.irrigation_type || 'Not set' }}
+                    </dd>
+                  </div>
                 </div>
               </dl>
 
-              <div class="mt-auto text-xs text-gray-400">
-                Last updated {{ formatDate(field.updated_at || field.created_at) }}
+              <!-- Footer -->
+              <div class="mt-auto pt-4 border-t border-gray-200">
+                <div class="text-xs text-gray-400 flex items-center gap-1">
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Updated {{ formatDate(field.updated_at || field.created_at) }}
+                </div>
               </div>
             </div>
           </article>
@@ -174,12 +259,8 @@ const refreshFields = async () => {
 }
 
 const goToFieldSetup = () => {
-  // Send farmers to the dedicated field creation flow
-  if (!farmStore.fields?.length) {
-    router.push('/onboarding')
-  } else {
-    router.push('/fields/create')
-  }
+  // Navigate directly to field creation page
+  router.push('/fields/create')
 }
 
 const formatArea = (value) => {
@@ -221,11 +302,8 @@ const statusClass = (status) => {
 }
 
 onMounted(() => {
-  if (!fields.value.length) {
-    refreshFields()
-  } else {
-    loading.value = false
-  }
+  // Always refresh fields to get latest current_crop data
+  refreshFields()
 })
 </script>
 
