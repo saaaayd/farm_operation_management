@@ -66,12 +66,22 @@ class HarvestController extends Controller
             ], 403);
         }
 
+        // Map quality_grade to quality enum for backward compatibility
+        $qualityMap = [
+            'A' => 'excellent',
+            'B' => 'good',
+            'C' => 'average',
+            'D' => 'poor',
+        ];
+        $quality = $request->quality_grade ? ($qualityMap[$request->quality_grade] ?? 'average') : 'average';
+
         $harvest = Harvest::create([
             'planting_id' => $request->planting_id,
             'harvest_date' => $request->harvest_date,
             'quantity' => $request->quantity,
             'yield' => $request->quantity, // Also set yield for backward compatibility
             'unit' => $request->unit,
+            'quality' => $quality, // Set quality enum for backward compatibility
             'quality_grade' => $request->quality_grade,
             'price_per_unit' => $request->price_per_unit,
             'total_value' => $request->total_value,
@@ -142,6 +152,19 @@ class HarvestController extends Controller
         // Map quantity to yield if provided for backward compatibility
         if (isset($updateData['quantity'])) {
             $updateData['yield'] = $updateData['quantity'];
+        }
+        
+        // Map quality_grade to quality enum for backward compatibility
+        if (isset($updateData['quality_grade'])) {
+            $qualityMap = [
+                'A' => 'excellent',
+                'B' => 'good',
+                'C' => 'average',
+                'D' => 'poor',
+            ];
+            $updateData['quality'] = $updateData['quality_grade'] 
+                ? ($qualityMap[$updateData['quality_grade']] ?? 'average') 
+                : 'average';
         }
         
         $harvest->update($updateData);
