@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Farm;
 use App\Http\Controllers\Controller;
 use App\Models\Harvest;
 use App\Models\Planting;
+use App\Models\InventoryItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class HarvestController extends Controller
 {
@@ -57,7 +59,7 @@ class HarvestController extends Controller
         }
 
         // Check if user owns the planting's field
-        $planting = Planting::with('field')->findOrFail($request->planting_id);
+        $planting = Planting::with(['field', 'riceVariety'])->findOrFail($request->planting_id);
         $user = $request->user();
         
         if (!$user->isAdmin() && $planting->field->user_id !== $user->id) {
@@ -75,23 +77,37 @@ class HarvestController extends Controller
         ];
         $quality = $request->quality_grade ? ($qualityMap[$request->quality_grade] ?? 'average') : 'average';
 
-        $harvest = Harvest::create([
-            'planting_id' => $request->planting_id,
-            'harvest_date' => $request->harvest_date,
-            'quantity' => $request->quantity,
-            'yield' => $request->quantity, // Also set yield for backward compatibility
-            'unit' => $request->unit,
-            'quality' => $quality, // Set quality enum for backward compatibility
-            'quality_grade' => $request->quality_grade,
-            'price_per_unit' => $request->price_per_unit,
-            'total_value' => $request->total_value,
-            'notes' => $request->notes,
-        ]);
+        DB::beginTransaction();
+        try {
+            $harvest = Harvest::create([
+                'planting_id' => $request->planting_id,
+                'harvest_date' => $request->harvest_date,
+                'quantity' => $request->quantity,
+                'yield' => $request->quantity, // Also set yield for backward compatibility
+                'unit' => $request->unit,
+                'quality' => $quality, // Set quality enum for backward compatibility
+                'quality_grade' => $request->quality_grade,
+                'price_per_unit' => $request->price_per_unit,
+                'total_value' => $request->total_value,
+                'notes' => $request->notes,
+            ]);
 
-        return response()->json([
-            'message' => 'Harvest created successfully',
-            'harvest' => $harvest->load(['planting.field', 'planting.riceVariety'])
-        ], 201);
+            // Reload harvest with planting relationship for inventory
+            $harvest->load('planting.riceVariety', 'planting.field');
+
+            // Add to inventory automatically
+            $this->addHarvestToInventory($harvest, $user);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Harvest created successfully',
+                'harvest' => $harvest->load(['planting.field', 'planting.riceVariety'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     /**
@@ -193,5 +209,55 @@ class HarvestController extends Controller
         return response()->json([
             'message' => 'Harvest deleted successfully'
         ]);
+    }
+
+    /**
+     * Add harvest to inventory automatically
+     */
+    private function addHarvestToInventory(Harvest $harvest, $user): void
+    {
+        $planting = $harvest->planting;
+        if (!$planting) {
+            return;
+        }
+
+        // Reload planting with relationships if needed
+        if (!$planting->relationLoaded('riceVariety') || !$planting->relationLoaded('field')) {
+            $planting->load(['riceVariety', 'field']);
+        }
+
+        // Determine the product name from rice variety or crop type
+        $productName = $planting->riceVariety?->name ?? $planting->crop_type ?? 'Rice';
+        
+        // If quality grade is provided, append it to the name
+        if ($harvest->quality_grade) {
+            $productName .= ' (Grade ' . $harvest->quality_grade . ')';
+        }
+
+        // Find or create inventory item for this product
+        $inventoryItem = InventoryItem::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'name' => $productName,
+                'category' => InventoryItem::CATEGORY_PRODUCE,
+                'unit' => $harvest->unit,
+            ],
+            [
+                'description' => 'Harvested from ' . ($planting->field?->name ?? 'field'),
+                'current_stock' => 0,
+                'minimum_stock' => 0,
+                'unit_price' => $harvest->price_per_unit ?? 0,
+                'notes' => 'Auto-created from harvest',
+            ]
+        );
+
+        // Add the harvested quantity to inventory
+        $inventoryItem->addStock($harvest->quantity);
+        
+        // Update unit price if provided and different
+        if ($harvest->price_per_unit && $harvest->price_per_unit != $inventoryItem->unit_price) {
+            $inventoryItem->unit_price = $harvest->price_per_unit;
+            $inventoryItem->save();
+        }
     }
 }

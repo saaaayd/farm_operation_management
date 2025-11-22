@@ -267,6 +267,17 @@ export const weatherAPI = {
   getHistory: (fieldId, days = 30) => api.get(`/weather/fields/${fieldId}/history?days=${days}`),
   getAlerts: (fieldId) => api.get(`/weather/fields/${fieldId}/alerts`),
   updateWeather: (fieldId, weatherData) => api.post(`/weather/fields/${fieldId}/update`, weatherData),
+  // ColorfulClouds Weather API proxy
+  getColorfulCloudsWeather: (lat, lon, options = {}) => {
+    const params = {
+      lat,
+      lon,
+      unit: options.unit || 'imperial',
+      lang: options.lang || 'en_US',
+      granu: options.granu || 'realtime',
+    };
+    return api.get('/weather/colorfulclouds', { params });
+  },
 };
 
 // Rice Marketplace API

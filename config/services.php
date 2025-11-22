@@ -40,6 +40,10 @@ return [
         'base_url' => env('OPENWEATHER_BASE_URL', 'https://api.openweathermap.org/data/2.5'),
     ],
 
+    'colorfulclouds' => [
+        'api_token' => env('COLORFULCLOUDS_API_TOKEN', 'S45Fnpxcwyq0QT4b'), // Demo token, replace with your own
+    ],
+
     'sms' => [
         'provider' => env('SMS_PROVIDER', 'custom'), // twilio, nexmo, custom
         'default_country_code' => env('SMS_DEFAULT_COUNTRY_CODE', '+63'),
