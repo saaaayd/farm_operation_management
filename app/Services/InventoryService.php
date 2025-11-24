@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\InventoryItem;
-use App\Models\User;
 use App\Events\LowInventoryAlert;
 use App\Exceptions\InventoryException;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +22,8 @@ class InventoryService
         }
 
         if (isset($filters['low_stock'])) {
-            $query->whereRaw('quantity <= min_stock');
+            // Fix: Changed quantity to current_stock
+            $query->whereRaw('current_stock <= minimum_stock');
         }
 
         return $query->orderBy('name')->get();
@@ -35,28 +35,25 @@ class InventoryService
     public function createInventoryItem($itemData)
     {
         try {
+            // Fix: Mapped array keys to match Database Columns exactly
             $item = InventoryItem::create([
-                'user_id' => $itemData['user_id'],
-                'name' => $itemData['name'],
-                'description' => $itemData['description'] ?? '',
-                'category' => $itemData['category'],
-                'quantity' => $itemData['quantity'] ?? 0,
-                'unit' => $itemData['unit'],
-                'price' => $itemData['price'] ?? 0,
-                'min_stock' => $itemData['min_stock'] ?? 0,
-                'supplier' => $itemData['supplier'] ?? '',
-                'quality_grade' => $itemData['quality_grade'] ?? 'A',
+                'user_id'       => $itemData['user_id'],
+                'name'          => $itemData['name'],
+                'description'   => $itemData['description'] ?? '',
+                'category'      => $itemData['category'],
+                'current_stock' => $itemData['quantity'] ?? $itemData['current_stock'] ?? 0, // Handle both inputs
+                'unit'          => $itemData['unit'],
+                'unit_price'    => $itemData['price'] ?? $itemData['unit_price'] ?? 0,
+                'minimum_stock' => $itemData['min_stock'] ?? $itemData['minimum_stock'] ?? 0,
+                'supplier'      => $itemData['supplier'] ?? '',
+                'location'      => $itemData['location'] ?? '',
+                'expiry_date'   => $itemData['expiry_date'] ?? null,
             ]);
 
             return $item;
         } catch (\Exception $e) {
             Log::error('Failed to create inventory item: ' . $e->getMessage());
-            throw new InventoryException(
-                'Failed to create inventory item',
-                null,
-                0,
-                $e
-            );
+            throw new InventoryException('Failed to create inventory item: ' . $e->getMessage());
         }
     }
 
@@ -67,22 +64,29 @@ class InventoryService
     {
         try {
             $item = InventoryItem::findOrFail($itemId);
+            
+            // Map legacy keys if they exist in update data
+            if (isset($itemData['quantity'])) {
+                $itemData['current_stock'] = $itemData['quantity'];
+                unset($itemData['quantity']);
+            }
+            if (isset($itemData['min_stock'])) {
+                $itemData['minimum_stock'] = $itemData['min_stock'];
+                unset($itemData['min_stock']);
+            }
+            if (isset($itemData['price'])) {
+                $itemData['unit_price'] = $itemData['price'];
+                unset($itemData['price']);
+            }
+
             $item->update($itemData);
             return $item;
         } catch (\Exception $e) {
             Log::error('Failed to update inventory item: ' . $e->getMessage());
-            throw new InventoryException(
-                'Failed to update inventory item',
-                $itemId,
-                0,
-                $e
-            );
+            throw new InventoryException('Failed to update inventory item');
         }
     }
 
-    /**
-     * Delete inventory item
-     */
     public function deleteInventoryItem($itemId)
     {
         try {
@@ -91,18 +95,10 @@ class InventoryService
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to delete inventory item: ' . $e->getMessage());
-            throw new InventoryException(
-                'Failed to delete inventory item',
-                $itemId,
-                0,
-                $e
-            );
+            throw new InventoryException('Failed to delete inventory item');
         }
     }
 
-    /**
-     * Update inventory quantity
-     */
     public function updateQuantity($itemId, $quantity, $operation = 'set')
     {
         try {
@@ -110,59 +106,37 @@ class InventoryService
             
             switch ($operation) {
                 case 'add':
-                    $item->increment('quantity', $quantity);
+                    $item->increment('current_stock', $quantity);
                     break;
                 case 'subtract':
-                    $item->decrement('quantity', $quantity);
+                    // Prevent negative stock
+                    if ($item->current_stock >= $quantity) {
+                        $item->decrement('current_stock', $quantity);
+                    } else {
+                        $item->update(['current_stock' => 0]);
+                    }
                     break;
                 case 'set':
                 default:
-                    $item->update(['quantity' => $quantity]);
+                    $item->update(['current_stock' => $quantity]);
                     break;
             }
 
-            // Check for low stock alert
             $this->checkLowStockAlert($item);
-
             return $item->fresh();
         } catch (\Exception $e) {
             Log::error('Failed to update inventory quantity: ' . $e->getMessage());
-            throw new InventoryException(
-                'Failed to update inventory quantity',
-                $itemId,
-                0,
-                $e
-            );
+            throw new InventoryException('Failed to update inventory quantity');
         }
     }
 
-    /**
-     * Check for low stock alerts
-     */
     public function checkLowStockAlert(InventoryItem $item)
     {
-        if ($item->quantity <= $item->min_stock) {
+        if ($item->current_stock <= $item->minimum_stock) {
             event(new LowInventoryAlert($item));
         }
     }
 
-    /**
-     * Get low stock items
-     */
-    public function getLowStockItems($userId = null)
-    {
-        $query = InventoryItem::whereRaw('quantity <= min_stock');
-
-        if ($userId) {
-            $query->where('user_id', $userId);
-        }
-
-        return $query->get();
-    }
-
-    /**
-     * Get inventory statistics
-     */
     public function getInventoryStats($userId)
     {
         $items = InventoryItem::where('user_id', $userId)->get();
@@ -170,89 +144,12 @@ class InventoryService
         return [
             'total_items' => $items->count(),
             'total_value' => $items->sum(function ($item) {
-                return $item->quantity * $item->price;
+                return $item->current_stock * $item->unit_price;
             }),
-            'low_stock_items' => $items->where('quantity', '<=', function ($item) {
-                return $item->min_stock;
+            'low_stock_items' => $items->filter(function ($item) {
+                return $item->current_stock <= $item->minimum_stock;
             })->count(),
-            'out_of_stock_items' => $items->where('quantity', 0)->count(),
-            'categories' => $items->groupBy('category')->map(function ($categoryItems) {
-                return [
-                    'count' => $categoryItems->count(),
-                    'total_value' => $categoryItems->sum(function ($item) {
-                        return $item->quantity * $item->price;
-                    }),
-                ];
-            }),
+            'out_of_stock_items' => $items->where('current_stock', '<=', 0)->count(),
         ];
-    }
-
-    /**
-     * Bulk update inventory
-     */
-    public function bulkUpdateInventory($updates)
-    {
-        DB::beginTransaction();
-        
-        try {
-            foreach ($updates as $update) {
-                $item = InventoryItem::findOrFail($update['id']);
-                $item->update($update['data']);
-                
-                // Check for low stock alert
-                $this->checkLowStockAlert($item);
-            }
-
-            DB::commit();
-            return true;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Bulk inventory update failed: ' . $e->getMessage());
-            throw new InventoryException(
-                'Bulk inventory update failed',
-                null,
-                0,
-                $e
-            );
-        }
-    }
-
-    /**
-     * Get inventory categories
-     */
-    public function getCategories()
-    {
-        return [
-            ['value' => 'seeds', 'label' => 'Seeds'],
-            ['value' => 'fertilizers', 'label' => 'Fertilizers'],
-            ['value' => 'pesticides', 'label' => 'Pesticides'],
-            ['value' => 'equipment', 'label' => 'Equipment'],
-            ['value' => 'produce', 'label' => 'Produce'],
-            ['value' => 'tools', 'label' => 'Tools'],
-            ['value' => 'materials', 'label' => 'Materials'],
-        ];
-    }
-
-    /**
-     * Search inventory items
-     */
-    public function searchInventory($userId, $query, $filters = [])
-    {
-        $searchQuery = InventoryItem::where('user_id', $userId)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', '%' . $query . '%')
-                  ->orWhere('description', 'like', '%' . $query . '%')
-                  ->orWhere('supplier', 'like', '%' . $query . '%');
-            });
-
-        if (isset($filters['category'])) {
-            $searchQuery->where('category', $filters['category']);
-        }
-
-        if (isset($filters['low_stock'])) {
-            $searchQuery->whereRaw('quantity <= min_stock');
-        }
-
-        return $searchQuery->get();
     }
 }

@@ -1,331 +1,203 @@
 <template>
-  <div class="inventory-page">
+  <div class="inventory-page min-h-screen bg-gray-50 font-sans">
     <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
+      
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">Inventory</h1>
-          <p class="text-gray-600 mt-2">Manage your farm supplies and equipment</p>
+          <h1 class="text-3xl font-bold text-gray-800">Inventory</h1>
+          <p class="text-gray-500 mt-1">Track your farm supplies, seeds, and equipment.</p>
         </div>
         <button
-          type="button"
-          @click="showCreateModal = true"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          @click="openCreateModal"
+          class="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm font-medium"
         >
-          Add New Item
+          <span class="text-xl leading-none">+</span> Add Product
         </button>
       </div>
 
-      <FormAlert
-        :visible="!!inventoryError"
-        :message="inventoryError"
-        class="mb-6"
-      />
+      <FormAlert :visible="!!error" :message="error" class="mb-6" />
 
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 text-lg">📦</span>
-              </div>
-            </div>
-            <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ totalItems }}</div>
-              <div class="text-sm text-gray-600">Total Items</div>
-            </div>
-          </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Items</div>
+          <div class="text-2xl font-bold text-gray-800 mt-1">{{ totalItems }}</div>
         </div>
-        
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span class="text-green-600 text-lg">✅</span>
-              </div>
-            </div>
-            <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ inStockItems }}</div>
-              <div class="text-sm text-gray-600">In Stock</div>
-            </div>
-          </div>
+        <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Value</div>
+          <div class="text-2xl font-bold text-emerald-600 mt-1">{{ formatCurrency(totalValue) }}</div>
         </div>
-        
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span class="text-yellow-600 text-lg">⚠️</span>
-              </div>
-            </div>
-            <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ lowStockItems }}</div>
-              <div class="text-sm text-gray-600">Low Stock</div>
-            </div>
-          </div>
+        <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Low Stock</div>
+          <div class="text-2xl font-bold text-yellow-600 mt-1">{{ lowStockItems }}</div>
         </div>
-        
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span class="text-red-600 text-lg">❌</span>
-              </div>
-            </div>
-            <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ outOfStockItems }}</div>
-              <div class="text-sm text-gray-600">Out of Stock</div>
-            </div>
-          </div>
+        <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Out of Stock</div>
+          <div class="text-2xl font-bold text-red-600 mt-1">{{ outOfStockItems }}</div>
         </div>
       </div>
 
-      <!-- Filters and Search -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search inventory..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
+        <div class="flex-1 relative">
+          <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search by name, supplier, or location..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+          />
+        </div>
+        <select v-model="categoryFilter" class="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+          <option value="">All Categories</option>
+          <option value="seeds">Seeds</option>
+          <option value="fertilizer">Fertilizer</option>
+          <option value="pesticide">Pesticides</option>
+          <option value="equipment">Equipment</option>
+          <option value="tools">Tools</option>
+        </select>
+      </div>
+
+      <div v-if="loading" class="text-center py-20">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mx-auto"></div>
+        <p class="text-gray-500 mt-4">Loading inventory...</p>
+      </div>
+
+      <div v-else-if="filteredItems.length === 0" class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+        <div class="text-5xl mb-4">📦</div>
+        <h3 class="text-lg font-medium text-gray-900">No items found</h3>
+        <p class="text-gray-500">Try adjusting your filters or add a new item.</p>
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          v-for="item in filteredItems"
+          :key="item.id"
+          class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col"
+        >
+          <div class="p-5 flex justify-between items-start">
+            <div>
+              <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-600 mb-2 uppercase tracking-wide">
+                {{ item.category }}
+              </span>
+              <h3 class="text-lg font-bold text-gray-800 leading-tight mb-1">{{ item.name }}</h3>
+              <p class="text-sm text-gray-500 line-clamp-1">{{ item.description || 'No description' }}</p>
+            </div>
+            <div class="text-right pl-2">
+              <div class="text-lg font-bold text-emerald-700">{{ formatCurrency(item.unit_price) }}</div>
+              <div class="text-xs text-gray-400">/ {{ item.unit }}</div>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-            <select
-              v-model="categoryFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Categories</option>
-              <option value="seeds">Seeds</option>
-              <option value="fertilizer">Fertilizer</option>
-              <option value="pesticides">Pesticides</option>
-              <option value="equipment">Equipment</option>
-              <option value="tools">Tools</option>
-            </select>
+
+          <div class="px-5 pb-4">
+            <div class="flex justify-between items-end mb-1">
+              <span class="text-sm font-medium" :class="getStockColor(item, 'text')">
+                {{ item.current_stock || 0 }} {{ item.unit }}
+              </span>
+              <span class="text-xs text-gray-400">Min: {{ item.minimum_stock || 0 }}</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+              <div
+                class="h-2 rounded-full transition-all duration-500"
+                :class="getStockColor(item, 'bg')"
+                :style="{ width: getStockWidth(item) }"
+              ></div>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              v-model="statusFilter"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="in_stock">In Stock</option>
-              <option value="low_stock">Low Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-            </select>
-          </div>
-          <div class="flex items-end">
+
+          <div class="mt-auto border-t border-gray-50 px-5 py-3 bg-gray-50/50 rounded-b-xl flex justify-between items-center text-sm">
+            <span class="text-gray-500 flex items-center gap-1 truncate max-w-[60%]">
+              <span v-if="item.location">📍 {{ item.location }}</span>
+            </span>
             <button
-              type="button"
-              @click="clearFilters"
-              class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              @click="editItem(item)"
+              class="text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
             >
-              Clear Filters
+              Edit Details
             </button>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Inventory Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div
-          v-for="item in filteredItems"
-          :key="item.id"
-          class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-        >
-          <div class="p-6">
-            <div class="flex justify-between items-start mb-4">
-              <h3 class="text-xl font-semibold text-gray-900">{{ item.name }}</h3>
-              <span
-                :class="getStatusBadgeClass(item.status)"
-                class="px-2 py-1 text-xs font-medium rounded-full"
-              >
-                {{ item.status }}
-              </span>
-            </div>
-            
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between">
-                <span class="text-gray-600">Category:</span>
-                <span class="font-medium">{{ item.category }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Quantity:</span>
-                <span class="font-medium">{{ getItemQuantity(item) }} {{ item.unit }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Unit Price:</span>
-                <span class="font-medium">{{ formatCurrency(item.unit_price || 0) }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Total Value:</span>
-                <span class="font-medium">{{ formatCurrency(getItemQuantity(item) * (item.unit_price || 0)) }}</span>
-              </div>
-            </div>
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" @click="closeModal"></div>
 
-            <!-- Stock Level Indicator -->
-            <div class="mb-4">
-              <div class="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Stock Level</span>
-                <span>{{ getStockPercentage(item) }}%</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  :class="getStockBarClass(item)"
-                  class="h-2 rounded-full transition-all duration-300"
-                  :style="{ width: `${getStockPercentage(item)}%` }"
-                ></div>
-              </div>
-            </div>
-
-            <div class="flex space-x-2">
-              <button
-                type="button"
-                @click="viewItem(item.id)"
-                class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              >
-                View Details
-              </button>
-              <button
-                type="button"
-                @click="editItem(item.id)"
-                class="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
-              >
-                Edit
-              </button>
-            </div>
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
+            <h3 class="text-xl leading-6 font-bold text-gray-900">
+              {{ isEditing ? 'Edit Product' : 'Add New Product' }}
+            </h3>
+            <p class="text-sm text-gray-500 mt-1">Fill in the details below to manage your inventory.</p>
           </div>
-        </div>
-      </div>
 
-      <!-- Empty State -->
-      <div v-if="filteredItems.length === 0" class="text-center py-12">
-        <div class="text-gray-400 text-6xl mb-4">📦</div>
-        <h3 class="text-xl font-medium text-gray-900 mb-2">No inventory items found</h3>
-        <p class="text-gray-600 mb-6">Get started by adding your first inventory item</p>
-        <button
-          type="button"
-          @click="showCreateModal = true"
-          class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Add Your First Item
-        </button>
-      </div>
+          <form @submit.prevent="submitForm" class="p-6 space-y-5">
+            <FormAlert :visible="!!formError" :message="formError" />
 
-      <!-- Create Item Modal -->
-      <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-          <h2 class="text-xl font-semibold mb-4">Add New Inventory Item</h2>
-          
-          <form @submit.prevent="createItem" class="space-y-4">
-            <FormAlert
-              :visible="!!formError.message"
-              :message="formError.message"
-              :field-errors="formError.fieldErrors"
-            />
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
-              <input
-                v-model="newItem.name"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <p v-if="fieldError('name')" class="mt-1 text-xs text-red-600">{{ fieldError('name') }}</p>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Item Name <span class="text-red-500">*</span></label>
+                <input v-model="form.name" required type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Urea 46-0-0">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
+                <select v-model="form.category" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                  <option value="" disabled>Select...</option>
+                  <option value="seeds">Seeds</option>
+                  <option value="fertilizer">Fertilizer</option>
+                  <option value="pesticide">Pesticide</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="tools">Tools</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
+                <select v-model="form.unit" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="liters">Liters</option>
+                  <option value="bags">Bags</option>
+                  <option value="pieces">Pieces</option>
+                  <option value="pounds">Pounds</option>
+                </select>
+              </div>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-              <select
-                v-model="newItem.category"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select category</option>
-                <option value="seeds">Seeds</option>
-                <option value="fertilizer">Fertilizer</option>
-                <option value="pesticides">Pesticides</option>
-                <option value="equipment">Equipment</option>
-                <option value="tools">Tools</option>
-              </select>
-              <p v-if="fieldError('category')" class="mt-1 text-xs text-red-600">{{ fieldError('category') }}</p>
+
+            <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Current Stock</label>
+                <input v-model.number="form.current_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Alert Level (Min)</label>
+                <input v-model.number="form.minimum_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Unit Price ($)</label>
+                <input v-model.number="form.unit_price" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
             </div>
-            
+
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                <input
-                  v-model="newItem.quantity"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p v-if="fieldError('quantity') || fieldError('current_stock')" class="mt-1 text-xs text-red-600">
-                  {{ fieldError('quantity') || fieldError('current_stock') }}
-                </p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input v-model="form.location" type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Warehouse A">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
-                <select
-                  v-model="newItem.unit"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select unit</option>
-                  <option value="lbs">Pounds</option>
-                  <option value="bags">Bags</option>
-                  <option value="gallons">Gallons</option>
-                  <option value="pieces">Pieces</option>
-                  <option value="tons">Tons</option>
-                </select>
-                <p v-if="fieldError('unit')" class="mt-1 text-xs text-red-600">{{ fieldError('unit') }}</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                <input v-model="form.expiry_date" type="date" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description / Notes</label>
+                <textarea v-model="form.description" rows="2" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"></textarea>
               </div>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
-              <input
-                v-model="newItem.unit_price"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <p v-if="fieldError('unit_price')" class="mt-1 text-xs text-red-600">{{ fieldError('unit_price') }}</p>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea
-                v-model="newItem.description"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              ></textarea>
-              <p v-if="fieldError('description')" class="mt-1 text-xs text-red-600">{{ fieldError('description') }}</p>
-            </div>
 
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
-                @click="showCreateModal = false"
-                class="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <button type="button" @click="closeModal" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
                 Cancel
               </button>
-              <button
-                type="submit"
-                :disabled="loading"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {{ loading ? 'Creating...' : 'Create Item' }}
+              <button type="submit" :disabled="loading" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium disabled:opacity-50 flex items-center">
+                <span v-if="loading" class="mr-2 animate-spin">⟳</span>
+                {{ isEditing ? 'Update Item' : 'Save Item' }}
               </button>
             </div>
           </form>
@@ -337,182 +209,131 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
-import { useRouter } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import FormAlert from '@/Components/UI/FormAlert.vue'
-import { extractFormErrors, resetFormErrors } from '@/utils/form'
 import { formatCurrency } from '@/utils/format'
 
-const router = useRouter()
-const inventoryStore = useInventoryStore()
-const loading = computed(() => inventoryStore.loading)
-const showCreateModal = ref(false)
+const store = useInventoryStore()
+const items = computed(() => store.items || [])
+const error = computed(() => store.error)
+const loading = computed(() => store.loading)
+
 const searchQuery = ref('')
 const categoryFilter = ref('')
-const statusFilter = ref('')
+const showModal = ref(false)
+const isEditing = ref(false)
+const formError = ref('')
 
-const items = computed(() => inventoryStore.items || [])
-const inventoryError = computed(() => inventoryStore.error)
-
-const newItem = ref({
+const form = reactive({
+  id: null,
   name: '',
   category: '',
-  quantity: '',
-  unit: '',
-  unit_price: '',
+  unit: 'kg',
+  current_stock: 0,
+  minimum_stock: 0,
+  unit_price: 0,
+  location: '',
+  expiry_date: '',
   description: ''
 })
 
-const formError = reactive({
-  message: '',
-  fieldErrors: {},
-})
+// Statistics
+const totalItems = computed(() => items.value.length)
+const totalValue = computed(() => items.value.reduce((sum, i) => sum + (Number(i.current_stock || 0) * Number(i.unit_price || 0)), 0))
+const lowStockItems = computed(() => items.value.filter(i => {
+  const stock = Number(i.current_stock || 0)
+  const min = Number(i.minimum_stock || 0)
+  return stock > 0 && stock <= min
+}).length)
+const outOfStockItems = computed(() => items.value.filter(i => Number(i.current_stock || 0) <= 0).length)
 
-const fieldErrors = computed(() => formError.fieldErrors || {})
-
-const fieldError = (field) => {
-  const messages = fieldErrors.value?.[field]
-  if (Array.isArray(messages)) {
-    return messages[0]
-  }
-  return messages || ''
-}
-
-// Helper functions for item data
-const getItemQuantity = (item) => {
-  return item.current_stock || item.quantity || 0
-}
-
-const getItemStatus = (item) => {
-  const quantity = getItemQuantity(item)
-  const minStock = item.minimum_stock || item.min_stock || 0
-  
-  if (quantity <= 0) return 'out_of_stock'
-  if (quantity <= minStock) return 'low_stock'
-  return 'in_stock'
-}
-
+// Filter Logic
 const filteredItems = computed(() => {
-  return (items.value || []).map(item => ({
-    ...item,
-    quantity: item.current_stock || item.quantity || 0,
-    status: getItemStatus(item)
-  })).filter(item => {
-    const searchLower = searchQuery.value.toLowerCase()
-    const matchesSearch = !searchQuery.value || 
-                         item.name?.toLowerCase().includes(searchLower) ||
-                         (item.description || '').toLowerCase().includes(searchLower)
+  return items.value.filter(item => {
+    const search = searchQuery.value.toLowerCase()
+    const matchesSearch = !search || 
+      item.name?.toLowerCase().includes(search) || 
+      item.description?.toLowerCase().includes(search) ||
+      item.location?.toLowerCase().includes(search)
+      
     const matchesCategory = !categoryFilter.value || item.category === categoryFilter.value
-    const matchesStatus = !statusFilter.value || item.status === statusFilter.value
-    
-    return matchesSearch && matchesCategory && matchesStatus
+    return matchesSearch && matchesCategory
   })
 })
 
-const totalItems = computed(() => items.value.length)
-const inStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'in_stock').length)
-const lowStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'low_stock').length)
-const outOfStockItems = computed(() => items.value.filter(item => getItemStatus(item) === 'out_of_stock').length)
-
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    in_stock: 'bg-green-100 text-green-800',
-    low_stock: 'bg-yellow-100 text-yellow-800',
-    out_of_stock: 'bg-red-100 text-red-800'
-  }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+// Modal Actions
+const openCreateModal = () => {
+  isEditing.value = false
+  formError.value = ''
+  Object.assign(form, {
+    id: null, name: '', category: '', unit: 'kg', 
+    current_stock: 0, minimum_stock: 0, unit_price: 0,
+    location: '', expiry_date: '', description: ''
+  })
+  showModal.value = true
 }
 
-const getStockPercentage = (item) => {
-  const quantity = getItemQuantity(item)
-  const maxStock = item.max_stock || item.maximum_stock || 0
-  if (maxStock === 0) return 0
-  return Math.min((quantity / maxStock) * 100, 100)
+const editItem = (item) => {
+  isEditing.value = true
+  formError.value = ''
+  // Normalize data from backend (handling legacy fields if any exist in old records)
+  Object.assign(form, {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    unit: item.unit,
+    current_stock: Number(item.current_stock ?? item.quantity ?? 0),
+    minimum_stock: Number(item.minimum_stock ?? item.min_stock ?? 0),
+    unit_price: Number(item.unit_price ?? item.price ?? 0),
+    location: item.location,
+    expiry_date: item.expiry_date,
+    description: item.description
+  })
+  showModal.value = true
 }
 
-const getStockBarClass = (item) => {
-  const percentage = getStockPercentage(item)
-  if (percentage < 20) return 'bg-red-600'
-  if (percentage < 50) return 'bg-yellow-600'
-  return 'bg-green-600'
+const closeModal = () => {
+  showModal.value = false
 }
 
-const viewItem = (id) => {
-  router.push(`/inventory/${id}`)
-}
-
-const editItem = (id) => {
-  // Navigate to edit page or show edit modal
-  console.log('Edit item:', id)
-}
-
-const createItem = async () => {
-  resetFormErrors(formError)
+const submitForm = async () => {
+  formError.value = ''
   try {
-    const mapCategory = (c) => {
-      const v = String(c || '').toLowerCase()
-      if (v === 'fertilizer' || v === 'fertilizers') return 'fertilizer'
-      if (v === 'pesticide' || v === 'pesticides') return 'pesticide'
-      if (v === 'produce') return 'produce'
-      return v
+    const payload = { ...form }
+    
+    // Ensure we send clean data to backend
+    if (isEditing.value) {
+      await store.updateItem(form.id, payload)
+    } else {
+      await store.createItem(payload)
     }
-    const mapUnit = (u) => {
-      const v = String(u || '').toLowerCase()
-      if (v === 'lbs' || v === 'pounds') return 'pounds'
-      if (v === 'bag' || v === 'bags' || v === 'packet' || v === 'packets') return 'packets'
-      if (v === 'liter' || v === 'liters') return 'liters'
-      return v
-    }
-    const payload = {
-      name: newItem.value.name,
-      category: mapCategory(newItem.value.category),
-      // Backend expects current_stock/minimum_stock; send both and legacy names for robustness
-      current_stock: Number(newItem.value.quantity),
-      quantity: Number(newItem.value.quantity),
-      minimum_stock: 0,
-      min_stock: 0,
-      unit: mapUnit(newItem.value.unit),
-      unit_price: Number(newItem.value.unit_price),
-      description: newItem.value.description || null,
-    }
-    await inventoryStore.createItem(payload)
-    // Reset form
-    newItem.value = {
-      name: '',
-      category: '',
-      quantity: '',
-      unit: '',
-      unit_price: '',
-      description: ''
-    }
-    showCreateModal.value = false
-  } catch (error) {
-    const parsed = extractFormErrors(error)
-    formError.message = parsed.message
-    formError.fieldErrors = parsed.fieldErrors
+    closeModal()
+    await store.fetchItems() // Refresh list
+  } catch (e) {
+    console.error(e)
+    formError.value = e.response?.data?.message || "Failed to save item. Please check inputs."
   }
 }
 
-const clearFilters = () => {
-  searchQuery.value = ''
-  categoryFilter.value = ''
-  statusFilter.value = ''
+// Visual Helpers
+const getStockWidth = (item) => {
+  const stock = Number(item.current_stock || 0)
+  const min = Number(item.minimum_stock || 0)
+  // Logic: Bar is full if stock is > 3x minimum. If 0 stock, width is 0.
+  const maxScale = Math.max(min * 3, stock * 1.2, 10)
+  return `${Math.min((stock / maxScale) * 100, 100)}%`
 }
 
-onMounted(async () => {
-  if (!items.value.length) {
-    try {
-      await inventoryStore.fetchItems()
-    } catch (e) {
-      // handled by store
-    }
-  }
+const getStockColor = (item, type) => {
+  const stock = Number(item.current_stock || 0)
+  const min = Number(item.minimum_stock || 0)
+  
+  if (stock <= 0) return type === 'bg' ? 'bg-red-500' : 'text-red-600'
+  if (stock <= min) return type === 'bg' ? 'bg-yellow-500' : 'text-yellow-600'
+  return type === 'bg' ? 'bg-emerald-500' : 'text-emerald-700'
+}
+
+onMounted(() => {
+  store.fetchItems()
 })
 </script>
-
-<style scoped>
-.inventory-page {
-  min-height: 100vh;
-  background-color: #f8fafc;
-}
-</style>
