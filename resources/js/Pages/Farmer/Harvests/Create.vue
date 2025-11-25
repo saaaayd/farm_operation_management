@@ -339,10 +339,12 @@ const form = reactive({
 });
 
 const availablePlantings = computed(() => {
-  return plantings.value.filter(p => 
-    ['growing', 'ready'].includes(p.status) && 
-    new Date(p.expected_harvest_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Within next 30 days
-  );
+  return plantings.value.filter(p => {
+    // Only show plantings that are at least "planted" (exclude "planned" status)
+    // Allow: planted, growing, ready (but not planned, harvested, or failed)
+    const validStatuses = ['planted', 'growing', 'ready'];
+    return validStatuses.includes(p.status);
+  });
 });
 
 // Auto-calculate yield per hectare

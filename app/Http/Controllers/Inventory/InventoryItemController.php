@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
+use App\Models\InventoryTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -362,6 +363,36 @@ class InventoryItemController extends Controller
         
         return response()->json([
             'low_stock_items' => $lowStockItems
+        ]);
+    }
+
+    /**
+     * Get low stock alerts
+     */
+    public function lowStockAlerts(Request $request): JsonResponse
+    {
+        return $this->lowStock($request);
+    }
+
+    /**
+     * Get transactions for an inventory item
+     */
+    public function getTransactions(Request $request, InventoryItem $item): JsonResponse
+    {
+        $user = $request->user();
+        
+        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+
+        $transactions = $item->transactions()
+            ->with('user:id,name,email')
+            ->orderBy('transaction_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'transactions' => $transactions
         ]);
     }
 }

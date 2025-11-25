@@ -36,7 +36,7 @@
             <h2 class="text-xl font-semibold mb-4">Item Overview</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div class="text-center">
-                <div class="text-2xl font-bold text-blue-600">{{ item.quantity }} {{ item.unit }}</div>
+                <div class="text-2xl font-bold text-blue-600">{{ itemQuantity }} {{ item.unit }}</div>
                 <div class="text-sm text-gray-600">Current Stock</div>
               </div>
               <div class="text-center">
@@ -60,7 +60,7 @@
             <div class="space-y-4">
               <div class="flex justify-between items-center">
                 <span class="text-gray-600">Current Stock</span>
-                <span class="font-medium">{{ item.quantity }} {{ item.unit }}</span>
+                <span class="font-medium">{{ itemQuantity }} {{ item.unit }}</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-3">
                 <div
@@ -73,13 +73,13 @@
                 <div>
                   <div class="flex justify-between text-sm mb-1">
                     <span class="text-gray-600">Min Stock:</span>
-                    <span class="font-medium">{{ item.min_stock }} {{ item.unit }}</span>
+                    <span class="font-medium">{{ itemMinStock }} {{ item.unit }}</span>
                   </div>
                 </div>
                 <div>
                   <div class="flex justify-between text-sm mb-1">
                     <span class="text-gray-600">Max Stock:</span>
-                    <span class="font-medium">{{ item.max_stock }} {{ item.unit }}</span>
+                    <span class="font-medium">{{ itemMaxStock }} {{ item.unit }}</span>
                   </div>
                 </div>
               </div>
@@ -101,26 +101,37 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="transaction in transactions" :key="transaction.id">
+                  <tr v-if="loadingTransactions">
+                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                      Loading transactions...
+                    </td>
+                  </tr>
+                  <tr v-else-if="transactions.length === 0">
+                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                      No transactions found
+                    </td>
+                  </tr>
+                  <tr v-else v-for="transaction in transactions" :key="transaction.id">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ formatDate(transaction.date) }}
+                      {{ formatDate(transaction.transaction_date || transaction.date) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
-                        :class="getTransactionBadgeClass(transaction.type)"
+                        :class="getTransactionBadgeClass(transaction.transaction_type || transaction.type)"
                         class="px-2 py-1 text-xs font-medium rounded-full"
                       >
-                        {{ transaction.type }}
+                        {{ transaction.transaction_type || transaction.type }}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ transaction.quantity > 0 ? '+' : '' }}{{ transaction.quantity }} {{ item.unit }}
+                      <span v-if="(transaction.transaction_type || transaction.type) === 'out' || transaction.quantity < 0">-</span>
+                      <span v-else>+</span>{{ Math.abs(transaction.quantity) }} {{ item.unit }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {{ transaction.reason }}
+                      {{ transaction.notes || transaction.reason || 'No notes' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {{ transaction.user }}
+                      {{ transaction.user?.name || transaction.user || 'Unknown' }}
                     </td>
                   </tr>
                 </tbody>
@@ -131,7 +142,13 @@
           <!-- Usage History -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Usage History</h2>
-            <div class="space-y-4">
+            <div v-if="loadingUsageHistory" class="text-center text-sm text-gray-500 py-4">
+              Loading usage history...
+            </div>
+            <div v-else-if="usageHistory.length === 0" class="text-center text-sm text-gray-500 py-4">
+              No usage history found
+            </div>
+            <div v-else class="space-y-4">
               <div
                 v-for="usage in usageHistory"
                 :key="usage.id"
@@ -143,12 +160,12 @@
                   </div>
                 </div>
                 <div class="flex-1">
-                  <div class="font-medium text-gray-900">{{ usage.activity }}</div>
-                  <div class="text-sm text-gray-600">{{ usage.description }}</div>
-                  <div class="text-xs text-gray-500 mt-1">{{ formatDate(usage.date) }}</div>
+                  <div class="font-medium text-gray-900">{{ usage.activity || 'Usage' }}</div>
+                  <div class="text-sm text-gray-600">{{ usage.description || usage.notes || 'No description' }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ formatDate(usage.transaction_date || usage.date) }}</div>
                 </div>
                 <div class="text-sm font-medium text-gray-900">
-                  {{ usage.quantity }} {{ item.unit }}
+                  {{ Math.abs(usage.quantity) }} {{ item.unit }}
                 </div>
               </div>
             </div>
@@ -176,10 +193,10 @@
               <div class="flex justify-between">
                 <span class="text-gray-600">Status:</span>
                 <span
-                  :class="getStatusBadgeClass(item.status)"
+                  :class="getStatusBadgeClass(itemStatus)"
                   class="px-2 py-1 text-xs font-medium rounded-full"
                 >
-                  {{ item.status }}
+                  {{ itemStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) }}
                 </span>
               </div>
               <div class="flex justify-between">
@@ -223,18 +240,110 @@
           <!-- Suppliers -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Suppliers</h3>
-            <div class="space-y-3">
+            <div v-if="suppliers.length === 0" class="text-sm text-gray-500">
+              <p v-if="item.supplier">{{ item.supplier }}</p>
+              <p v-else>No supplier information available</p>
+            </div>
+            <div v-else class="space-y-3">
               <div
                 v-for="supplier in suppliers"
-                :key="supplier.id"
+                :key="supplier.id || supplier.name"
                 class="p-3 border border-gray-200 rounded-lg"
               >
                 <div class="font-medium text-gray-900">{{ supplier.name }}</div>
-                <div class="text-sm text-gray-600">{{ supplier.contact }}</div>
-                <div class="text-sm text-gray-600">{{ formatCurrency(supplier.price) }} per {{ item.unit }}</div>
+                <div v-if="supplier.contact" class="text-sm text-gray-600">{{ supplier.contact }}</div>
+                <div v-if="supplier.price" class="text-sm text-gray-600">{{ formatCurrency(supplier.price) }} per {{ item.unit }}</div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" @click="closeEditModal"></div>
+
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
+            <h3 class="text-xl leading-6 font-bold text-gray-900">Edit Product</h3>
+            <p class="text-sm text-gray-500 mt-1">Update the details below.</p>
+          </div>
+
+          <form @submit.prevent="submitEditForm" class="p-6 space-y-5">
+            <div v-if="editFormError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {{ editFormError }}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Item Name <span class="text-red-500">*</span></label>
+                <input v-model="editForm.name" required type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Urea 46-0-0">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
+                <select v-model="editForm.category" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                  <option value="" disabled>Select...</option>
+                  <option value="seeds">Seeds</option>
+                  <option value="fertilizer">Fertilizer</option>
+                  <option value="pesticide">Pesticide</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="tools">Tools</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
+                <select v-model="editForm.unit" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="liters">Liters</option>
+                  <option value="bags">Bags</option>
+                  <option value="pieces">Pieces</option>
+                  <option value="pounds">Pounds</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Current Stock</label>
+                <input v-model.number="editForm.current_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Alert Level (Min)</label>
+                <input v-model.number="editForm.minimum_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Unit Price ($)</label>
+                <input v-model.number="editForm.unit_price" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input v-model="editForm.location" type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Warehouse A">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                <input v-model="editForm.expiry_date" type="date" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description / Notes</label>
+                <textarea v-model="editForm.description" rows="2" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"></textarea>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <button type="button" @click="closeEditModal" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+                Cancel
+              </button>
+              <button type="submit" :disabled="loading" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium disabled:opacity-50 flex items-center">
+                <span v-if="loading" class="mr-2 animate-spin">⟳</span>
+                Update Item
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -242,7 +351,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
 import { useInventoryStore } from '@/stores/inventory'
@@ -269,72 +378,51 @@ const item = ref({
   updated_at: ''
 })
 
-const transactions = ref([
-  {
-    id: 1,
-    type: 'in',
-    quantity: 25,
-    reason: 'Purchase order received',
-    user: 'John Smith',
-    date: '2024-03-25T10:00:00Z'
-  },
-  {
-    id: 2,
-    type: 'out',
-    quantity: -5,
-    reason: 'Used for field application',
-    user: 'Mike Johnson',
-    date: '2024-03-24T14:30:00Z'
-  },
-  {
-    id: 3,
-    type: 'in',
-    quantity: 30,
-    reason: 'Initial stock',
-    user: 'Admin',
-    date: '2024-03-20T09:00:00Z'
-  }
-])
+const transactions = ref([])
+const usageHistory = ref([])
+const suppliers = ref([])
+const loadingTransactions = ref(false)
+const loadingUsageHistory = ref(false)
+const showEditModal = ref(false)
+const editFormError = ref('')
 
-const usageHistory = ref([
-  {
-    id: 1,
-    activity: 'Field Application',
-    description: 'Applied to North Field',
-    quantity: 5,
-    date: '2024-03-24T14:30:00Z'
-  },
-  {
-    id: 2,
-    activity: 'Field Application',
-    description: 'Applied to South Field',
-    quantity: 3,
-    date: '2024-03-22T10:15:00Z'
-  }
-])
-
-const suppliers = ref([
-  {
-    id: 1,
-    name: 'AgriSupply Co.',
-    contact: 'contact@agrisupply.com',
-    price: 180.00
-  },
-  {
-    id: 2,
-    name: 'Farm Depot',
-    contact: 'sales@farmdepot.com',
-    price: 175.00
-  }
-])
+const editForm = reactive({
+  name: '',
+  category: '',
+  unit: 'kg',
+  current_stock: 0,
+  minimum_stock: 0,
+  unit_price: 0,
+  location: '',
+  expiry_date: '',
+  description: ''
+})
 
 const totalValue = computed(() => {
-  return item.value.quantity * item.value.unit_price
+  const qty = item.value.current_stock || item.value.quantity || 0
+  const price = item.value.unit_price || 0
+  return qty * price
 })
 
 const stockPercentage = computed(() => {
-  if (item.value.max_stock === 0) return 0
-  return Math.min((item.value.quantity / item.value.max_stock) * 100, 100)
+  const qty = item.value.current_stock || item.value.quantity || 0
+  const maxStock = item.value.max_stock || item.value.maximum_stock || 0
+  if (maxStock === 0) return 0
+  return Math.min((qty / maxStock) * 100, 100)
+})
+
+// Computed properties for backward compatibility
+const itemQuantity = computed(() => item.value.current_stock || item.value.quantity || 0)
+const itemMinStock = computed(() => item.value.minimum_stock || item.value.min_stock || 0)
+const itemMaxStock = computed(() => item.value.max_stock || item.value.maximum_stock || 0)
+const itemStatus = computed(() => {
+  if (item.value.status) return item.value.status
+  // Derive status from stock levels
+  const qty = itemQuantity.value
+  const minStock = itemMinStock.value
+  if (qty <= 0) return 'out_of_stock'
+  if (qty <= minStock) return 'low_stock'
+  return 'in_stock'
 })
 
 const getStatusBadgeClass = (status) => {
@@ -368,8 +456,37 @@ const formatDate = (date) => {
 }
 
 const editItem = () => {
-  // Could navigate to a dedicated edit route; keeping inline for now
-  console.log('Edit item')
+  editFormError.value = ''
+  // Populate form with current item data
+  Object.assign(editForm, {
+    name: item.value.name || '',
+    category: item.value.category || '',
+    unit: item.value.unit || 'kg',
+    current_stock: Number(item.value.current_stock ?? item.value.quantity ?? 0),
+    minimum_stock: Number(item.value.minimum_stock ?? item.value.min_stock ?? 0),
+    unit_price: Number(item.value.unit_price ?? 0),
+    location: item.value.location || '',
+    expiry_date: item.value.expiry_date || '',
+    description: item.value.description || ''
+  })
+  showEditModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  editFormError.value = ''
+}
+
+const submitEditForm = async () => {
+  editFormError.value = ''
+  try {
+    await inventoryStore.updateItem(item.value.id, editForm)
+    await reloadFromStore()
+    closeEditModal()
+  } catch (e) {
+    console.error('Error updating item:', e)
+    editFormError.value = e.response?.data?.message || 'Failed to update item. Please check inputs.'
+  }
 }
 
 const adjustStock = () => {
@@ -429,6 +546,12 @@ const viewSuppliers = () => {
   })
 }
 
+const reloadFromStore = async () => {
+  if (item.value.id) {
+    await loadItemData(item.value.id)
+  }
+}
+
 onMounted(async () => {
   const itemId = Number(route.params.id)
   await loadItemData(itemId)
@@ -443,6 +566,9 @@ const loadItemData = async (id) => {
     const found = inventoryStore.items.find(it => Number(it.id) === Number(id))
     if (found) {
       item.value = found
+      await loadTransactions(id)
+      await loadUsageHistory(id)
+      loadSuppliers()
       return
     }
     // Fallback to direct API call
@@ -451,6 +577,9 @@ const loadItemData = async (id) => {
     const entity = payload?.inventory_item || payload?.item || payload
     if (entity && entity.id) {
       item.value = entity
+      await loadTransactions(id)
+      await loadUsageHistory(id)
+      loadSuppliers()
       return
     }
     console.warn('Item not found on server, going back to list')
@@ -458,6 +587,63 @@ const loadItemData = async (id) => {
   } catch (e) {
     console.error('Error loading item data:', e)
     error.value = e.userMessage || e.response?.data?.message || 'Unable to load item'
+  }
+}
+
+const loadTransactions = async (itemId) => {
+  loadingTransactions.value = true
+  try {
+    const resp = await api.get(`/inventory/${itemId}/transactions`)
+    const payload = resp?.data
+    transactions.value = payload?.transactions || []
+  } catch (e) {
+    console.error('Error loading transactions:', e)
+    transactions.value = []
+  } finally {
+    loadingTransactions.value = false
+  }
+}
+
+const loadUsageHistory = async (itemId) => {
+  loadingUsageHistory.value = true
+  try {
+    // Usage history is derived from transactions with type 'out'
+    const resp = await api.get(`/inventory/${itemId}/transactions`)
+    const payload = resp?.data
+    const allTransactions = payload?.transactions || []
+    
+    // Filter for 'out' transactions and format them as usage history
+    usageHistory.value = allTransactions
+      .filter(t => (t.transaction_type || t.type) === 'out')
+      .map(t => ({
+        id: t.id,
+        activity: t.reference_type ? t.reference_type.charAt(0).toUpperCase() + t.reference_type.slice(1) : 'Usage',
+        description: t.notes || `Used ${Math.abs(t.quantity)} ${item.value.unit}`,
+        quantity: t.quantity,
+        transaction_date: t.transaction_date || t.date,
+        date: t.transaction_date || t.date
+      }))
+      .slice(0, 10) // Limit to 10 most recent
+  } catch (e) {
+    console.error('Error loading usage history:', e)
+    usageHistory.value = []
+  } finally {
+    loadingUsageHistory.value = false
+  }
+}
+
+const loadSuppliers = () => {
+  // Since supplier is just a string field, we'll show it if available
+  // If there are multiple suppliers in the future, we can enhance this
+  if (item.value.supplier) {
+    suppliers.value = [{
+      id: 1,
+      name: item.value.supplier,
+      contact: item.value.supplier_contact || null,
+      price: item.value.unit_price || null
+    }]
+  } else {
+    suppliers.value = []
   }
 }
 </script>

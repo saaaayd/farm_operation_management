@@ -114,20 +114,23 @@ class WeatherController extends Controller
             ], 400);
         }
 
-        $days = $request->get('days', 5);
-        if ($days > 5) $days = 5; // API limitation
+        $days = $request->get('days', 7);
+        if ($days > 7) $days = 7; // Limit to 7 days
 
         $forecastData = $this->weatherService->getForecast($lat, $lon, $days);
 
-        if (!$forecastData) {
+        if (!$forecastData || !isset($forecastData['list'])) {
             return response()->json([
                 'message' => 'Unable to fetch forecast data'
             ], 500);
         }
 
+        // Process forecast data to daily format
+        $dailyForecasts = $this->processForecastToDaily($forecastData['list'], $days);
+
         return response()->json([
             'field' => $field,
-            'forecast' => $forecastData
+            'forecast' => $dailyForecasts
         ]);
     }
 
@@ -410,5 +413,101 @@ class WeatherController extends Controller
         }
 
         return response()->json($dashboardData);
+    }
+
+    /**
+     * Process forecast data from 3-hourly intervals to daily forecasts
+     */
+    private function processForecastToDaily(array $forecastList, int $days): array
+    {
+        $dailyForecasts = [];
+        $today = date('Y-m-d');
+        
+        foreach ($forecastList as $forecast) {
+            if (!isset($forecast['dt']) || !isset($forecast['main']) || !isset($forecast['weather'][0])) {
+                continue;
+            }
+            
+            $forecastDate = date('Y-m-d', $forecast['dt']);
+            
+            // Skip past dates - only include today and future dates
+            if ($forecastDate < $today) {
+                continue;
+            }
+            
+            if (!isset($dailyForecasts[$forecastDate])) {
+                $dailyForecasts[$forecastDate] = [
+                    'date' => $forecastDate,
+                    'time' => $forecastDate,
+                    'high' => PHP_FLOAT_MIN,
+                    'low' => PHP_FLOAT_MAX,
+                    'temperature_max' => PHP_FLOAT_MIN,
+                    'temperature_min' => PHP_FLOAT_MAX,
+                    'max_temp' => PHP_FLOAT_MIN,
+                    'min_temp' => PHP_FLOAT_MAX,
+                    'condition' => '',
+                    'weather' => '',
+                    'description' => '',
+                    'weather_description' => '',
+                    'rain_chance' => 0,
+                    'precipitation_probability' => 0,
+                    'precipitation_chance' => 0,
+                    'wind_speed' => 0,
+                    'wind' => 0,
+                    'weather_code' => 0,
+                    'code' => 0,
+                    'humidity' => 0,
+                    'icon' => '🌤️'
+                ];
+            }
+            
+            // Keep temperature in Celsius (API returns metric/Celsius)
+            $tempC = $forecast['main']['temp'] ?? 0;
+            
+            $dailyForecasts[$forecastDate]['high'] = max($dailyForecasts[$forecastDate]['high'], $tempC);
+            $dailyForecasts[$forecastDate]['low'] = min($dailyForecasts[$forecastDate]['low'], $tempC);
+            $dailyForecasts[$forecastDate]['temperature_max'] = max($dailyForecasts[$forecastDate]['temperature_max'], $tempC);
+            $dailyForecasts[$forecastDate]['temperature_min'] = min($dailyForecasts[$forecastDate]['temperature_min'], $tempC);
+            $dailyForecasts[$forecastDate]['max_temp'] = max($dailyForecasts[$forecastDate]['max_temp'], $tempC);
+            $dailyForecasts[$forecastDate]['min_temp'] = min($dailyForecasts[$forecastDate]['min_temp'], $tempC);
+            
+            // Get most common condition (use the first one for now, could be improved)
+            if (empty($dailyForecasts[$forecastDate]['condition'])) {
+                $dailyForecasts[$forecastDate]['condition'] = $forecast['weather'][0]['main'] ?? 'Clear';
+                $dailyForecasts[$forecastDate]['weather'] = $forecast['weather'][0]['main'] ?? 'Clear';
+                $dailyForecasts[$forecastDate]['description'] = $forecast['weather'][0]['description'] ?? 'Clear skies';
+                $dailyForecasts[$forecastDate]['weather_description'] = $forecast['weather'][0]['description'] ?? 'Clear skies';
+            }
+            
+            // Get max precipitation probability
+            $pop = $forecast['pop'] ?? 0;
+            $dailyForecasts[$forecastDate]['rain_chance'] = max($dailyForecasts[$forecastDate]['rain_chance'], $pop * 100);
+            $dailyForecasts[$forecastDate]['precipitation_probability'] = max($dailyForecasts[$forecastDate]['precipitation_probability'], $pop * 100);
+            $dailyForecasts[$forecastDate]['precipitation_chance'] = max($dailyForecasts[$forecastDate]['precipitation_chance'], $pop * 100);
+            
+            // Keep wind speed in m/s (can convert to km/h if needed, but keep metric)
+            $windSpeed = $forecast['wind']['speed'] ?? 0; // m/s
+            $dailyForecasts[$forecastDate]['wind_speed'] = max($dailyForecasts[$forecastDate]['wind_speed'], $windSpeed);
+            $dailyForecasts[$forecastDate]['wind'] = max($dailyForecasts[$forecastDate]['wind'], $windSpeed);
+            
+            // Weather code
+            $dailyForecasts[$forecastDate]['weather_code'] = $forecast['weather'][0]['id'] ?? 0;
+            $dailyForecasts[$forecastDate]['code'] = $forecast['weather'][0]['id'] ?? 0;
+            
+            // Average humidity
+            $humidity = $forecast['main']['humidity'] ?? 0;
+            if ($dailyForecasts[$forecastDate]['humidity'] === 0) {
+                $dailyForecasts[$forecastDate]['humidity'] = $humidity;
+            } else {
+                $dailyForecasts[$forecastDate]['humidity'] = ($dailyForecasts[$forecastDate]['humidity'] + $humidity) / 2;
+            }
+        }
+        
+        // Sort by date and get first N days (starting from today)
+        ksort($dailyForecasts);
+        $result = array_values($dailyForecasts);
+        
+        // Return exactly 7 days starting from today
+        return array_slice($result, 0, $days);
     }
 }

@@ -334,37 +334,28 @@ const isEditMode = computed(() => !!props.harvest)
 // Get harvestable plantings from the store
 const harvestablePlantings = computed(() => {
   const allPlantings = farmStore.plantings || []
-  // Use the store getter which should handle the filtering
-  let plantings = farmStore.harvestablePlantings || []
+  
+  // Filter to only show plantings that are at least "planted" (exclude "planned" status)
+  // Allow: planted, growing, ready (but not planned, harvested, or failed)
+  const validStatuses = ['planted', 'growing', 'ready']
+  
+  const plantings = allPlantings.filter(p => {
+    if (!p || !p.id) return false
+    const status = String(p.status || '').toLowerCase()
+    return validStatuses.includes(status)
+  })
   
   // Debug logging when modal is open
   if (props.show) {
     console.log('=== Harvest Modal Debug ===')
     console.log('All plantings in store:', allPlantings.length)
-    console.log('Harvestable plantings (from getter):', plantings.length)
+    console.log('Harvestable plantings (filtered):', plantings.length)
     if (allPlantings.length > 0) {
-      console.log('Sample planting structure:', JSON.stringify(allPlantings[0], null, 2))
       console.log('Planting statuses:', allPlantings.map(p => ({ 
         id: p?.id, 
         status: p?.status,
-        statusType: typeof p?.status,
-        statusValue: String(p?.status),
-        hasField: !!p?.field,
-        fieldName: p?.field?.name,
-        fieldId: p?.field_id
+        included: validStatuses.includes(String(p?.status || '').toLowerCase())
       })))
-    }
-    
-    // If getter returns empty but we have plantings, do manual filter as fallback
-    if (plantings.length === 0 && allPlantings.length > 0) {
-      console.warn('Getter returned 0 but we have plantings! Doing manual filter...')
-      plantings = allPlantings.filter(p => {
-        if (!p || !p.id) return false
-        // Only exclude explicitly failed (case-insensitive)
-        const status = String(p.status || '').toLowerCase()
-        return status !== 'failed'
-      })
-      console.log('Manual filter result:', plantings.length, plantings)
     }
   }
   

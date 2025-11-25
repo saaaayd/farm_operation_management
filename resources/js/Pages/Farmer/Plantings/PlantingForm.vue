@@ -173,17 +173,30 @@
           </div>
           
           <div>
-            <label for="area_planted" class="block text-sm font-semibold text-gray-700 mb-2">Area Planted (ha)</label>
+            <label for="area_planted" class="block text-sm font-semibold text-gray-700 mb-2">
+              Area Planted (ha)
+              <span v-if="selectedField" class="text-xs font-normal text-gray-500 ml-2">
+                (Max: {{ selectedField.size }} ha)
+              </span>
+            </label>
             <input
               type="number"
-              step="0.1"
+              step="0.01"
               min="0"
+              :max="maxAreaPlanted"
               id="area_planted"
               v-model.number="form.data.area_planted"
               class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-              :class="{ 'border-red-500': form.errors.area_planted }"
+              :class="{ 'border-red-500': form.errors.area_planted || areaExceedsField }"
+              @input="validateAreaPlanted"
             />
             <p v-if="form.errors.area_planted" class="mt-1 text-xs text-red-600">{{ form.errors.area_planted }}</p>
+            <p v-else-if="areaExceedsField" class="mt-1 text-xs text-red-600">
+              Area planted ({{ form.data.area_planted || 0 }} ha) cannot exceed field size ({{ selectedField?.size || 0 }} ha)
+            </p>
+            <p v-else-if="selectedField && form.data.area_planted" class="mt-1 text-xs text-gray-500">
+              Field size: {{ selectedField.size }} ha
+            </p>
           </div>
 
           <div>
@@ -266,6 +279,33 @@ const selectedRiceVariety = computed(() => {
   if (!form.value.data.rice_variety_id) return null
   return riceVarieties.value.find(v => v.id == form.value.data.rice_variety_id)
 })
+
+// Get selected field
+const selectedField = computed(() => {
+  if (!form.value.data.field_id) return null
+  return farmStore.fields.find(f => f.id == form.value.data.field_id)
+})
+
+// Get max area that can be planted (field size)
+const maxAreaPlanted = computed(() => {
+  return selectedField.value?.size || null
+})
+
+// Check if area planted exceeds field size
+const areaExceedsField = computed(() => {
+  if (!selectedField.value || !form.value.data.area_planted) return false
+  return Number(form.value.data.area_planted) > Number(selectedField.value.size)
+})
+
+// Validate area planted
+const validateAreaPlanted = () => {
+  if (areaExceedsField.value) {
+    // Clear any existing errors first
+    if (form.value.errors.area_planted) {
+      delete form.value.errors.area_planted
+    }
+  }
+}
 
 // Track if harvest date was manually changed
 const harvestDateManuallyChanged = ref(false)
@@ -451,6 +491,18 @@ onMounted(async () => {
 const submitForm = async () => {
   form.value.processing = true
   form.value.errors = {}
+
+  // Validate area planted doesn't exceed field size
+  if (form.value.data.area_planted && selectedField.value) {
+    const areaPlanted = Number(form.value.data.area_planted)
+    const fieldSize = Number(selectedField.value.size)
+    
+    if (areaPlanted > fieldSize) {
+      form.value.errors.area_planted = `Area planted (${areaPlanted} ha) cannot exceed field size (${fieldSize} ha)`
+      form.value.processing = false
+      return
+    }
+  }
 
   // Validate expected harvest date is after planting date
   if (form.value.data.planting_date && form.value.data.expected_harvest_date) {

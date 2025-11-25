@@ -103,16 +103,24 @@
             </div>
           </div>
 
-          <div class="mt-auto border-t border-gray-50 px-5 py-3 bg-gray-50/50 rounded-b-xl flex justify-between items-center text-sm">
+          <div class="mt-auto border-t border-gray-50 px-5 py-3 bg-gray-50/50 rounded-b-xl flex justify-between items-center gap-2 text-sm">
             <span class="text-gray-500 flex items-center gap-1 truncate max-w-[60%]">
               <span v-if="item.location">📍 {{ item.location }}</span>
             </span>
-            <button
-              @click="editItem(item)"
-              class="text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
-            >
-              Edit Details
-            </button>
+            <div class="flex gap-3">
+              <button
+                @click="viewDetails(item)"
+                class="text-blue-600 hover:text-blue-700 font-medium hover:underline"
+              >
+                View Details
+              </button>
+              <button
+                @click="editItem(item)"
+                class="text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
+              >
+                Edit Details
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -209,9 +217,12 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import FormAlert from '@/Components/UI/FormAlert.vue'
 import { formatCurrency } from '@/utils/format'
+
+const router = useRouter()
 
 const store = useInventoryStore()
 const items = computed(() => store.items || [])
@@ -271,6 +282,10 @@ const openCreateModal = () => {
     location: '', expiry_date: '', description: ''
   })
   showModal.value = true
+}
+
+const viewDetails = (item) => {
+  router.push(`/inventory/${item.id}`)
 }
 
 const editItem = (item) => {

@@ -34,7 +34,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.temperature }}°F</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Math.round(currentWeather.temperature) }}°C</div>
               <div class="text-sm text-gray-600">Temperature</div>
             </div>
           </div>
@@ -62,7 +62,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall }} in</div>
+              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall.toFixed(1) }} mm</div>
               <div class="text-sm text-gray-600">Rainfall (24h)</div>
             </div>
           </div>
@@ -76,7 +76,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.wind_speed }} mph</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Math.round(currentWeather.wind_speed) }} km/h</div>
               <div class="text-sm text-gray-600">Wind Speed</div>
             </div>
           </div>
@@ -123,7 +123,8 @@
                 frameborder="0"
                 style="border: none;"
                 @error="handleIframeError"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+                @load="handleIframeLoad"
               ></iframe>
             </div>
             <!-- Leaflet Map with Weather Overlays -->
@@ -133,7 +134,20 @@
           <!-- 7-Day Forecast -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">7-Day Forecast</h2>
-            <div class="space-y-4">
+            <div v-if="loading && forecast.length === 0" class="text-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p class="text-gray-500 mt-4">Loading forecast...</p>
+            </div>
+            <div v-else-if="forecast.length === 0" class="text-center py-8">
+              <p class="text-gray-500">No forecast data available</p>
+              <button
+                @click="refreshWeather"
+                class="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Try refreshing weather data
+              </button>
+            </div>
+            <div v-else class="space-y-4">
               <div
                 v-for="day in forecast"
                 :key="day.date"
@@ -151,12 +165,12 @@
                 </div>
                 <div class="flex items-center space-x-4">
                   <div class="text-right">
-                    <div class="font-medium text-gray-900">{{ day.high }}°F</div>
-                    <div class="text-sm text-gray-600">{{ day.low }}°F</div>
+                    <div class="font-medium text-gray-900">{{ Math.round(day.high) }}°C</div>
+                    <div class="text-sm text-gray-600">{{ Math.round(day.low) }}°C</div>
                   </div>
                   <div class="text-right text-sm text-gray-600">
-                    <div>{{ day.rain_chance }}% rain</div>
-                    <div>{{ day.wind_speed }} mph</div>
+                    <div>{{ Math.round(day.rain_chance) }}% rain</div>
+                    <div>{{ Math.round(day.wind_speed * 3.6) }} km/h</div>
                   </div>
                 </div>
               </div>
@@ -201,7 +215,7 @@
               >
                 <div class="flex justify-between items-start mb-2">
                   <h4 class="font-medium text-gray-900">{{ field.name }}</h4>
-                  <span class="text-sm text-gray-600">{{ field.temperature }}°F</span>
+                  <span class="text-sm text-gray-600">{{ Math.round(field.temperature) }}°C</span>
                 </div>
                 <div class="text-sm text-gray-600">
                   <div>Humidity: {{ field.humidity }}%</div>
@@ -333,6 +347,13 @@ const fieldsWithCoordinates = computed(() => {
 })
 
 // Suppress iframe security errors (harmless browser extension conflicts)
+const handleIframeLoad = () => {
+  // Note: The SecurityError about '_falkon_external' is a harmless browser extension issue
+  // It occurs when browser extensions (like Falkon) try to access iframe content
+  // This doesn't affect the Windy.com iframe functionality - the map still works correctly
+  // The error is logged by the browser's security system but can be safely ignored
+}
+
 const handleIframeError = () => {
   // These errors are harmless - they occur when browser extensions try to access iframe
   // They don't affect functionality, so we can safely ignore them
@@ -366,10 +387,10 @@ const fallbackWeather = ref({
 const currentWeather = computed(() => {
   if (weatherStore.currentWeather) {
     return {
-      temperature: weatherStore.currentWeather.temperature || 72,
+      temperature: weatherStore.currentWeather.temperature || 22,
       humidity: weatherStore.currentWeather.humidity || 65,
       rainfall: weatherStore.currentWeather.rainfall || weatherStore.currentWeather.precipitation || 0.2,
-      wind_speed: weatherStore.currentWeather.wind_speed || 5,
+      wind_speed: weatherStore.currentWeather.wind_speed || 10,
       condition: weatherStore.currentWeather.condition || 'Partly Cloudy',
       icon: getWeatherIcon(weatherStore.currentWeather.weather_code)
     }
@@ -520,11 +541,12 @@ const refreshWeather = async () => {
     
     await Promise.all(weatherPromises)
     
-    // Fetch forecast for primary field
+    // Fetch forecast for primary field (7 days)
     if (fieldsWithCoordinates.value.length > 0) {
       const primaryField = fieldsWithCoordinates.value[0]
       try {
-        await weatherStore.fetchForecast(primaryField.id)
+        await weatherStore.fetchForecast(primaryField.id, 7)
+        console.log('Forecast loaded:', weatherStore.forecast?.length || 0, 'days')
       } catch (error) {
         console.warn('Failed to fetch forecast:', error)
       }
@@ -705,14 +727,14 @@ const initMap = () => {
         
         switch (selectedWeatherLayer.value) {
           case 'temperature':
-            value = weatherData.temperature || field.temperature || 70
-            // Color gradient: blue (cold) -> green (moderate) -> red (hot)
-            if (value < 50) color = '#3B82F6'
-            else if (value < 70) color = '#10B981'
-            else if (value < 85) color = '#F59E0B'
+            value = weatherData.temperature || field.temperature || 22
+            // Color gradient: blue (cold) -> green (moderate) -> red (hot) - Celsius
+            if (value < 10) color = '#3B82F6'
+            else if (value < 20) color = '#10B981'
+            else if (value < 30) color = '#F59E0B'
             else color = '#EF4444'
-            radius = Math.max(20, Math.min(60, (value - 40) * 2))
-            label = `${Math.round(value)}°F`
+            radius = Math.max(20, Math.min(60, (value - 5) * 2))
+            label = `${Math.round(value)}°C`
             break
           case 'precipitation':
             value = weatherData.precipitation || 0
@@ -737,12 +759,12 @@ const initMap = () => {
             break
           case 'wind':
             value = weatherData.wind_speed || 0
-            // Wind speed gradient: calm (green) -> moderate (yellow) -> strong (red)
-            if (value < 10) color = '#10B981'
-            else if (value < 20) color = '#F59E0B'
+            // Wind speed gradient: calm (green) -> moderate (yellow) -> strong (red) - km/h
+            if (value < 15) color = '#10B981'
+            else if (value < 30) color = '#F59E0B'
             else color = '#EF4444'
-            radius = Math.max(15, Math.min(40, value * 1.5))
-            label = `${Math.round(value)} mph`
+            radius = Math.max(15, Math.min(40, value * 0.8))
+            label = `${Math.round(value)} km/h`
             break
           default:
             return
@@ -781,7 +803,7 @@ const initMap = () => {
 const fetchOpenMeteoWeather = async (lat, lon) => {
   try {
     // Open-Meteo API - no API key required, good CORS support
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code,cloud_cover,pressure_msl&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code,cloud_cover,pressure_msl&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm`
     
     const response = await fetch(url)
     
@@ -925,15 +947,16 @@ const updateFieldMarkers = async () => {
   fieldDataWithWeather.forEach(({ field, lat, lon, weatherData }) => {
     if (!field || !lat || !lon || !map.value || !L) return
 
-    // Use real weather data or fallback to field data
-    const temp = weatherData?.temperature || field.temperature || 70
+    // Use real weather data or fallback to field data (Celsius)
+    const temp = weatherData?.temperature || field.temperature || 22
     const humidity = weatherData?.humidity || field.humidity || 65
     const rainfall = weatherData?.precipitation || field.rainfall || 0
+    // Wind speed is in km/h from API, ensure it's displayed correctly
     const windSpeed = weatherData?.wind_speed || 0
     const description = weatherData?.description || 'Weather data unavailable'
     
-    // Create custom icon based on temperature
-    const iconColor = temp < 60 ? '#3B82F6' : temp > 80 ? '#EF4444' : '#10B981'
+    // Create custom icon based on temperature (Celsius thresholds)
+    const iconColor = temp < 15 ? '#3B82F6' : temp > 30 ? '#EF4444' : '#10B981'
     
     const customIcon = L.divIcon({
       className: 'weather-marker',
@@ -952,7 +975,7 @@ const updateFieldMarkers = async () => {
           font-size: 12px;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         ">
-          ${Math.round(temp)}°
+          ${Math.round(temp)}°C
         </div>
       `,
       iconSize: [40, 40],
@@ -965,9 +988,9 @@ const updateFieldMarkers = async () => {
         <div style="min-width: 200px;">
           <h3 style="margin: 0 0 8px 0; font-weight: bold;">${field.name}</h3>
           <div style="font-size: 14px; margin-bottom: 8px;">
-            <div><strong>Temperature:</strong> ${temp}°F</div>
+            <div><strong>Temperature:</strong> ${Math.round(temp)}°C</div>
             <div><strong>Humidity:</strong> ${humidity}%</div>
-            <div><strong>Wind Speed:</strong> ${windSpeed} mph</div>
+            <div><strong>Wind Speed:</strong> ${Math.round(windSpeed)} km/h</div>
             <div><strong>Conditions:</strong> ${description}</div>
             ${rainfall > 0 ? `<div><strong>Precipitation:</strong> ${rainfall.toFixed(2)} mm/h</div>` : ''}
           </div>

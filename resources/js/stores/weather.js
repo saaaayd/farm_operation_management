@@ -44,14 +44,18 @@ export const useWeatherStore = defineStore('weather', {
       }
     },
 
-    async fetchForecast(fieldId) {
+    async fetchForecast(fieldId, days = 7) {
       this.loading = true;
       try {
-        const response = await axios.get(`/api/weather/fields/${fieldId}/forecast`);
-        this.forecast = response.data.forecast;
+        const response = await axios.get(`/api/weather/fields/${fieldId}/forecast`, {
+          params: { days }
+        });
+        this.forecast = response.data.forecast || [];
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch forecast';
+        console.error('Forecast fetch error:', error);
+        this.forecast = []; // Set to empty array on error
         throw error;
       } finally {
         this.loading = false;

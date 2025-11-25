@@ -364,6 +364,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{item}', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'destroy']);
         Route::post('/{item}/add-stock', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'addStock']);
         Route::post('/{item}/remove-stock', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'removeStock']);
+        Route::get('/{item}/transactions', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'getTransactions']);
         Route::get('/alerts/low-stock', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'lowStockAlerts']);
     });
 

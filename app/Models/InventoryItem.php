@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InventoryItem extends Model
 {
@@ -45,6 +46,14 @@ class InventoryItem extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Get the transactions for this inventory item
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class)->orderBy('transaction_date', 'desc');
     }
 
     /**

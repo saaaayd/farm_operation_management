@@ -407,7 +407,7 @@ export default routes;
 
 // Navigation guard function to be used in main app
 export const setupRouterGuards = (router) => {
-  router.beforeEach((to, from, next) => {
+  router.beforeEach(async (to, from, next) => {
     try {
       const authStore = useAuthStore();
       
@@ -453,6 +453,29 @@ export const setupRouterGuards = (router) => {
       
       // --- START OF THE FIX ---
       
+      // If user is authenticated but user data is not loaded yet, wait for it
+      // This is important for page reloads where the guard runs before user data is fetched
+      if (authStore.isAuthenticated && !authStore.user && !authStore.loading) {
+        console.log('Router: User authenticated but data not loaded, fetching user data...');
+        try {
+          await authStore.fetchUser();
+        } catch (error) {
+          console.error('Router: Failed to fetch user data:', error);
+          // If fetch fails, allow navigation to continue (will be handled by auth checks)
+        }
+      }
+      
+      // Wait for user data to finish loading if it's currently loading
+      if (authStore.isAuthenticated && authStore.loading) {
+        console.log('Router: Waiting for user data to load...');
+        // Wait up to 3 seconds for user data to load
+        let attempts = 0;
+        while (authStore.loading && attempts < 30) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+      }
+      
       // We calculate the onboarding status manually from the
       // 'authStore.user' object, which we know is fresh.
       const user = authStore.user;
@@ -470,7 +493,8 @@ export const setupRouterGuards = (router) => {
       }
 
       // Check if user is ALREADY onboarded but tries to go back to /onboarding
-      if (to.meta.requiresOnboarding && !userHasNoFarm) {
+      // Only redirect if we have user data (to avoid redirecting when user is null on reload)
+      if (to.meta.requiresOnboarding && user && !userHasNoFarm) {
         // Redirect based on user role
         if (authStore.isAdmin) {
           console.log('Router: Admin user is already onboarded, redirecting from /onboarding to /admin');
@@ -479,6 +503,14 @@ export const setupRouterGuards = (router) => {
           console.log('Router: User is already onboarded, redirecting from /onboarding');
           next('/dashboard');
         }
+        return;
+      }
+      
+      // If we're on onboarding page and user data is still loading, allow navigation
+      // (don't redirect away from onboarding while user data is being fetched)
+      if (to.meta.requiresOnboarding && !user && authStore.isAuthenticated) {
+        console.log('Router: On onboarding page, user data still loading, allowing navigation');
+        next();
         return;
       }
       
