@@ -84,7 +84,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.avgTemperature }}°F</div>
+              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.avgTemperature }}°C</div>
               <div class="text-sm text-gray-600">Avg Temperature</div>
             </div>
           </div>
@@ -98,7 +98,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.totalRainfall }}"</div>
+              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.totalRainfall }} mm</div>
               <div class="text-sm text-gray-600">Total Rainfall</div>
             </div>
           </div>
@@ -112,7 +112,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.avgWindSpeed }} mph</div>
+              <div class="text-2xl font-bold text-gray-900">{{ weatherSummary.avgWindSpeed }} km/h</div>
               <div class="text-sm text-gray-600">Avg Wind Speed</div>
             </div>
           </div>
@@ -278,7 +278,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { weatherAPI } from '@/services/api'
+import { reportsAPI } from '@/services/api'
 import LineChart from '@/Components/Charts/LineChart.vue'
 import BarChart from '@/Components/Charts/BarChart.vue'
 
@@ -296,44 +296,13 @@ const weatherSummary = ref({
 })
 
 const gddData = ref({
-  today: 15,
-  week: 95,
-  month: 420,
-  season: 1250
+  today: 0,
+  week: 0,
+  month: 0,
+  season: 0
 })
 
-const weatherEvents = ref([
-  {
-    id: 1,
-    type: 'rain',
-    title: 'Heavy Rainfall',
-    description: 'Significant rainfall event with 1.2 inches in 6 hours',
-    date: '2024-03-20T14:00:00Z',
-    duration: '6 hours',
-    intensity: 'Heavy',
-    impact: 'Positive'
-  },
-  {
-    id: 2,
-    type: 'wind',
-    title: 'Strong Winds',
-    description: 'Wind speeds reached 25 mph with gusts up to 35 mph',
-    date: '2024-03-18T10:30:00Z',
-    duration: '4 hours',
-    intensity: 'Strong',
-    impact: 'Neutral'
-  },
-  {
-    id: 3,
-    type: 'frost',
-    title: 'Frost Warning',
-    description: 'Temperatures dropped to 32°F, potential frost damage',
-    date: '2024-03-15T06:00:00Z',
-    duration: '2 hours',
-    intensity: 'Light',
-    impact: 'Negative'
-  }
-])
+const weatherEvents = ref([])
 
 const getEventIcon = (type) => {
   const icons = {
@@ -394,34 +363,39 @@ const exportReport = () => {
 
 const generateCSV = () => {
   // Generate CSV content from weather data
-  const headers = ['Date', 'Temperature', 'Humidity', 'Rainfall', 'Wind Speed', 'Conditions']
-  const rows = weatherData.value.map(item => [
-    item.date || 'N/A',
-    item.temperature || 0,
-    item.humidity || 0,
-    item.rainfall || 0,
-    item.wind_speed || 0,
-    item.conditions || 'N/A',
-  ])
+  const headers = ['Date', 'Temperature (°C)', 'Rainfall (mm)', 'Wind Speed (km/h)', 'Sunshine Hours']
+  const rows = temperatureTrends.value.map((tempItem, index) => {
+    const rainItem = rainfallDistribution.value[index] || {}
+    return [
+      tempItem.date || 'N/A',
+      tempItem.temperature || 0,
+      rainItem.rainfall || 0,
+      weatherSummary.value.avgWindSpeed || 0,
+      weatherSummary.value.sunshineHours || 0,
+    ]
+  })
   
   return [headers, ...rows].map(row => row.join(',')).join('\n')
 }
 
+const temperatureTrends = ref([])
+const rainfallDistribution = ref([])
+
 // Chart data computed properties
 const temperatureChartData = computed(() => {
-  if (!weatherData.value || weatherData.value.length === 0) {
+  if (!temperatureTrends.value || temperatureTrends.value.length === 0) {
     return { labels: [], datasets: [] }
   }
   
   return {
-    labels: weatherData.value.map(item => {
-      const date = new Date(item.recorded_at || item.date)
+    labels: temperatureTrends.value.map(item => {
+      const date = new Date(item.date)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }),
     datasets: [
       {
         label: 'Temperature (°C)',
-        data: weatherData.value.map(item => item.temperature || 0),
+        data: temperatureTrends.value.map(item => item.temperature || 0),
         borderColor: 'rgb(239, 68, 68)',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         fill: true,
@@ -432,26 +406,19 @@ const temperatureChartData = computed(() => {
 })
 
 const rainfallChartData = computed(() => {
-  if (!weatherData.value || weatherData.value.length === 0) {
+  if (!rainfallDistribution.value || rainfallDistribution.value.length === 0) {
     return { labels: [], datasets: [] }
   }
   
-  // Group by date and sum rainfall
-  const dailyRainfall = {}
-  weatherData.value.forEach(item => {
-    const date = new Date(item.recorded_at || item.date).toLocaleDateString()
-    if (!dailyRainfall[date]) {
-      dailyRainfall[date] = 0
-    }
-    dailyRainfall[date] += item.rainfall || 0
-  })
-  
   return {
-    labels: Object.keys(dailyRainfall),
+    labels: rainfallDistribution.value.map(item => {
+      const date = new Date(item.date)
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }),
     datasets: [
       {
         label: 'Rainfall (mm)',
-        data: Object.values(dailyRainfall),
+        data: rainfallDistribution.value.map(item => item.rainfall || 0),
         backgroundColor: 'rgba(59, 130, 246, 0.8)',
       }
     ]
@@ -461,21 +428,51 @@ const rainfallChartData = computed(() => {
 const loadWeatherData = async () => {
   try {
     loading.value = true
-    // Load weather data for all fields or selected field
-    // This is a placeholder - actual implementation would depend on the API structure
-    weatherData.value = []
     
-    // Calculate summary from data
-    if (weatherData.value.length > 0) {
+    // Map date range to period
+    const periodMap = {
+      'last7days': 7,
+      'last30days': 30,
+      'last3months': 90,
+      'lastyear': 365
+    }
+    const period = periodMap[dateRange.value] || 30
+    
+    const response = await reportsAPI.getWeatherReport(period)
+    const data = response.data.data || response.data
+    
+    if (data.weather_summary) {
       weatherSummary.value = {
-        avgTemperature: weatherData.value.reduce((sum, item) => sum + (item.temperature || 0), 0) / weatherData.value.length,
-        totalRainfall: weatherData.value.reduce((sum, item) => sum + (item.rainfall || 0), 0),
-        avgWindSpeed: weatherData.value.reduce((sum, item) => sum + (item.wind_speed || 0), 0) / weatherData.value.length,
-        sunshineHours: 0, // Not available in weather data
+        avgTemperature: data.weather_summary.avg_temperature || 0,
+        totalRainfall: data.weather_summary.total_rainfall || 0,
+        avgWindSpeed: data.weather_summary.avg_wind_speed || 0,
+        sunshineHours: data.weather_summary.sunshine_hours || 0,
       }
+    }
+    
+    if (data.gdd_data) {
+      gddData.value = {
+        today: data.gdd_data.today || 0,
+        week: data.gdd_data.week || 0,
+        month: data.gdd_data.month || 0,
+        season: data.gdd_data.season || 0,
+      }
+    }
+    
+    if (data.temperature_trends) {
+      temperatureTrends.value = data.temperature_trends
+    }
+    
+    if (data.rainfall_distribution) {
+      rainfallDistribution.value = data.rainfall_distribution
+    }
+    
+    if (data.weather_events) {
+      weatherEvents.value = data.weather_events
     }
   } catch (error) {
     console.error('Error loading weather data:', error)
+    alert('Failed to load weather data')
   } finally {
     loading.value = false
   }

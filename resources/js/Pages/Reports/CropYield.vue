@@ -85,7 +85,7 @@
             </div>
             <div class="ml-4">
               <div class="text-2xl font-bold text-gray-900">{{ yieldSummary.totalYield.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600">Total Yield (bushels)</div>
+              <div class="text-sm text-gray-600">Total Yield (kg)</div>
             </div>
           </div>
         </div>
@@ -98,8 +98,8 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ yieldSummary.avgYieldPerAcre }}</div>
-              <div class="text-sm text-gray-600">Avg Yield/Acre</div>
+              <div class="text-2xl font-bold text-gray-900">{{ yieldSummary.avgYieldPerAcre.toFixed(1) }}</div>
+              <div class="text-sm text-gray-600">Avg Yield/Hectare (kg)</div>
             </div>
           </div>
         </div>
@@ -156,11 +156,11 @@
             >
               <div class="flex justify-between items-start mb-2">
                 <h3 class="font-medium text-gray-900">{{ field.name }}</h3>
-                <span class="text-sm font-medium text-green-600">{{ field.yieldPerAcre }} bu/acre</span>
+                <span class="text-sm font-medium text-green-600">{{ field.yieldPerAcre.toFixed(1) }} kg/ha</span>
               </div>
               <div class="flex justify-between text-sm text-gray-600">
-                <span>Total Yield: {{ field.totalYield.toLocaleString() }} bushels</span>
-                <span>Area: {{ field.area }} acres</span>
+                <span>Total Yield: {{ field.totalYield.toLocaleString() }} kg</span>
+                <span>Area: {{ field.area }} ha</span>
               </div>
               <div class="mt-2">
                 <div class="w-full bg-gray-200 rounded-full h-2">
@@ -184,9 +184,9 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Crop</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area (acres)</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Yield</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yield/Acre</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area (ha)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Yield (kg)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yield/Hectare</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market Price</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Value</th>
                 </tr>
@@ -200,13 +200,13 @@
                     {{ crop.area }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {{ crop.totalYield.toLocaleString() }} bushels
+                    {{ crop.totalYield.toLocaleString() }} kg
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {{ crop.yieldPerAcre }} bu/acre
+                    {{ crop.yieldPerAcre.toFixed(1) }} kg/ha
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {{ formatCurrency(crop.marketPrice) }}/bushel
+                    {{ formatCurrency(crop.marketPrice) }}/kg
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                     {{ formatCurrency(crop.totalValue) }}
@@ -292,59 +292,15 @@ const selectedCrop = ref('')
 const selectedField = ref('')
 
 const yieldSummary = ref({
-  totalYield: 12500,
-  avgYieldPerAcre: 165,
-  yieldIncrease: 12,
-  bestField: 'North Field'
+  totalYield: 0,
+  avgYieldPerAcre: 0,
+  yieldIncrease: 0,
+  bestField: 'N/A'
 })
 
-const fieldPerformance = ref([
-  {
-    name: 'North Field',
-    totalYield: 4500,
-    area: 25.5,
-    yieldPerAcre: 176
-  },
-  {
-    name: 'South Field',
-    totalYield: 3800,
-    area: 22.0,
-    yieldPerAcre: 173
-  },
-  {
-    name: 'East Field',
-    totalYield: 4200,
-    area: 28.0,
-    yieldPerAcre: 150
-  }
-])
+const fieldPerformance = ref([])
 
-const cropComparison = ref([
-  {
-    name: 'Corn',
-    area: 45.5,
-    totalYield: 8300,
-    yieldPerAcre: 182,
-    marketPrice: 5.25,
-    totalValue: 43575
-  },
-  {
-    name: 'Wheat',
-    area: 22.0,
-    totalYield: 2200,
-    yieldPerAcre: 100,
-    marketPrice: 6.80,
-    totalValue: 14960
-  },
-  {
-    name: 'Soybeans',
-    area: 8.0,
-    totalYield: 2000,
-    yieldPerAcre: 250,
-    marketPrice: 12.50,
-    totalValue: 25000
-  }
-])
+const cropComparison = ref([])
 
 const updateReport = async () => {
   // Reload report data with current filters
@@ -390,8 +346,8 @@ const exportReport = () => {
 
 const generateCSV = () => {
   // Generate CSV content from yield data
-  const headers = ['Crop', 'Area (acres)', 'Total Yield (kg)', 'Yield per Acre', 'Market Price', 'Total Value']
-  const rows = yieldData.value.map(item => [
+  const headers = ['Crop', 'Area (hectares)', 'Total Yield (kg)', 'Yield per Hectare', 'Market Price', 'Total Value']
+  const rows = cropComparison.value.map(item => [
     item.name || 'N/A',
     item.area || 0,
     item.totalYield || 0,
@@ -403,11 +359,26 @@ const generateCSV = () => {
   return [headers, ...rows].map(row => row.join(',')).join('\n')
 }
 
+const yieldTrends = ref([])
+
 const yieldChartData = computed(() => {
-  // Placeholder - would be populated from actual yield data
+  if (!yieldTrends.value || yieldTrends.value.length === 0) {
+    return {
+      labels: [],
+      datasets: []
+    }
+  }
+  
   return {
-    labels: [],
-    datasets: []
+    labels: yieldTrends.value.map(item => item.month),
+    datasets: [{
+      label: 'Yield (kg)',
+      data: yieldTrends.value.map(item => item.yield),
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      fill: true,
+      tension: 0.4,
+    }]
   }
 })
 
@@ -418,12 +389,45 @@ onMounted(() => {
 
 const loadYieldData = async () => {
   try {
-    const response = await reportsAPI.getCropYieldReport()
+    const period = selectedSeason.value === '2024' ? 365 : selectedSeason.value === '2023' ? 730 : 1095
+    const response = await reportsAPI.getCropYieldReport(period)
     const data = response.data.data || response.data
-    // Update yield data from API response
-    // Chart data would be populated from response
+    
+    if (data.yield_summary) {
+      yieldSummary.value = {
+        totalYield: data.yield_summary.total_yield || 0,
+        avgYieldPerAcre: data.yield_summary.avg_yield_per_hectare || 0,
+        yieldIncrease: data.yield_summary.yield_increase || 0,
+        bestField: data.yield_summary.best_field || 'N/A'
+      }
+    }
+    
+    if (data.field_performance) {
+      fieldPerformance.value = data.field_performance.map(field => ({
+        name: field.field_name,
+        totalYield: field.total_yield,
+        area: field.area,
+        yieldPerAcre: field.yield_per_hectare
+      }))
+    }
+    
+    if (data.crop_comparison) {
+      cropComparison.value = data.crop_comparison.map(crop => ({
+        name: crop.name,
+        area: crop.area,
+        totalYield: crop.total_yield,
+        yieldPerAcre: crop.yield_per_hectare,
+        marketPrice: crop.market_price,
+        totalValue: crop.total_value
+      }))
+    }
+    
+    if (data.yield_trends) {
+      yieldTrends.value = data.yield_trends
+    }
   } catch (error) {
     console.error('Error loading yield data:', error)
+    alert('Failed to load yield data')
   }
 }
 </script>

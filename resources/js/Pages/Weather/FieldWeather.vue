@@ -39,7 +39,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.temperature }}°F</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Math.round(currentWeather.temperature) }}°C</div>
               <div class="text-sm text-gray-600">Temperature</div>
             </div>
           </div>
@@ -53,7 +53,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.humidity }}%</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Math.round(currentWeather.humidity) }}%</div>
               <div class="text-sm text-gray-600">Humidity</div>
             </div>
           </div>
@@ -67,7 +67,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall }} in</div>
+              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall.toFixed(1) }} mm</div>
               <div class="text-sm text-gray-600">Rainfall (24h)</div>
             </div>
           </div>
@@ -81,7 +81,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.wind_speed }} mph</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Math.round(currentWeather.wind_speed) }} km/h</div>
               <div class="text-sm text-gray-600">Wind Speed</div>
             </div>
           </div>
@@ -93,7 +93,7 @@
         <div class="lg:col-span-2 space-y-6">
           <!-- Weather Chart -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4">Temperature & Humidity (24h)</h2>
+            <h2 class="text-xl font-semibold mb-4">Temperature & Humidity (7 Days)</h2>
             <div class="w-full" style="height: 300px;">
               <LineChart v-if="temperatureHumidityChartData.labels.length > 0" :data="temperatureHumidityChartData" />
               <div v-else class="h-full flex items-center justify-center text-gray-500">
@@ -129,24 +129,29 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="day in weatherHistory" :key="day.date">
+                  <tr v-for="day in processedWeatherHistory" :key="day.date || day.recorded_at">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ formatDate(day.date) }}
+                      {{ formatDate(day.date || day.recorded_at) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ day.high }}°F
+                      {{ Math.round(day.high || day.temperature || day.max_temperature || 0) }}°C
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ day.low }}°F
+                      {{ Math.round(day.low || day.min_temperature || day.temperature || 0) }}°C
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ day.rainfall }} in
+                      {{ (day.rainfall || day.precipitation || 0).toFixed(1) }} mm
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ day.humidity }}%
+                      {{ Math.round(day.humidity || 0) }}%
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ day.wind_speed }} mph
+                      {{ Math.round((day.wind_speed || 0) * 3.6) }} km/h
+                    </td>
+                  </tr>
+                  <tr v-if="processedWeatherHistory.length === 0">
+                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                      No weather history data available
                     </td>
                   </tr>
                 </tbody>
@@ -163,7 +168,7 @@
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Size:</span>
-                <span class="font-medium">{{ field.size }} acres</span>
+                <span class="font-medium">{{ field.size > 0 ? field.size.toFixed(2) : 'Not set' }} {{ field.size > 0 ? 'hectares' : '' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Soil Type:</span>
@@ -174,8 +179,8 @@
                 <span class="font-medium">{{ field.current_crop || 'None' }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Weather Station:</span>
-                <span class="font-medium">{{ field.weather_station }}</span>
+                <span class="text-gray-600">Location:</span>
+                <span class="font-medium">{{ fieldLocation }}</span>
               </div>
             </div>
           </div>
@@ -183,37 +188,40 @@
           <!-- Growing Degree Days -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Growing Degree Days</h3>
+            <p class="text-xs text-gray-500 mb-3">
+              GDD measures heat accumulation for crop growth. Calculated as daily average temperature minus base temperature (10°C for rice). Higher GDD indicates faster growth.
+            </p>
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Today:</span>
-                <span class="font-medium">{{ gdd.today }}</span>
+                <span class="font-medium">{{ gdd.today }} GDD</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Week:</span>
-                <span class="font-medium">{{ gdd.week }}</span>
+                <span class="font-medium">{{ gdd.week }} GDD</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Month:</span>
-                <span class="font-medium">{{ gdd.month }}</span>
+                <span class="font-medium">{{ gdd.month }} GDD</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Season:</span>
-                <span class="font-medium">{{ gdd.season }}</span>
+                <span class="font-medium">{{ gdd.season }} GDD</span>
               </div>
             </div>
           </div>
 
           <!-- Soil Conditions -->
-          <div class="bg-white rounded-lg shadow-md p-6">
+          <div v-if="soilConditions.available" class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Soil Conditions</h3>
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Soil Temperature:</span>
-                <span class="font-medium">{{ soilConditions.temperature }}°F</span>
+                <span class="font-medium">{{ Math.round(soilConditions.temperature) }}°C</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Soil Moisture:</span>
-                <span class="font-medium">{{ soilConditions.moisture }}%</span>
+                <span class="font-medium">{{ Math.round(soilConditions.moisture) }}%</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">pH Level:</span>
@@ -299,10 +307,10 @@ const field = ref({
 })
 
 const currentWeather = ref({
-  temperature: 72,
-  humidity: 65,
-  rainfall: 0.2,
-  wind_speed: 5
+  temperature: 0,
+  humidity: 0,
+  rainfall: 0,
+  wind_speed: 0
 })
 
 const weatherHistory = ref([])
@@ -310,33 +318,21 @@ const weatherData24h = ref([])
 const weatherData7d = ref([])
 
 const gdd = ref({
-  today: 15,
-  week: 95,
-  month: 420,
-  season: 1250
+  today: 0,
+  week: 0,
+  month: 0,
+  season: 0
 })
 
 const soilConditions = ref({
-  temperature: 58,
-  moisture: 45,
-  ph: 6.8,
-  last_updated: '2024-03-25T10:00:00Z'
+  available: false,
+  temperature: 0,
+  moisture: 0,
+  ph: 0,
+  last_updated: null
 })
 
-const fieldAlerts = ref([
-  {
-    id: 1,
-    title: 'Low Soil Moisture',
-    description: 'Soil moisture below optimal level',
-    severity: 'warning'
-  },
-  {
-    id: 2,
-    title: 'Temperature Alert',
-    description: 'Expected frost tonight',
-    severity: 'danger'
-  }
-])
+const fieldAlerts = ref([])
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
@@ -352,15 +348,8 @@ const getAlertClass = (severity) => {
 }
 
 const refreshWeather = async () => {
-  loading.value = true
-  try {
-    // API call to refresh weather data
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-  } catch (error) {
-    console.error('Error refreshing weather:', error)
-  } finally {
-    loading.value = false
-  }
+  if (!field.value.id) return
+  await loadFieldWeatherData(field.value.id)
 }
 
 const viewFieldDetails = () => {
@@ -368,23 +357,80 @@ const viewFieldDetails = () => {
 }
 
 const viewHistoricalData = () => {
-  // Navigate to historical data page
-  console.log('View historical data')
+  // Navigate to weather reports page with field filter
+  router.push({
+    path: '/reports/weather',
+    query: { field: field.value.id }
+  })
 }
 
 const setFieldAlerts = () => {
-  // Show field alerts settings modal
-  console.log('Set field alerts')
+  // Navigate to weather analytics page where alerts can be configured
+  router.push({
+    path: '/weather/analytics',
+    query: { field: field.value.id, tab: 'alerts' }
+  })
 }
 
-const exportFieldData = () => {
-  // Export field weather data
-  console.log('Export field data')
+const exportFieldData = async () => {
+  try {
+    // Export weather data as CSV
+    const response = await weatherAPI.getHistory(field.value.id, 30)
+    let historyData = []
+    
+    if (response.data?.weather_logs?.data) {
+      historyData = response.data.weather_logs.data
+    } else if (Array.isArray(response.data?.data)) {
+      historyData = response.data.data
+    } else if (Array.isArray(response.data)) {
+      historyData = response.data
+    }
+    
+    if (historyData.length === 0) {
+      alert('No weather data available to export')
+      return
+    }
+    
+    // Create CSV content
+    const headers = ['Date', 'Temperature (°C)', 'Humidity (%)', 'Rainfall (mm)', 'Wind Speed (km/h)', 'Conditions']
+    const rows = historyData.map(item => {
+      const date = new Date(item.recorded_at || item.date).toLocaleString()
+      const temp = item.temperature || 0
+      const humidity = item.humidity || 0
+      const rainfall = item.rainfall || item.precipitation || 0
+      const windSpeed = (item.wind_speed || 0) * 3.6 // Convert m/s to km/h
+      const conditions = item.conditions || item.weather_condition || 'N/A'
+      
+      return [date, temp, humidity, rainfall, windSpeed.toFixed(1), conditions].join(',')
+    })
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows
+    ].join('\n')
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `field-${field.value.id}-weather-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('Error exporting field data:', error)
+    alert('Failed to export weather data. Please try again.')
+  }
 }
 
 const compareWithOtherFields = () => {
-  // Navigate to field comparison page
-  console.log('Compare with other fields')
+  // Navigate to weather analytics page with comparison view
+  router.push({
+    path: '/weather/analytics',
+    query: { compare: true, field: field.value.id }
+  })
 }
 
 onMounted(() => {
@@ -399,37 +445,172 @@ const loadFieldWeatherData = async (id) => {
     
     // Load field data
     const fieldResponse = await fieldsAPI.getById(id)
-    const fieldData = fieldResponse.data.data || fieldResponse.data
+    const fieldData = fieldResponse.data.field || fieldResponse.data.data || fieldResponse.data
+    
+    // Get current crop from plantings if available
+    let currentCrop = 'None'
+    if (fieldData.plantings && Array.isArray(fieldData.plantings) && fieldData.plantings.length > 0) {
+      // Find active planting (planted or growing status)
+      const activePlanting = fieldData.plantings
+        .filter(p => p.status === 'planted' || p.status === 'growing')
+        .sort((a, b) => new Date(b.planting_date || 0) - new Date(a.planting_date || 0))[0]
+      
+      if (activePlanting) {
+        // Try to get rice variety name
+        if (activePlanting.rice_variety && activePlanting.rice_variety.name) {
+          currentCrop = activePlanting.rice_variety.name
+        } else if (activePlanting.rice_variety_id) {
+          // If we have variety ID but not loaded, just show crop type
+          currentCrop = activePlanting.crop_type ? activePlanting.crop_type.charAt(0).toUpperCase() + activePlanting.crop_type.slice(1) : 'Rice'
+        } else if (activePlanting.crop_type) {
+          currentCrop = activePlanting.crop_type.charAt(0).toUpperCase() + activePlanting.crop_type.slice(1)
+        }
+      }
+    }
+    
+    // Get size - convert to hectares if needed (assuming size is in hectares)
+    const size = parseFloat(fieldData.size) || 0
+    
     field.value = {
       id: fieldData.id,
       name: fieldData.name || '',
-      size: fieldData.area || fieldData.size || 0,
-      soil_type: fieldData.soil_type || '',
-      current_crop: null,
-      weather_station: 'Field Weather Station'
+      size: size,
+      soil_type: fieldData.soil_type || 'Not specified',
+      current_crop: currentCrop,
+      location: fieldData.location || fieldData.field_coordinates || {}
     }
-    
-    // Load weather history (last 7 days)
-    const historyResponse = await weatherAPI.getHistory(id, 7)
-    const historyData = historyResponse.data.data || historyResponse.data || []
-    weatherHistory.value = historyData
-    weatherData7d.value = historyData
     
     // Load current weather
     try {
       const currentResponse = await weatherAPI.getCurrentWeather(id)
-      const currentData = currentResponse.data.data || currentResponse.data
-      if (currentData) {
+      const responseData = currentResponse.data
+      const weatherData = responseData.weather || responseData.data || responseData
+      
+      if (weatherData) {
+        // Handle temperature - convert from Fahrenheit if needed, or use Celsius
+        let temp = weatherData.temperature || 0
+        if (temp > 100) {
+          // Likely Fahrenheit, convert to Celsius
+          temp = (temp - 32) * 5/9
+        }
+        
+        // Handle wind speed - convert from m/s to km/h if needed
+        let windSpeed = weatherData.wind_speed || 0
+        if (windSpeed < 50) {
+          // Likely m/s, convert to km/h
+          windSpeed = windSpeed * 3.6
+        }
+        
+        // Handle rainfall - convert from inches to mm if needed
+        let rainfall = weatherData.rainfall || weatherData.precipitation || 0
+        if (rainfall > 0 && rainfall < 1) {
+          // Likely inches, convert to mm
+          rainfall = rainfall * 25.4
+        }
+        
         currentWeather.value = {
-          temperature: currentData.temperature || 0,
-          humidity: currentData.humidity || 0,
-          rainfall: currentData.rainfall || 0,
-          wind_speed: currentData.wind_speed || 0,
+          temperature: temp,
+          humidity: weatherData.humidity || 0,
+          rainfall: rainfall,
+          wind_speed: windSpeed,
+        }
+        
+        // If no history data, create a single data point from current weather for the chart
+        if (weatherData7d.value.length === 0 && currentWeather.value.temperature > 0) {
+          weatherData7d.value = [{
+            recorded_at: new Date().toISOString(),
+            date: new Date().toISOString(),
+            temperature: currentWeather.value.temperature,
+            humidity: currentWeather.value.humidity,
+            rainfall: currentWeather.value.rainfall,
+            wind_speed: currentWeather.value.wind_speed
+          }]
+          weatherHistory.value = weatherData7d.value
         }
       }
     } catch (weatherError) {
       console.error('Error loading current weather:', weatherError)
     }
+    
+    // Load weather history (last 7 days)
+    try {
+      const historyResponse = await weatherAPI.getHistory(id, 7)
+      // Handle paginated response structure
+      let historyData = []
+      if (historyResponse.data) {
+        if (historyResponse.data.weather_logs) {
+          // Paginated response
+          historyData = historyResponse.data.weather_logs.data || historyResponse.data.weather_logs || []
+        } else if (Array.isArray(historyResponse.data.data)) {
+          // Direct array in data
+          historyData = historyResponse.data.data
+        } else if (Array.isArray(historyResponse.data)) {
+          // Direct array
+          historyData = historyResponse.data
+        }
+      }
+      // Ensure it's an array
+      weatherHistory.value = Array.isArray(historyData) ? historyData : []
+      weatherData7d.value = Array.isArray(historyData) ? historyData : []
+      
+      console.log('Loaded weather history:', weatherData7d.value.length, 'records')
+      if (weatherData7d.value.length > 0) {
+        // Log actual data structure for debugging
+        const sample = weatherData7d.value[0]
+        console.log('Sample weather data structure:', {
+          recorded_at: sample.recorded_at,
+          date: sample.date,
+          temperature: sample.temperature,
+          humidity: sample.humidity,
+          rainfall: sample.rainfall,
+          wind_speed: sample.wind_speed,
+          conditions: sample.conditions
+        })
+      } else {
+        console.warn('No weather history data found. Will use current weather if available.')
+      }
+    } catch (error) {
+      console.error('Error loading weather history:', error)
+      weatherHistory.value = []
+      weatherData7d.value = []
+    }
+    
+    // Load 24h weather data (last 24 hours)
+    try {
+      const history24hResponse = await weatherAPI.getHistory(id, 1)
+      let history24hData = []
+      if (history24hResponse.data) {
+        if (history24hResponse.data.weather_logs) {
+          history24hData = history24hResponse.data.weather_logs.data || history24hResponse.data.weather_logs || []
+        } else if (Array.isArray(history24hResponse.data.data)) {
+          history24hData = history24hResponse.data.data
+        } else if (Array.isArray(history24hResponse.data)) {
+          history24hData = history24hResponse.data
+        }
+      }
+      weatherData24h.value = Array.isArray(history24hData) ? history24hData : []
+    } catch (error) {
+      console.warn('Error loading 24h weather data:', error)
+      weatherData24h.value = []
+    }
+    
+    // Load weather alerts
+    try {
+      const alertsResponse = await weatherAPI.getAlerts(id)
+      const alertsData = alertsResponse.data.alerts || alertsResponse.data || []
+      fieldAlerts.value = Array.isArray(alertsData) ? alertsData.map((alert, index) => ({
+        id: alert.id || index + 1,
+        title: alert.title || alert.type || alert.message || 'Weather Alert',
+        description: alert.description || alert.message || '',
+        severity: alert.severity || alert.level || 'info'
+      })) : []
+    } catch (error) {
+      console.warn('Error loading weather alerts:', error)
+      fieldAlerts.value = []
+    }
+    
+    // Calculate GDD from weather data
+    calculateGDD()
     
   } catch (error) {
     console.error('Error loading field weather data:', error)
@@ -438,44 +619,207 @@ const loadFieldWeatherData = async (id) => {
   }
 }
 
-// Chart data computed properties
-const temperatureHumidityChartData = computed(() => {
-  if (!weatherData24h.value || weatherData24h.value.length === 0) {
-    // Use 7-day data if 24h not available
-    const data = weatherData7d.value.slice(-24) || []
-    if (data.length === 0) {
-      return { labels: [], datasets: [] }
-    }
-    
-    return {
-      labels: data.map(item => {
-        const date = new Date(item.recorded_at || item.date)
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }),
-      datasets: [
-        {
-          label: 'Temperature (°C)',
-          data: data.map(item => item.temperature || 0),
-          borderColor: 'rgb(239, 68, 68)',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          yAxisID: 'y',
-        },
-        {
-          label: 'Humidity (%)',
-          data: data.map(item => item.humidity || 0),
-          borderColor: 'rgb(59, 130, 246)',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          yAxisID: 'y1',
-        }
-      ]
-    }
+// Calculate Growing Degree Days from weather history
+const calculateGDD = () => {
+  if (!weatherData7d.value || weatherData7d.value.length === 0) {
+    gdd.value = { today: 0, week: 0, month: 0, season: 0 }
+    return
   }
   
-  return { labels: [], datasets: [] }
+  // Base temperature for rice (10°C)
+  const baseTemp = 10
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+  
+  // Filter today's data
+  const todayData = weatherData7d.value.filter(item => {
+    const date = new Date(item.recorded_at || item.date)
+    return date.toISOString().split('T')[0] === todayStr
+  })
+  
+  // Calculate today's GDD
+  let todayGDD = 0
+  if (todayData.length > 0) {
+    const avgTemp = todayData.reduce((sum, item) => sum + (item.temperature || 0), 0) / todayData.length
+    todayGDD = Math.max(0, avgTemp - baseTemp)
+  }
+  
+  // Calculate week's GDD (last 7 days)
+  let weekGDD = 0
+  const weekData = weatherData7d.value.slice(-7)
+  if (weekData.length > 0) {
+    weekData.forEach(item => {
+      const temp = item.temperature || 0
+      weekGDD += Math.max(0, temp - baseTemp)
+    })
+  }
+  
+  // For month and season, we'd need more data, so estimate based on week
+  const monthGDD = weekGDD * 4 // Rough estimate
+  const seasonGDD = weekGDD * 12 // Rough estimate
+  
+  gdd.value = {
+    today: Math.round(todayGDD),
+    week: Math.round(weekGDD),
+    month: Math.round(monthGDD),
+    season: Math.round(seasonGDD)
+  }
+}
+
+// Process weather history for table display
+const processedWeatherHistory = computed(() => {
+  if (!weatherHistory.value || weatherHistory.value.length === 0) {
+    return []
+  }
+  
+  // Group by date and calculate daily stats
+  const dailyStats = {}
+  
+  weatherHistory.value.forEach(item => {
+    const date = new Date(item.recorded_at || item.date).toISOString().split('T')[0]
+    
+    if (!dailyStats[date]) {
+      dailyStats[date] = {
+        date: date,
+        temperatures: [],
+        humidities: [],
+        rainfalls: [],
+        windSpeeds: []
+      }
+    }
+    
+    const temp = item.temperature || 0
+    dailyStats[date].temperatures.push(temp)
+    dailyStats[date].humidities.push(item.humidity || 0)
+    dailyStats[date].rainfalls.push(item.rainfall || item.precipitation || 0)
+    dailyStats[date].windSpeeds.push(item.wind_speed || 0)
+  })
+  
+  // Convert to array with min/max/avg
+  return Object.values(dailyStats).map(day => ({
+    date: day.date,
+    high: Math.max(...day.temperatures),
+    low: Math.min(...day.temperatures),
+    humidity: day.humidities.length > 0 ? day.humidities.reduce((a, b) => a + b, 0) / day.humidities.length : 0,
+    rainfall: day.rainfalls.reduce((a, b) => a + b, 0),
+    wind_speed: day.windSpeeds.length > 0 ? day.windSpeeds.reduce((a, b) => a + b, 0) / day.windSpeeds.length : 0
+  })).sort((a, b) => new Date(b.date) - new Date(a.date))
+})
+
+// Field location display
+const fieldLocation = computed(() => {
+  if (!field.value.location) return 'Not set'
+  const loc = field.value.location
+  if (loc.lat && loc.lon) {
+    return `${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`
+  }
+  return 'Not set'
+})
+
+// Chart data computed properties - 7 days data
+const temperatureHumidityChartData = computed(() => {
+  // Use 7-day data, grouped by day for better visualization
+  let data = []
+  
+  if (weatherData7d.value && Array.isArray(weatherData7d.value) && weatherData7d.value.length > 0) {
+    data = weatherData7d.value
+  } else if (currentWeather.value && currentWeather.value.temperature > 0) {
+    // Fallback: use current weather as a single data point
+    data = [{
+      recorded_at: new Date().toISOString(),
+      date: new Date().toISOString().split('T')[0],
+      temperature: currentWeather.value.temperature,
+      humidity: currentWeather.value.humidity
+    }]
+  }
+  
+  if (data.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+  
+  // Group by date and calculate daily averages for 7-day view
+  const dailyData = {}
+  data.forEach(item => {
+    // Handle different date formats
+    let dateStr = null
+    if (item.date) {
+      dateStr = typeof item.date === 'string' ? item.date.split('T')[0] : new Date(item.date).toISOString().split('T')[0]
+    } else if (item.recorded_at) {
+      dateStr = typeof item.recorded_at === 'string' ? item.recorded_at.split('T')[0] : new Date(item.recorded_at).toISOString().split('T')[0]
+    } else {
+      dateStr = new Date().toISOString().split('T')[0]
+    }
+    
+    if (!dailyData[dateStr]) {
+      dailyData[dateStr] = {
+        date: dateStr,
+        temperatures: [],
+        humidities: []
+      }
+    }
+    
+    // Handle different temperature field names and formats
+    let temp = item.temperature || item.temp || item.avg_temperature || 0
+    // Convert to number if string
+    temp = typeof temp === 'string' ? parseFloat(temp) : temp
+    // If temperature seems like Fahrenheit (> 100), convert to Celsius
+    if (temp > 100) {
+      temp = (temp - 32) * 5/9
+    }
+    
+    // Handle different humidity field names
+    let humidity = item.humidity || item.avg_humidity || 0
+    humidity = typeof humidity === 'string' ? parseFloat(humidity) : humidity
+    
+    if (temp > -50 && temp < 60) dailyData[dateStr].temperatures.push(temp) // Valid temperature range
+    if (humidity >= 0 && humidity <= 100) dailyData[dateStr].humidities.push(humidity) // Valid humidity range
+  })
+  
+  // Convert to array and calculate averages
+  const processedData = Object.values(dailyData)
+    .map(day => ({
+      date: day.date,
+      temp: day.temperatures.length > 0 ? day.temperatures.reduce((a, b) => a + b, 0) / day.temperatures.length : null,
+      humidity: day.humidities.length > 0 ? day.humidities.reduce((a, b) => a + b, 0) / day.humidities.length : null
+    }))
+    .filter(item => (item.temp !== null && item.temp > -50 && item.temp < 60) || (item.humidity !== null && item.humidity >= 0 && item.humidity <= 100))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-7) // Last 7 days
+  
+  if (processedData.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+  
+  return {
+    labels: processedData.map(item => {
+      try {
+        const date = new Date(item.date)
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      } catch (e) {
+        return item.date
+      }
+    }),
+    datasets: [
+      {
+        label: 'Temperature (°C)',
+        data: processedData.map(item => Math.round(item.temp * 10) / 10),
+        borderColor: 'rgb(239, 68, 68)',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        yAxisID: 'y',
+      },
+      {
+        label: 'Humidity (%)',
+        data: processedData.map(item => Math.round(item.humidity)),
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        yAxisID: 'y1',
+      }
+    ]
+  }
 })
 
 const rainfallChartData = computed(() => {
-  if (!weatherData7d.value || weatherData7d.value.length === 0) {
+  if (!weatherData7d.value || !Array.isArray(weatherData7d.value) || weatherData7d.value.length === 0) {
     return { labels: [], datasets: [] }
   }
   

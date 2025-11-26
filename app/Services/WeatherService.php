@@ -110,12 +110,18 @@ class WeatherService
     public function getForecast(float $lat, float $lon, int $days = 5): ?array
     {
         try {
+            // OpenWeatherMap free tier has a maximum of 40 forecasts (5 days)
+            // Request the maximum available to get as many days as possible
+            $maxForecasts = 40; // API limit
+            $requestedForecasts = $days * 8; // 8 forecasts per day (3-hour intervals)
+            $cnt = min($requestedForecasts, $maxForecasts);
+            
             $response = Http::get("{$this->baseUrl}/forecast", [
                 'lat' => $lat,
                 'lon' => $lon,
                 'appid' => $this->apiKey,
                 'units' => 'metric',
-                'cnt' => $days * 8 // 8 forecasts per day (3-hour intervals)
+                'cnt' => $cnt
             ]);
 
             if ($response->successful()) {
@@ -227,6 +233,8 @@ class WeatherService
             'temperature_fahrenheit' => round(($weatherLog->temperature * 9/5) + 32, 1),
             'humidity' => (float) $weatherLog->humidity,
             'wind_speed' => (float) $weatherLog->wind_speed,
+            'rainfall' => (float) ($weatherLog->rainfall ?? 0),
+            'precipitation' => (float) ($weatherLog->rainfall ?? 0),
             'conditions' => $weatherLog->conditions,
             'recorded_at' => optional($weatherLog->recorded_at)->toIso8601String(),
             'is_favorable_for_farming' => $weatherLog->isFavorableForFarming(),

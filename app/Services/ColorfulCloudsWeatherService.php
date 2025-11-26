@@ -73,7 +73,9 @@ class ColorfulCloudsWeatherService
                 if ($granu === 'hourly') {
                     $params['hourlysteps'] = min($days * 24, 240);
                 } else {
-                    $params['dailysteps'] = min($days, 10);
+                    // Request the exact number of days (API supports up to 10)
+                    // Add 1 extra to ensure we get enough days even if today is excluded
+                    $params['dailysteps'] = min($days + 1, 10);
                 }
                 
                 $response = Http::get($url, $params);
@@ -192,22 +194,49 @@ class ColorfulCloudsWeatherService
             $wind = $daily['wind'] ?? [];
             $precipitation = $daily['precipitation'] ?? [];
 
-            foreach ($temperatures as $index => $temp) {
-                if (isset($temp['date'])) {
-                    $forecast[] = [
-                        'date' => date('Y-m-d', strtotime($temp['date'])),
-                        'temperature' => round(($temp['max'] ?? 0 + $temp['min'] ?? 0) / 2, 1),
-                        'temperature_high' => round($temp['max'] ?? 0, 1),
-                        'temperature_low' => round($temp['min'] ?? 0, 1),
-                        'humidity' => isset($humidity[$index]) ? round($humidity[$index]['avg'] * 100 ?? 0, 1) : 0,
-                        'wind_speed' => isset($wind[$index]) ? round($wind[$index]['max']['speed'] ?? 0, 1) : 0,
-                        'wind_direction' => isset($wind[$index]) ? round($wind[$index]['avg']['direction'] ?? 0, 0) : 0,
-                        'conditions' => $this->mapSkyconToCondition($skycons[$index]['value'] ?? 'UNKNOWN'),
-                        'description' => $this->getSkyconDescription($skycons[$index]['value'] ?? 'UNKNOWN'),
-                        'rain' => isset($precipitation[$index]) ? ($precipitation[$index]['max'] ?? 0) : 0,
-                        'clouds' => 0,
-                    ];
+            // ColorfulClouds API returns dates in datetime format in skycon array
+            // Use skycon dates as the primary source since they're more reliable
+            foreach ($skycons as $index => $skycon) {
+                if (!isset($skycon['date'])) {
+                    continue;
                 }
+                
+                // Parse date - ColorfulClouds returns datetime strings like "2024-01-15T00:00+08:00"
+                $dateValue = $skycon['date'];
+                $dateStr = null;
+                
+                if (is_numeric($dateValue)) {
+                    // Timestamp
+                    $dateStr = date('Y-m-d', $dateValue);
+                } else {
+                    // Datetime string - extract just the date part
+                    $dateTime = new \DateTime($dateValue);
+                    $dateStr = $dateTime->format('Y-m-d');
+                }
+                
+                if (!$dateStr) {
+                    continue;
+                }
+                
+                // Get corresponding temperature data
+                $temp = $temperatures[$index] ?? null;
+                if (!$temp || !isset($temp['max']) || !isset($temp['min'])) {
+                    continue;
+                }
+                
+                $forecast[] = [
+                    'date' => $dateStr,
+                    'temperature' => round((($temp['max'] ?? 0) + ($temp['min'] ?? 0)) / 2, 1),
+                    'temperature_high' => round($temp['max'] ?? 0, 1),
+                    'temperature_low' => round($temp['min'] ?? 0, 1),
+                    'humidity' => isset($humidity[$index]) ? round(($humidity[$index]['avg'] ?? 0) * 100, 1) : 0,
+                    'wind_speed' => isset($wind[$index]) ? round($wind[$index]['max']['speed'] ?? 0, 1) : 0,
+                    'wind_direction' => isset($wind[$index]) ? round($wind[$index]['avg']['direction'] ?? 0, 0) : 0,
+                    'conditions' => $this->mapSkyconToCondition($skycon['value'] ?? 'UNKNOWN'),
+                    'description' => $this->getSkyconDescription($skycon['value'] ?? 'UNKNOWN'),
+                    'rain' => isset($precipitation[$index]) ? ($precipitation[$index]['max'] ?? 0) : 0,
+                    'clouds' => 0,
+                ];
             }
         }
 

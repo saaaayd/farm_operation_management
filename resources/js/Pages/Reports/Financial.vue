@@ -218,63 +218,15 @@ const endDate = ref('2024-12-31')
 const reportType = ref('income')
 
 const financialSummary = ref({
-  totalRevenue: 125000,
-  totalExpenses: 85000,
-  netProfit: 40000,
-  profitMargin: 32
+  totalRevenue: 0,
+  totalExpenses: 0,
+  netProfit: 0,
+  profitMargin: 0
 })
 
-const expenseBreakdown = ref([
-  { category: 'Seeds & Fertilizer', amount: 25000, percentage: 29, color: '#3B82F6' },
-  { category: 'Equipment', amount: 20000, percentage: 24, color: '#10B981' },
-  { category: 'Labor', amount: 15000, percentage: 18, color: '#F59E0B' },
-  { category: 'Fuel & Utilities', amount: 10000, percentage: 12, color: '#EF4444' },
-  { category: 'Insurance', amount: 8000, percentage: 9, color: '#8B5CF6' },
-  { category: 'Other', amount: 7000, percentage: 8, color: '#6B7280' }
-])
+const expenseBreakdown = ref([])
 
-const transactions = ref([
-  {
-    id: 1,
-    date: '2024-03-25',
-    description: 'Corn harvest sale',
-    category: 'Crop Sales',
-    type: 'income',
-    amount: 15000
-  },
-  {
-    id: 2,
-    date: '2024-03-24',
-    description: 'Fertilizer purchase',
-    category: 'Seeds & Fertilizer',
-    type: 'expense',
-    amount: 2500
-  },
-  {
-    id: 3,
-    date: '2024-03-23',
-    description: 'Equipment maintenance',
-    category: 'Equipment',
-    type: 'expense',
-    amount: 800
-  },
-  {
-    id: 4,
-    date: '2024-03-22',
-    description: 'Wheat sale',
-    category: 'Crop Sales',
-    type: 'income',
-    amount: 8500
-  },
-  {
-    id: 5,
-    date: '2024-03-21',
-    description: 'Fuel purchase',
-    category: 'Fuel & Utilities',
-    type: 'expense',
-    amount: 450
-  }
-])
+const transactions = ref([])
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
@@ -325,7 +277,7 @@ const exportReport = () => {
 const generateCSV = () => {
   // Generate CSV content from financial data
   const headers = ['Date', 'Type', 'Description', 'Amount', 'Category']
-  const rows = financialData.value.map(item => [
+  const rows = transactions.value.map(item => [
     item.date || 'N/A',
     item.type || 'N/A',
     item.description || 'N/A',
@@ -337,12 +289,27 @@ const generateCSV = () => {
 }
 
 const revenueChartData = computed(() => {
-  // Placeholder - would be populated from actual financial data
+  if (!revenueTrends.value || revenueTrends.value.length === 0) {
+    return {
+      labels: [],
+      datasets: []
+    }
+  }
+  
   return {
-    labels: [],
-    datasets: []
+    labels: revenueTrends.value.map(item => item.month),
+    datasets: [{
+      label: 'Revenue (₱)',
+      data: revenueTrends.value.map(item => item.revenue),
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      fill: true,
+      tension: 0.4,
+    }]
   }
 })
+
+const revenueTrends = ref([])
 
 onMounted(() => {
   // Load financial data from API
@@ -351,12 +318,35 @@ onMounted(() => {
 
 const loadFinancialData = async () => {
   try {
-    const response = await reportsAPI.getFinancialReport()
+    const start = new Date(startDate.value)
+    const end = new Date(endDate.value)
+    const period = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 365
+    const response = await reportsAPI.getFinancialReport(period)
     const data = response.data.data || response.data
-    // Update financial data from API response
-    // Chart data would be populated from response
+    
+    if (data.financial_summary) {
+      financialSummary.value = {
+        totalRevenue: data.financial_summary.total_revenue || 0,
+        totalExpenses: data.financial_summary.total_expenses || 0,
+        netProfit: data.financial_summary.net_profit || 0,
+        profitMargin: data.financial_summary.profit_margin || 0
+      }
+    }
+    
+    if (data.expense_breakdown) {
+      expenseBreakdown.value = data.expense_breakdown
+    }
+    
+    if (data.revenue_trends) {
+      revenueTrends.value = data.revenue_trends
+    }
+    
+    if (data.transactions) {
+      transactions.value = data.transactions
+    }
   } catch (error) {
     console.error('Error loading financial data:', error)
+    alert('Failed to load financial data')
   }
 }
 </script>

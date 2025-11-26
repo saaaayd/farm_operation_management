@@ -218,8 +218,8 @@
                   <span class="text-sm text-gray-600">{{ Math.round(field.temperature) }}°C</span>
                 </div>
                 <div class="text-sm text-gray-600">
-                  <div>Humidity: {{ field.humidity }}%</div>
-                  <div>Rainfall: {{ field.rainfall }} in</div>
+                  <div>Humidity: {{ Math.round(field.humidity) }}%</div>
+                  <div>Rainfall: {{ field.rainfall > 0 ? field.rainfall.toFixed(1) : '0.0' }} mm</div>
                 </div>
                 <button
                   @click="viewFieldWeather(field.id)"
@@ -453,12 +453,27 @@ const fieldWeather = computed(() => {
     const weatherData = fieldWeatherData.value[field.id] || {}
     const location = field.location || field.field_coordinates || {}
     
+    // Handle different data formats from API
+    // Weather data might have temperature in Celsius or Fahrenheit
+    let temp = weatherData.temperature || weatherData.temp || 22
+    // If temperature seems like Fahrenheit (> 100), convert to Celsius
+    if (temp > 100) {
+      temp = (temp - 32) * 5/9
+    }
+    
+    // Handle rainfall/precipitation - could be in different units
+    let rainfall = weatherData.rainfall || weatherData.precipitation || weatherData.rain?.intensity || 0
+    // If rainfall seems like inches (> 1), convert to mm
+    if (rainfall > 1 && rainfall < 10) {
+      rainfall = rainfall * 25.4 // Convert inches to mm
+    }
+    
     return {
       id: field.id,
       name: field.name,
-      temperature: weatherData.temperature || 70,
+      temperature: temp,
       humidity: weatherData.humidity || 65,
-      rainfall: weatherData.precipitation || 0,
+      rainfall: rainfall,
       location: location,
       field_coordinates: field.field_coordinates
     }

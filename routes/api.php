@@ -448,10 +448,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/rice-farming', [\App\Http\Controllers\RiceFarmingAnalyticsController::class, 'getRiceFarmingAnalytics']);
     });
 
-    // Reports routes (simplified)
+    // Reports routes
     Route::middleware('farmer')->prefix('reports')->group(function () {
-        Route::get('/financial', [\App\Http\Controllers\Financial\ExpenseController::class, 'index']);
-        Route::get('/crop-yield', [\App\Http\Controllers\Farm\HarvestController::class, 'index']);
+        Route::get('/financial', [\App\Http\Controllers\Reports\ReportController::class, 'getFinancialReport']);
+        Route::get('/crop-yield', [\App\Http\Controllers\Reports\ReportController::class, 'getCropYieldReport']);
+        Route::get('/weather', [\App\Http\Controllers\Reports\ReportController::class, 'getWeatherReport']);
         Route::get('/labor-cost', [\App\Http\Controllers\Labor\WageController::class, 'index']);
         Route::get('/weather-analysis', [\App\Http\Controllers\Weather\WeatherController::class, 'dashboard']);
         Route::get('/inventory-usage', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'index']);
