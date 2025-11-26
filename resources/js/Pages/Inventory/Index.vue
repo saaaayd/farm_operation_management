@@ -130,25 +130,46 @@
       <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" @click="closeModal"></div>
 
-        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full max-h-[90vh] flex flex-col">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100 flex-shrink-0">
             <h3 class="text-xl leading-6 font-bold text-gray-900">
               {{ isEditing ? 'Edit Product' : 'Add New Product' }}
             </h3>
             <p class="text-sm text-gray-500 mt-1">Fill in the details below to manage your inventory.</p>
           </div>
 
-          <form @submit.prevent="submitForm" class="p-6 space-y-5">
-            <FormAlert :visible="!!formError" :message="formError" />
+          <form @submit.prevent="submitForm" class="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
+            <FormAlert :visible="!!formError" :message="formError" :fieldErrors="formFieldErrors" />
 
             <div class="grid grid-cols-2 gap-4">
               <div class="col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Item Name <span class="text-red-500">*</span></label>
-                <input v-model="form.name" required type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Urea 46-0-0">
+                <input 
+                  v-model="form.name" 
+                  required 
+                  type="text" 
+                  :class="[
+                    'w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm',
+                    formFieldErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                  placeholder="e.g. Urea 46-0-0"
+                >
+                <p v-if="formFieldErrors.name" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.name) ? formFieldErrors.name[0] : formFieldErrors.name }}
+                </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                <select v-model="form.category" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                <select 
+                  v-model="form.category" 
+                  required 
+                  :class="[
+                    'w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm',
+                    formFieldErrors.category ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                >
                   <option value="" disabled>Select...</option>
                   <option value="seeds">Seeds</option>
                   <option value="fertilizer">Fertilizer</option>
@@ -156,56 +177,142 @@
                   <option value="equipment">Equipment</option>
                   <option value="tools">Tools</option>
                 </select>
+                <p v-if="formFieldErrors.category" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.category) ? formFieldErrors.category[0] : formFieldErrors.category }}
+                </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
-                <select v-model="form.unit" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                <select 
+                  v-model="form.unit" 
+                  required 
+                  :class="[
+                    'w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm',
+                    formFieldErrors.unit ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                >
                   <option value="kg">Kilograms (kg)</option>
                   <option value="liters">Liters</option>
-                  <option value="bags">Bags</option>
+                  <option value="packets">Packets / Bags</option>
                   <option value="pieces">Pieces</option>
                   <option value="pounds">Pounds</option>
                 </select>
+                <p v-if="formFieldErrors.unit" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.unit) ? formFieldErrors.unit[0] : formFieldErrors.unit }}
+                </p>
               </div>
             </div>
 
             <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Current Stock</label>
-                <input v-model.number="form.current_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                <input 
+                  v-model.number="form.current_stock" 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  :class="[
+                    'w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500',
+                    formFieldErrors.current_stock ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                >
+                <p v-if="formFieldErrors.current_stock" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.current_stock) ? formFieldErrors.current_stock[0] : formFieldErrors.current_stock }}
+                </p>
               </div>
               <div>
                 <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Alert Level (Min)</label>
-                <input v-model.number="form.minimum_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                <input 
+                  v-model.number="form.minimum_stock" 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  :class="[
+                    'w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500',
+                    formFieldErrors.minimum_stock ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                >
+                <p v-if="formFieldErrors.minimum_stock" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.minimum_stock) ? formFieldErrors.minimum_stock[0] : formFieldErrors.minimum_stock }}
+                </p>
               </div>
               <div class="col-span-2">
                 <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Unit Price ($)</label>
-                <input v-model.number="form.unit_price" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                <input 
+                  v-model.number="form.unit_price" 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  :class="[
+                    'w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500',
+                    formFieldErrors.unit_price ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  ]"
+                >
+                <p v-if="formFieldErrors.unit_price" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.unit_price) ? formFieldErrors.unit_price[0] : formFieldErrors.unit_price }}
+                </p>
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                <input 
+                  v-model="form.supplier" 
+                  type="text" 
+                  class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" 
+                  placeholder="e.g. ABC Suppliers"
+                >
+                <p v-if="formFieldErrors.supplier" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.supplier) ? formFieldErrors.supplier[0] : formFieldErrors.supplier }}
+                </p>
+              </div>
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input v-model="form.location" type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Warehouse A">
+                <input 
+                  v-model="form.location" 
+                  type="text" 
+                  class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" 
+                  placeholder="e.g. Warehouse A"
+                >
+                <p v-if="formFieldErrors.location" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.location) ? formFieldErrors.location[0] : formFieldErrors.location }}
+                </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                <input v-model="form.expiry_date" type="date" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
+                <input 
+                  v-model="form.expiry_date" 
+                  type="date" 
+                  class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"
+                >
+                <p v-if="formFieldErrors.expiry_date" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.expiry_date) ? formFieldErrors.expiry_date[0] : formFieldErrors.expiry_date }}
+                </p>
               </div>
               <div class="col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Description / Notes</label>
-                <textarea v-model="form.description" rows="2" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"></textarea>
+                <textarea 
+                  v-model="form.description" 
+                  rows="2" 
+                  class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"
+                ></textarea>
+                <p v-if="formFieldErrors.description" class="mt-1 text-xs text-red-600">
+                  {{ Array.isArray(formFieldErrors.description) ? formFieldErrors.description[0] : formFieldErrors.description }}
+                </p>
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 flex-shrink-0">
               <button type="button" @click="closeModal" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
                 Cancel
               </button>
-              <button type="submit" :disabled="loading" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium disabled:opacity-50 flex items-center">
-                <span v-if="loading" class="mr-2 animate-spin">⟳</span>
-                {{ isEditing ? 'Update Item' : 'Save Item' }}
+              <button type="submit" :disabled="submitting || loading" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                <svg v-if="submitting || loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ submitting || loading ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Item' : 'Save Item') }}
               </button>
             </div>
           </form>
@@ -234,6 +341,8 @@ const categoryFilter = ref('')
 const showModal = ref(false)
 const isEditing = ref(false)
 const formError = ref('')
+const formFieldErrors = ref({})
+const submitting = ref(false)
 
 const form = reactive({
   id: null,
@@ -243,6 +352,7 @@ const form = reactive({
   current_stock: 0,
   minimum_stock: 0,
   unit_price: 0,
+  supplier: '',
   location: '',
   expiry_date: '',
   description: ''
@@ -276,10 +386,19 @@ const filteredItems = computed(() => {
 const openCreateModal = () => {
   isEditing.value = false
   formError.value = ''
+  formFieldErrors.value = {}
   Object.assign(form, {
-    id: null, name: '', category: '', unit: 'kg', 
-    current_stock: 0, minimum_stock: 0, unit_price: 0,
-    location: '', expiry_date: '', description: ''
+    id: null, 
+    name: '', 
+    category: '', 
+    unit: 'kg', 
+    current_stock: 0, 
+    minimum_stock: 0, 
+    unit_price: 0,
+    supplier: '',
+    location: '', 
+    expiry_date: '', 
+    description: ''
   })
   showModal.value = true
 }
@@ -291,30 +410,58 @@ const viewDetails = (item) => {
 const editItem = (item) => {
   isEditing.value = true
   formError.value = ''
+  formFieldErrors.value = {}
   // Normalize data from backend (handling legacy fields if any exist in old records)
   Object.assign(form, {
     id: item.id,
-    name: item.name,
-    category: item.category,
-    unit: item.unit,
+    name: item.name || '',
+    category: item.category || '',
+    unit: item.unit || 'kg',
     current_stock: Number(item.current_stock ?? item.quantity ?? 0),
     minimum_stock: Number(item.minimum_stock ?? item.min_stock ?? 0),
     unit_price: Number(item.unit_price ?? item.price ?? 0),
-    location: item.location,
-    expiry_date: item.expiry_date,
-    description: item.description
+    supplier: item.supplier || '',
+    location: item.location || '',
+    expiry_date: item.expiry_date || '',
+    description: item.description || ''
   })
   showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
+  // Reset form errors when closing
+  formError.value = ''
+  formFieldErrors.value = {}
 }
 
 const submitForm = async () => {
+  if (submitting.value) return
+  
   formError.value = ''
+  formFieldErrors.value = {}
+  submitting.value = true
+  
   try {
+    // Clean up the payload - remove id for new items, convert empty strings to null
     const payload = { ...form }
+    
+    // Remove id when creating new item
+    if (!isEditing.value) {
+      delete payload.id
+    }
+    
+    // Convert empty strings to null for optional fields
+    if (payload.location === '') payload.location = null
+    if (payload.expiry_date === '') payload.expiry_date = null
+    if (payload.description === '') payload.description = null
+    if (payload.supplier === '') payload.supplier = null
+    if (payload.notes === '') payload.notes = null
+    
+    // Ensure numeric fields are numbers, not strings
+    payload.current_stock = Number(payload.current_stock) || 0
+    payload.minimum_stock = Number(payload.minimum_stock) || 0
+    payload.unit_price = Number(payload.unit_price) || 0
     
     // Ensure we send clean data to backend
     if (isEditing.value) {
@@ -322,11 +469,25 @@ const submitForm = async () => {
     } else {
       await store.createItem(payload)
     }
+    
+    // Success - close modal and refresh
     closeModal()
     await store.fetchItems() // Refresh list
   } catch (e) {
-    console.error(e)
-    formError.value = e.response?.data?.message || "Failed to save item. Please check inputs."
+    console.error('Form submission error:', e)
+    
+    // Extract validation errors if present
+    if (e.response?.data?.errors && typeof e.response.data.errors === 'object') {
+      formFieldErrors.value = e.response.data.errors
+      formError.value = e.response?.data?.message || 'Please fix the errors below'
+    } else {
+      formError.value = e.response?.data?.message || 
+                       e.message ||
+                       "Failed to save item. Please check inputs."
+      formFieldErrors.value = {}
+    }
+  } finally {
+    submitting.value = false
   }
 }
 

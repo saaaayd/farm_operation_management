@@ -214,8 +214,23 @@ const formatDate = (value) => {
 }
 
 onMounted(async () => {
-  if (!authStore.user) return
-  await refresh()
+  if (!authStore.user) {
+    console.warn('No user found in auth store')
+    return
+  }
+  
+  console.log('My Products page mounted, fetching products...')
+  console.log('Current farmerProducts in store:', marketplaceStore.farmerProducts?.length || 0)
+  
+  // Always refresh products when mounting the page
+  // This ensures we get the latest data, especially after creating a product
+  try {
+    await refresh()
+    console.log('Products fetched successfully:', marketplaceStore.farmerProducts?.length || 0)
+  } catch (error) {
+    console.error('Error loading products:', error)
+    console.error('Error details:', error.response?.data)
+  }
 })
 </script>
 

@@ -101,23 +101,53 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.error = null;
 
       try {
+        const authStore = useAuthStore();
+        const farmerId = authStore.user?.id;
+        console.log('Fetching farmer products for user ID:', farmerId);
+
         const params = {
-          per_page: 50,
+          per_page: 100,
+          my_products: true, // Request all products for the logged-in farmer
+          sort_by: 'created_at',
+          sort_order: 'desc',
           ...filters,
         };
 
-        const response = await riceMarketplaceAPI.getProducts(params);
-        const products = response.data?.products?.data || response.data?.products || [];
-        const authStore = useAuthStore();
-        const farmerId = authStore.user?.id;
+        // Remove production_status from filters for my_products to avoid filtering out pending products
+        delete params.production_status;
 
-        this.farmerProducts = farmerId
-          ? products.filter(product => product.farmer_id === farmerId)
-          : products;
+        console.log('Fetching with params:', params);
+        const response = await riceMarketplaceAPI.getProducts(params);
+        console.log('API response received:', response.data);
+
+        const products = response.data?.products?.data || response.data?.products || [];
+        console.log('Extracted products array:', products.length, 'items');
+
+        // Only update if we got valid data
+        if (Array.isArray(products)) {
+          console.log(`✓ Setting ${products.length} farmer products in store`);
+          this.farmerProducts = products;
+          
+          // Log each product for debugging
+          products.forEach((product, index) => {
+            console.log(`  Product ${index + 1}: ${product.name} (ID: ${product.id}, Status: ${product.approval_status}, Farmer ID: ${product.farmer_id})`);
+          });
+        } else {
+          console.warn('Invalid products data received:', response.data);
+          console.warn('Response structure:', JSON.stringify(response.data, null, 2));
+          this.farmerProducts = [];
+        }
 
         return response.data;
       } catch (error) {
+        console.error('Failed to fetch farmer products:', error);
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
         this.error = error.response?.data?.message || 'Failed to fetch products';
+        // Don't clear existing products on error
+        if (!Array.isArray(this.farmerProducts)) {
+          this.farmerProducts = [];
+        }
         throw error;
       } finally {
         this.loading = false;
@@ -143,15 +173,28 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.error = null;
 
       try {
+        console.log('Creating rice product with data:', productData);
         const response = await riceMarketplaceAPI.createProduct(productData);
+        console.log('Product creation response:', response.data);
+        
+        // Optimistically add the product to the store immediately
         const product = response.data?.product;
         if (product) {
-          this.farmerProducts = [product, ...(this.farmerProducts || [])];
+          console.log('Adding product to farmerProducts array:', product);
+          // Add to the beginning of the array
+          if (!Array.isArray(this.farmerProducts)) {
+            this.farmerProducts = [];
+          }
+          this.farmerProducts = [product, ...this.farmerProducts];
+          console.log(`✓ Product added. Total products: ${this.farmerProducts.length}`);
         } else {
-          await this.fetchFarmerProducts();
+          console.warn('No product in response:', response.data);
         }
+        
         return response.data;
       } catch (error) {
+        console.error('Failed to create rice product:', error);
+        console.error('Error response:', error.response?.data);
         this.error = error.response?.data?.message || 'Failed to create product';
         throw error;
       } finally {

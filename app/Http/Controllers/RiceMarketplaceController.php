@@ -20,10 +20,29 @@ class RiceMarketplaceController extends Controller
     public function getProducts(Request $request)
     {
         try {
+            $user = auth()->user();
+            $showMyProducts = $request->boolean('my_products') && $user && $user->isFarmer();
+            
+            \Log::info('RiceMarketplaceController::getProducts', [
+                'user_id' => $user?->id,
+                'is_farmer' => $user?->isFarmer(),
+                'my_products_param' => $request->input('my_products'),
+                'show_my_products' => $showMyProducts,
+            ]);
+            
             // For buyers, show only approved products that are available or in production (for pre-order)
-            $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews'])
-                ->where('approval_status', 'approved') // Only show approved products
-                ->availableOrPreOrder();
+            // For farmers viewing their own products, show all statuses
+            $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews']);
+            
+            if ($showMyProducts) {
+                // Show all products for the logged-in farmer regardless of approval status
+                $query->where('farmer_id', $user->id);
+                \Log::info('Querying for farmer products', ['farmer_id' => $user->id]);
+            } else {
+                // For buyers, show only approved products
+                $query->where('approval_status', 'approved')
+                      ->availableOrPreOrder();
+            }
 
             // Apply filters
             if ($request->has('variety_id')) {
@@ -38,7 +57,9 @@ class RiceMarketplaceController extends Controller
                 $query->organic();
             }
 
-            if ($request->has('production_status')) {
+            // Only apply production_status filter if not viewing my_products
+            // (farmers should see all their products regardless of status)
+            if ($request->has('production_status') && !$showMyProducts) {
                 $query->where('production_status', $request->production_status);
             }
 
@@ -91,6 +112,13 @@ class RiceMarketplaceController extends Controller
 
             $perPage = min($request->get('per_page', 20), 50);
             $products = $query->paginate($perPage);
+
+            \Log::info('Products query result', [
+                'total' => $products->total(),
+                'count' => $products->count(),
+                'show_my_products' => $showMyProducts,
+                'farmer_id' => $showMyProducts ? $user->id : null,
+            ]);
 
             // Add calculated fields
             $products->getCollection()->transform(function ($product) {
@@ -242,6 +270,7 @@ class RiceMarketplaceController extends Controller
                 'farmer_id' => $user->id,
                 'is_available' => true,
                 'approval_status' => 'pending', // Products require admin approval
+                'production_status' => $validated['production_status'] ?? RiceProduct::STATUS_AVAILABLE, // Ensure production_status is set
             ]));
 
             // Log product creation

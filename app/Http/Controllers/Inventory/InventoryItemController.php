@@ -130,8 +130,14 @@ class InventoryItemController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Inventory store error: ' . $e->getMessage());
-            return response()->json(['message' => 'Server Error'], 500);
+            Log::error('Inventory store error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Failed to create inventory item',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred while creating the item'
+            ], 500);
         }
     }
 

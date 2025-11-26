@@ -28,7 +28,7 @@ class InventoryTransaction extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
+         
     /**
      * Get the inventory item that owns this transaction
      */
