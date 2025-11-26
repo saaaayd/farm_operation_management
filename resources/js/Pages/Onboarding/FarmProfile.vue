@@ -710,24 +710,34 @@ const setAddress = () => {
 };
 
 const submitProfile = async () => {
-  // Validate form
-  if (!form.farm_name || !form.total_area || !form.rice_area || !form.address || !form.field_name) {
-    error.value = 'Please fill in all required fields.';
+  // Clear previous errors
+  error.value = '';
+  
+  // Validate all required fields
+  const requiredFields = {
+    'Farm Name': form.farm_name,
+    'Total Farm Area': form.total_area,
+    'Rice Cultivation Area': form.rice_area,
+    'Farm Location': form.address,
+    'Field Name': form.field_name,
+    'Soil Type': form.soil_type,
+    'Water Source': form.water_source,
+    'Irrigation Type': form.irrigation_type,
+    'Water Access Quality': form.water_access,
+    'Drainage Quality': form.drainage_quality,
+  };
+  
+  const missingFields = Object.entries(requiredFields)
+    .filter(([_, value]) => !value || (typeof value === 'string' && value.trim() === ''))
+    .map(([name]) => name);
+  
+  if (missingFields.length > 0) {
+    error.value = `Please fill in all required fields: ${missingFields.join(', ')}`;
     return;
   }
   
   if (parseFloat(form.rice_area) > parseFloat(form.total_area)) {
     error.value = 'Rice cultivation area cannot exceed total farm area.';
-    return;
-  }
-  
-  if (!form.soil_type) {
-    error.value = 'Please select your soil type.';
-    return;
-  }
-  
-  if (!form.water_source || !form.irrigation_type || !form.water_access || !form.drainage_quality) {
-    error.value = 'Please fill in all water management fields.';
     return;
   }
   
@@ -780,7 +790,17 @@ const submitProfile = async () => {
     // Redirect to dashboard
     router.push('/dashboard');
   } catch (err) {
-    error.value = err.message || 'Failed to create farm profile. Please try again.';
+    console.error('Profile creation error:', err);
+    
+    // Show backend validation errors if available
+    if (err.response?.data?.errors) {
+      const validationErrors = Object.entries(err.response.data.errors)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('; ');
+      error.value = `Validation errors: ${validationErrors}`;
+    } else {
+      error.value = err.response?.data?.message || err.message || 'Failed to create farm profile. Please try again.';
+    }
   } finally {
     loading.value = false;
   }
