@@ -238,7 +238,7 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Price per Unit (₱) <span class="text-red-500">*</span>
+                  Price per Sack (₱) <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="form.price_per_unit"
@@ -485,7 +485,8 @@ const form = reactive({
   name: '',
   description: '',
   quantity_available: '',
-  unit: 'kg',
+  quantity_available: '',
+  unit: 'sacks',
   price_per_unit: '',
   quality_grade: 'premium',
   moisture_content: '',
@@ -498,7 +499,7 @@ const form = reactive({
   notes: ''
 })
 
-const units = ['kg', 'tons', 'bags', 'sacks']
+const units = ['sacks']
 const qualityGrades = {
   premium: 'Premium',
   grade_a: 'Grade A',
