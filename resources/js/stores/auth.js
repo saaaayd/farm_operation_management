@@ -23,29 +23,29 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await axios.post('/api/login', credentials);
-        
+
         if (!response.data.token || !response.data.user) {
           throw new Error('Invalid response from server');
         }
-        
+
         this.token = response.data.token;
         this.user = response.data.user;
-        
+
         localStorage.setItem('token', this.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
-        
+
         console.log('✓ Login successful for user:', this.user.name);
         return response.data;
       } catch (error) {
         console.error('Login error:', error);
         this.error = error.userMessage || error.response?.data?.message || 'Login failed. Please try again.';
-        
+
         // Clear any partial state
         this.token = null;
         this.user = null;
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
-        
+
         throw error;
       } finally {
         this.loading = false;
@@ -58,13 +58,14 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await axios.post('/api/register', userData);
-        
-        this.token = response.data.token;
-        this.user = response.data.user;
-        
-        localStorage.setItem('token', this.token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
-        
+
+        // Registration successful, but no token yet (requires verification)
+        // this.token = response.data.token;
+        // this.user = response.data.user;
+
+        // localStorage.setItem('token', this.token);
+        // axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+
         return response.data;
       } catch (error) {
         // Handle validation errors
@@ -76,6 +77,28 @@ export const useAuthStore = defineStore('auth', {
         } else {
           this.error = error.response?.data?.message || 'Registration failed';
         }
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async verifyPhone(phone, code) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await axios.post('/api/verify-phone', { phone, code });
+
+        this.token = response.data.token;
+        this.user = response.data.user;
+
+        localStorage.setItem('token', this.token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Verification failed';
         throw error;
       } finally {
         this.loading = false;
@@ -96,7 +119,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = null;
         this.error = null;
         this.loading = false;
-        
+
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
       }
@@ -113,16 +136,16 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await axios.get('/api/user');
-        
+
         if (!response.data.user) {
           throw new Error('Invalid user data received');
         }
-        
+
         this.user = response.data.user;
         console.log('✓ User data fetched successfully');
       } catch (error) {
         console.error('Fetch user error:', error);
-        
+
         // If token is invalid or expired, logout gracefully
         if (error.response?.status === 401) {
           console.warn('Token expired or invalid, logging out...');

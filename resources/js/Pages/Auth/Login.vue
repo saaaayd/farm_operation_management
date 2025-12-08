@@ -19,18 +19,17 @@
         <form class="space-y-6" @submit.prevent="handleLogin">
           <div class="space-y-4">
           <div>
-              <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
-                Email address
+              <label for="login_id" class="block text-sm font-semibold text-gray-700 mb-2">
+                Email or Phone Number
               </label>
             <input
-              id="email"
-              v-model="form.email"
-              name="email"
-              type="email"
-              autocomplete="email"
+              id="login_id"
+              v-model="form.login_id"
+              name="login_id"
+              type="text"
               required
                 class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm transition-all duration-200 bg-gray-50 focus:bg-white"
-                placeholder="Enter your email"
+                placeholder="Enter your email or phone number"
             />
           </div>
           <div>
@@ -95,7 +94,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const form = ref({
-  email: '',
+  login_id: '',
   password: ''
 });
 

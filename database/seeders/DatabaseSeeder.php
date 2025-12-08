@@ -43,11 +43,37 @@ class DatabaseSeeder extends Seeder
             'bob@farmops.com' => 'bob123',
         ];
 
-        
+        // Create admin user (or update existing)
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@farmops.com'],
+            [
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'name' => 'Admin User',
+                'password' => Hash::make($userPasswords['admin@farmops.com']),
+                'role' => 'admin',
+                'phone' => '+1-555-0100',
+                'address' => [
+                    'street' => '123 Admin Street',
+                    'city' => 'Admin City',
+                    'state' => 'AC',
+                    'country' => 'USA',
+                    'postal_code' => '12345'
+                ],
+                'approval_status' => 'approved', // Admins are auto-approved
+                'approved_by' => null,
+                'approved_at' => now(),
+                'phone_verified_at' => now(),
+            ]
+        );
+
+
         // Create farmers
         $farmer1 = User::updateOrCreate(
             ['email' => 'john@farmops.com'],
             [
+                'first_name' => 'John',
+                'last_name' => 'Farmer',
                 'name' => 'John Farmer',
                 'password' => Hash::make($userPasswords['john@farmops.com']),
                 'role' => 'farmer',
@@ -59,12 +85,18 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '54321'
                 ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
         $farmer2 = User::updateOrCreate(
             ['email' => 'mary@farmops.com'],
             [
+                'first_name' => 'Mary',
+                'last_name' => 'Grower',
                 'name' => 'Mary Grower',
                 'password' => Hash::make($userPasswords['mary@farmops.com']),
                 'role' => 'farmer',
@@ -76,6 +108,10 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '67890'
                 ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
@@ -261,6 +297,8 @@ class DatabaseSeeder extends Seeder
         $buyer1 = User::updateOrCreate(
             ['email' => 'alice@farmops.com'],
             [
+                'first_name' => 'Alice',
+                'last_name' => 'Buyer',
                 'name' => 'Alice Buyer',
                 'password' => Hash::make($userPasswords['alice@farmops.com']),
                 'role' => 'buyer',
@@ -272,12 +310,18 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '13579'
                 ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
         $buyer2 = User::updateOrCreate(
             ['email' => 'bob@farmops.com'],
             [
+                'first_name' => 'Bob',
+                'last_name' => 'Merchant',
                 'name' => 'Bob Merchant',
                 'password' => Hash::make($userPasswords['bob@farmops.com']),
                 'role' => 'buyer',
@@ -289,6 +333,10 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '24680'
                 ],
+                'approval_status' => 'approved', // Seeded users are pre-approved
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
@@ -314,7 +362,7 @@ class DatabaseSeeder extends Seeder
                 'water_access' => 'good',
                 'drainage_quality' => 'good',
             ]);
-            
+
             $field2 = Field::updateOrCreate([
                 'user_id' => $farmer1->id,
                 'farm_id' => $farm1->id,
@@ -334,7 +382,7 @@ class DatabaseSeeder extends Seeder
                 'water_access' => 'moderate',
                 'drainage_quality' => 'moderate',
             ]);
-            
+
             $field3 = Field::updateOrCreate([
                 'user_id' => $farmer2->id,
                 'farm_id' => $farm2->id,
@@ -354,7 +402,7 @@ class DatabaseSeeder extends Seeder
                 'water_access' => 'good',
                 'drainage_quality' => 'good',
             ]);
-            
+
 
             // Create laborers
             $laborer1 = Laborer::updateOrCreate([
@@ -389,7 +437,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Corn',
-                    'rice_variety_id' => $varietyCorn->id,
+                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
                     'planting_date' => now()->subDays(45),
                     'expected_harvest_date' => now()->addDays(75),
                     'status' => Planting::STATUS_GROWING,
@@ -406,7 +454,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Soybeans',
-                    'rice_variety_id' => $varietySoy->id,
+                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
                     'planting_date' => now()->subDays(30),
                     'expected_harvest_date' => now()->addDays(90),
                     'status' => Planting::STATUS_GROWING,
@@ -422,7 +470,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Wheat',
-                    'rice_variety_id' => $varietyWheat->id,
+                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
                     'planting_date' => now()->subDays(60),
                     'expected_harvest_date' => now()->addDays(30),
                     'status' => Planting::STATUS_READY,
@@ -439,7 +487,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Tomatoes',
-                    'rice_variety_id' => $varietyTomato->id,
+                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
                     'planting_date' => now()->subDays(75),
                     'expected_harvest_date' => now()->subDays(5),
                     'actual_harvest_date' => now()->subDays(4),
@@ -605,7 +653,7 @@ class DatabaseSeeder extends Seeder
             // Create weather logs
             $fields = [$field1, $field2, $field3];
             $conditions = ['clear', 'cloudy', 'rainy', 'clear', 'cloudy'];
-            
+
             foreach ($fields as $field) {
                 for ($i = 0; $i < 7; $i++) {
                     $recordedAt = now()->subDays($i)->setTime(8 + $i, 0, 0);
