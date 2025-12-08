@@ -17,17 +17,43 @@
       
       <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
         <div class="space-y-4">
-          <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-            <input
-              id="name"
-              v-model="form.name"
-              name="name"
-              type="text"
-              required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              placeholder="Enter your full name"
-            />
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 sm:col-span-5">
+              <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+              <input
+                id="first_name"
+                v-model="form.first_name"
+                name="first_name"
+                type="text"
+                required
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                placeholder="First Name"
+              />
+            </div>
+            <div class="col-span-12 sm:col-span-2">
+              <label for="middle_initial" class="block text-sm font-medium text-gray-700">M.I.</label>
+              <input
+                id="middle_initial"
+                v-model="form.middle_initial"
+                name="middle_initial"
+                type="text"
+                maxlength="3"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                placeholder="M.I."
+              />
+            </div>
+            <div class="col-span-12 sm:col-span-5">
+              <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+              <input
+                id="last_name"
+                v-model="form.last_name"
+                name="last_name"
+                type="text"
+                required
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                placeholder="Last Name"
+              />
+            </div>
           </div>
           
           <div>
@@ -43,36 +69,50 @@
               placeholder="Enter your email address"
             />
           </div>
-          
-          
+
           <div>
-            <label for="role" class="block text-sm font-medium text-gray-700">Account Type</label>
-            <select
-              id="role"
-              v-model="form.role"
-              name="role"
-              required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-            >
-              <option value="">Select account type</option>
-              <option value="farmer">Farmer - Manage rice farming operations</option>
-              <option value="buyer">Buyer - Purchase rice products</option>
-            </select>
-            <p class="mt-1 text-xs text-gray-500">
-              Farmers can manage fields, plantings, and sell rice. Buyers can browse and purchase rice products.
-            </p>
-          </div>
-          
-          <div>
-            <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (Optional)</label>
+            <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
             <input
               id="phone"
               v-model="form.phone"
               name="phone"
               type="tel"
+              required
               class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
               placeholder="Enter your phone number"
             />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Verification Method</label>
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center">
+                <input
+                  id="verify_sms"
+                  name="verification_method"
+                  type="radio"
+                  value="sms"
+                  v-model="form.verification_method"
+                  class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
+                />
+                <label for="verify_sms" class="ml-2 block text-sm text-gray-700">
+                  SMS
+                </label>
+              </div>
+              <div class="flex items-center">
+                <input
+                  id="verify_email"
+                  name="verification_method"
+                  type="radio"
+                  value="email"
+                  v-model="form.verification_method"
+                  class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
+                />
+                <label for="verify_email" class="ml-2 block text-sm text-gray-700">
+                  Email
+                </label>
+              </div>
+            </div>
           </div>
           
           <div>
@@ -152,10 +192,13 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const form = ref({
-  name: '',
+  first_name: '',
+  middle_initial: '',
+  last_name: '',
   email: '',
   phone: '',
-  role: '',
+  verification_method: 'sms', // Default to SMS
+  role: 'buyer', // Default to buyer
   password: '',
   password_confirmation: ''
 });
@@ -165,7 +208,7 @@ const handleRegister = async () => {
   authStore.error = null;
   
   // Basic client-side validation
-  if (!form.value.name || !form.value.email || !form.value.role || !form.value.password) {
+  if (!form.value.first_name || !form.value.last_name || !form.value.email || !form.value.phone || !form.value.password) {
     authStore.error = 'Please fill in all required fields.';
     return;
   }
@@ -180,15 +223,16 @@ const handleRegister = async () => {
     return;
   }
   
-  if (!['farmer', 'buyer'].includes(form.value.role)) {
-    authStore.error = 'Please select a valid account type.';
-    return;
-  }
-  
   try {
-    await authStore.register(form.value);
-    // Let the router guard handle the redirect based on auth state
-    router.push('/');
+    // Redirect to verification page
+    router.push({ 
+      path: '/verify-phone', 
+      query: { 
+        phone: form.value.phone,
+        email: form.value.email,
+        method: form.value.verification_method
+      } 
+    });
   } catch (error) {
     // Error is handled in the store
     console.error('Registration error:', error);

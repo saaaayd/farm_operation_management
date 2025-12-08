@@ -19,13 +19,14 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'first_name' => 'required|string|max:255',
+            'middle_initial' => 'nullable|string|max:5',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users', // Email required again
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:20|unique:users',
             'address' => 'nullable|array',
-            
-            // --- ADD THIS VALIDATION ---
+            'verification_method' => ['required', 'string', Rule::in(['sms', 'email'])],
             'role' => ['required', 'string', Rule::in(['farmer', 'buyer'])],
         ]);
         
@@ -46,26 +47,53 @@ class AuthController extends Controller
             ], 422);
         }
         
+        // Generate verification code
+        $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $request->first_name,
+            'middle_initial' => $request->middle_initial,
+            'last_name' => $request->last_name,
+            'name' => $request->first_name . ' ' . $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $role,
             'phone' => $request->phone,
             'address' => $request->address,
-            'approval_status' => 'pending', // New registrations require admin approval
+            'approval_status' => 'pending',
+            'verification_code' => $verificationCode,
         ]);
+
+        // Send Verification Code
+        if ($request->verification_method === 'sms') {
+            try {
+                $twilio = new \App\Services\TwilioService();
+                $twilio->sendSMS($user->phone, "Your RiceFARM verification code is: {$verificationCode}");
+            } catch (\Exception $e) {
+                \Log::error('Failed to send verification SMS: ' . $e->getMessage());
+            }
+        } else {
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($verificationCode));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send verification Email: ' . $e->getMessage());
+            }
+        }
 
         // Log the registration
         \App\Models\ActivityLog::log('user.registered', $user, null, $user->toArray(), "New {$role} registration pending approval");
         
-        $token = $user->createToken('auth-token')->plainTextToken;
-        
-        return response()->json([
-            'message' => 'Registration successful',
+        $response = [
+            'message' => 'Registration successful. Please verify your account.',
             'user' => $user,
-            'token' => $token,
-        ], 201);
+        ];
+
+        // For development/debugging: return code if local
+        if (app()->environment('local')) {
+            $response['debug_verification_code'] = $verificationCode;
+        }
+        
+        return response()->json($response, 201);
     }
     
     /**
@@ -74,7 +102,7 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'login_id' => 'required|string', // Can be email or phone
             'password' => 'required',
         ]);
         
@@ -85,7 +113,10 @@ class AuthController extends Controller
             ], 422);
         }
         
-        $user = User::where('email', $request->email)->first();
+        $loginId = $request->login_id;
+        $field = filter_var($loginId, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+        $user = User::where($field, $loginId)->first();
         
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([

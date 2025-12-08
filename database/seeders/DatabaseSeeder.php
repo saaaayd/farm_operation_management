@@ -48,6 +48,8 @@ class DatabaseSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => 'admin@farmops.com'],
             [
+                'first_name' => 'Admin',
+                'last_name' => 'User',
                 'name' => 'Admin User',
                 'password' => Hash::make($userPasswords['admin@farmops.com']),
                 'role' => 'admin',
@@ -62,6 +64,7 @@ class DatabaseSeeder extends Seeder
                 'approval_status' => 'approved', // Admins are auto-approved
                 'approved_by' => null,
                 'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
@@ -70,6 +73,8 @@ class DatabaseSeeder extends Seeder
         $farmer1 = User::updateOrCreate(
             ['email' => 'john@farmops.com'],
             [
+                'first_name' => 'John',
+                'last_name' => 'Farmer',
                 'name' => 'John Farmer',
                 'password' => Hash::make($userPasswords['john@farmops.com']),
                 'role' => 'farmer',
@@ -84,12 +89,15 @@ class DatabaseSeeder extends Seeder
                 'approval_status' => 'approved', // Seeded users are pre-approved
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
         $farmer2 = User::updateOrCreate(
             ['email' => 'mary@farmops.com'],
             [
+                'first_name' => 'Mary',
+                'last_name' => 'Grower',
                 'name' => 'Mary Grower',
                 'password' => Hash::make($userPasswords['mary@farmops.com']),
                 'role' => 'farmer',
@@ -104,6 +112,7 @@ class DatabaseSeeder extends Seeder
                 'approval_status' => 'approved', // Seeded users are pre-approved
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
@@ -289,6 +298,8 @@ class DatabaseSeeder extends Seeder
         $buyer1 = User::updateOrCreate(
             ['email' => 'alice@farmops.com'],
             [
+                'first_name' => 'Alice',
+                'last_name' => 'Buyer',
                 'name' => 'Alice Buyer',
                 'password' => Hash::make($userPasswords['alice@farmops.com']),
                 'role' => 'buyer',
@@ -303,12 +314,15 @@ class DatabaseSeeder extends Seeder
                 'approval_status' => 'approved', // Seeded users are pre-approved
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
         $buyer2 = User::updateOrCreate(
             ['email' => 'bob@farmops.com'],
             [
+                'first_name' => 'Bob',
+                'last_name' => 'Merchant',
                 'name' => 'Bob Merchant',
                 'password' => Hash::make($userPasswords['bob@farmops.com']),
                 'role' => 'buyer',
@@ -323,6 +337,7 @@ class DatabaseSeeder extends Seeder
                 'approval_status' => 'approved', // Seeded users are pre-approved
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
+                'phone_verified_at' => now(),
             ]
         );
 
@@ -423,7 +438,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Corn',
-                    'rice_variety_id' => $varietyCorn->id,
+                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
                     'planting_date' => now()->subDays(45),
                     'expected_harvest_date' => now()->addDays(75),
                     'status' => Planting::STATUS_GROWING,
@@ -440,7 +455,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Soybeans',
-                    'rice_variety_id' => $varietySoy->id,
+                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
                     'planting_date' => now()->subDays(30),
                     'expected_harvest_date' => now()->addDays(90),
                     'status' => Planting::STATUS_GROWING,
@@ -456,7 +471,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Wheat',
-                    'rice_variety_id' => $varietyWheat->id,
+                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
                     'planting_date' => now()->subDays(60),
                     'expected_harvest_date' => now()->addDays(30),
                     'status' => Planting::STATUS_READY,
@@ -473,7 +488,7 @@ class DatabaseSeeder extends Seeder
                 ],
                 [
                     'crop_type' => 'Tomatoes',
-                    'rice_variety_id' => $varietyTomato->id,
+                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
                     'planting_date' => now()->subDays(75),
                     'expected_harvest_date' => now()->subDays(5),
                     'actual_harvest_date' => now()->subDays(4),

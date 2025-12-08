@@ -69,6 +69,12 @@ const routes = [
     component: () => import('@/Pages/Auth/Login.vue'), // Temporary, will be handled by router guard
   },
   {
+    path: '/verify-phone',
+    name: 'verify-phone',
+    component: () => import('@/Pages/Auth/VerifyPhone.vue'),
+    meta: { requiresGuest: true }
+  },
+  {
     path: '/login',
     name: 'login',
     component: Login,
@@ -98,7 +104,7 @@ const routes = [
     component: Profile,
     meta: { requiresAuth: true }
   },
-  
+
   // Farm Management Routes (Rice-specific)
   {
     path: '/fields',
@@ -172,7 +178,7 @@ const routes = [
     component: HarvestsCreate,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
-  
+
   // Weather Routes
   {
     path: '/weather',
@@ -186,8 +192,8 @@ const routes = [
     component: WeatherAnalytics,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
-  
-  
+
+
   // Reports Routes
   {
     path: '/reports',
@@ -195,7 +201,7 @@ const routes = [
     component: ReportsIndex,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
-  
+
   // Inventory Routes
   {
     path: '/inventory',
@@ -209,7 +215,7 @@ const routes = [
     component: InventoryDetail,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
-  
+
   // Weather Routes  
   {
     path: '/weather/fields/:id',
@@ -217,7 +223,7 @@ const routes = [
     component: FieldWeather,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
-  
+
   // Buyer Routes
   {
     path: '/buyer/products',
@@ -276,6 +282,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/checkout',
+    name: 'checkout',
+    component: () => import('@/Pages/Marketplace/Checkout.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
     path: '/cart',
     name: 'cart',
     component: Cart,
@@ -293,7 +305,7 @@ const routes = [
     component: OrderDetail,
     meta: { requiresAuth: true, roles: ['buyer'] }
   },
-  
+
   // Financial Routes
   {
     path: '/financial/expenses',
@@ -381,7 +393,7 @@ const routes = [
     component: () => import('@/Pages/Admin/Reports/Index.vue'),
     meta: { requiresAuth: true, roles: ['admin'] }
   },
-  
+
   // Reports Routes
   {
     path: '/reports/financial',
@@ -410,9 +422,9 @@ export const setupRouterGuards = (router) => {
   router.beforeEach(async (to, from, next) => {
     try {
       const authStore = useAuthStore();
-      
+
       console.log(`Router: Navigating from ${from.path} to ${to.path}`);
-      
+
       // Handle root path redirect
       if (to.path === '/') {
         if (authStore.isAuthenticated) {
@@ -430,14 +442,14 @@ export const setupRouterGuards = (router) => {
         }
         return;
       }
-      
+
       // Check if route requires authentication
       if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         console.log('Router: Route requires auth, redirecting to login');
         next('/login');
         return;
       }
-      
+
       // Check if route requires guest (not authenticated)
       if (to.meta.requiresGuest && authStore.isAuthenticated) {
         // Redirect based on user role
@@ -450,9 +462,9 @@ export const setupRouterGuards = (router) => {
         }
         return;
       }
-      
+
       // --- START OF THE FIX ---
-      
+
       // If user is authenticated but user data is not loaded yet, wait for it
       // This is important for page reloads where the guard runs before user data is fetched
       if (authStore.isAuthenticated && !authStore.user && !authStore.loading) {
@@ -464,7 +476,7 @@ export const setupRouterGuards = (router) => {
           // If fetch fails, allow navigation to continue (will be handled by auth checks)
         }
       }
-      
+
       // Wait for user data to finish loading if it's currently loading
       if (authStore.isAuthenticated && authStore.loading) {
         console.log('Router: Waiting for user data to load...');
@@ -475,12 +487,12 @@ export const setupRouterGuards = (router) => {
           attempts++;
         }
       }
-      
+
       // We calculate the onboarding status manually from the
       // 'authStore.user' object, which we know is fresh.
       const user = authStore.user;
       const userIsFarmer = user && user.role === 'farmer';
-      
+
       // Check if the user's address (where farm data is stored) is missing.
       // This is the real source of truth for onboarding.
       const userHasNoFarm = userIsFarmer && (!user.address || !user.address.farm_location);
@@ -505,7 +517,7 @@ export const setupRouterGuards = (router) => {
         }
         return;
       }
-      
+
       // If we're on onboarding page and user data is still loading, allow navigation
       // (don't redirect away from onboarding while user data is being fetched)
       if (to.meta.requiresOnboarding && !user && authStore.isAuthenticated) {
@@ -513,9 +525,9 @@ export const setupRouterGuards = (router) => {
         next();
         return;
       }
-      
+
       // --- END OF THE FIX ---
-      
+
       // Check role-based access
       if (to.meta.roles && authStore.user) {
         if (!to.meta.roles.includes(authStore.user.role)) {
@@ -530,7 +542,7 @@ export const setupRouterGuards = (router) => {
           return;
         }
       }
-      
+
       console.log(`Router: Navigation to ${to.path} allowed`);
       next();
     } catch (error) {
@@ -539,7 +551,7 @@ export const setupRouterGuards = (router) => {
       next();
     }
   });
-  
+
   // Add error handler for router errors
   router.onError((error) => {
     console.error('Router error:', error);

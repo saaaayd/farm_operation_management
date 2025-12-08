@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Http;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/verify-phone', [\App\Http\Controllers\Auth\VerificationController::class, 'verify']);
+Route::post('/resend-verification', [\App\Http\Controllers\Auth\VerificationController::class, 'resend']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
