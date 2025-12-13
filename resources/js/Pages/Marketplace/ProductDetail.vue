@@ -323,14 +323,20 @@ const decreaseQuantity = () => {
   }
 }
 
+import { useMarketplaceStore } from '@/stores/marketplace';
+
+const marketplaceStore = useMarketplaceStore();
+
 const addToCart = () => {
-  // Add to cart logic
-  console.log('Add to cart:', product.value.id, quantity.value)
+  marketplaceStore.addToCart(product.value, quantity.value);
+  // Optional: Add a toast/notification here
+  // alert('Added into cart'); 
 }
 
 const contactSeller = () => {
-  // Contact seller logic
-  console.log('Contact seller')
+  // Currently, messaging is linked to orders. 
+  // Inform the user to place an order to start a conversation.
+  alert("You can message the seller regarding delivery and other details after placing an order. Please proceed to checkout.");
 }
 
 const viewProduct = (id) => {
