@@ -80,11 +80,11 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.products = Array.isArray(items) ? items : [];
         this.productsPagination = payload
           ? {
-              current_page: payload.current_page,
-              last_page: payload.last_page,
-              per_page: payload.per_page,
-              total: payload.total,
-            }
+            current_page: payload.current_page,
+            last_page: payload.last_page,
+            per_page: payload.per_page,
+            total: payload.total,
+          }
           : null;
 
         return response.data;
@@ -127,7 +127,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
         if (Array.isArray(products)) {
           console.log(`✓ Setting ${products.length} farmer products in store`);
           this.farmerProducts = products;
-          
+
           // Log each product for debugging
           products.forEach((product, index) => {
             console.log(`  Product ${index + 1}: ${product.name} (ID: ${product.id}, Status: ${product.approval_status}, Farmer ID: ${product.farmer_id})`);
@@ -176,7 +176,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
         console.log('Creating rice product with data:', productData);
         const response = await riceMarketplaceAPI.createProduct(productData);
         console.log('Product creation response:', response.data);
-        
+
         // Optimistically add the product to the store immediately
         const product = response.data?.product;
         if (product) {
@@ -190,7 +190,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
         } else {
           console.warn('No product in response:', response.data);
         }
-        
+
         return response.data;
       } catch (error) {
         console.error('Failed to create rice product:', error);
@@ -275,11 +275,11 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.orders = Array.isArray(items) ? items : [];
         this.ordersPagination = payload
           ? {
-              current_page: payload.current_page,
-              last_page: payload.last_page,
-              per_page: payload.per_page,
-              total: payload.total,
-            }
+            current_page: payload.current_page,
+            last_page: payload.last_page,
+            per_page: payload.per_page,
+            total: payload.total,
+          }
           : null;
 
         return response.data;
@@ -310,20 +310,20 @@ export const useMarketplaceStore = defineStore('marketplace', {
     // Cart management
     addToCart(product, quantity = 1) {
       const existingItem = this.cart.find(item => item.id === product.id);
-      
+
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
         this.cart.push({
           id: product.id,
           name: product.name,
-          price: product.price,
+          price: Number(product.price), // Ensure price is a number
           quantity: quantity,
           image: product.image,
           farmer: product.farmer,
         });
       }
-      
+
       this.saveCartToStorage();
     },
 
@@ -364,7 +364,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.loading = true;
       try {
         const response = await riceMarketplaceAPI.createOrder(orderData);
-        this.clearCart(); // Clear cart after successful order
+        // Don't clear cart here, let the component handle it after all orders are created
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to create order';

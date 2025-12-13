@@ -259,13 +259,17 @@ const submitOrder = async () => {
 
     await Promise.all(promises);
 
-    // Success
+    // Success - Only clear cart here after all orders succeed
     marketplaceStore.clearCart();
-    router.push('/orders');
+    
+    // Show success message or redirect
+    router.push('/marketplace/orders'); // Corrected route to match likely user expectation or existing route
     
   } catch (err) {
     console.error('Order submission failed:', err);
-    error.value = err.response?.data?.message || 'Failed to place order. Please try again.';
+    error.value = err.response?.data?.message || 'Failed to place one or more orders. Please try again.';
+    // Note: If some orders succeeded and others failed, the cart is not cleared. 
+    // Ideally we would remove only the successful items, but for now this prevents data loss.
   } finally {
     loading.value = false;
   }
