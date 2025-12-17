@@ -1,12 +1,12 @@
 <template>
-  <div class="flex h-screen bg-gray-100">
+  <div class="flex h-screen bg-gray-100 overflow-hidden">
     <!-- Sidebar -->
     <div 
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto lg:overflow-y-auto border-r border-gray-100"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col h-full border-r border-gray-100"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
       <!-- Sidebar Header -->
-      <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-green-600 to-emerald-600 shadow-lg">
+      <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-green-600 to-emerald-600 shadow-lg flex-shrink-0">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md transform transition-transform hover:scale-110">
@@ -29,7 +29,7 @@
       </div>
 
       <!-- User Info -->
-      <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+      <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md ring-2 ring-white">
@@ -44,8 +44,9 @@
       </div>
 
       <!-- Navigation Menu -->
-      <div class="flex flex-col h-full">
-        <nav class="flex-1 px-3 py-4 overflow-y-auto">
+      <div class="flex flex-col flex-1 overflow-y-auto">
+        <nav class="flex-1 px-3 py-4">
+          <!-- ... navigation items ... -->
           <div class="space-y-1">
           <!-- Dashboard -->
           <router-link
@@ -199,7 +200,7 @@
         </nav>
 
         <!-- Bottom Section -->
-        <div class="px-3 py-4 border-t border-gray-200 bg-white">
+        <div class="px-3 py-4 border-t border-gray-200 bg-white flex-shrink-0">
           <router-link
             to="/profile"
             class="nav-item"
@@ -229,10 +230,10 @@
       @click="closeSidebar"
     ></div>
 
-    <!-- Main content -->
-    <div class="flex-1 lg:ml-64">
+    <!-- Main content container -->
+    <div class="flex-1 flex flex-col min-w-0 lg:ml-64 h-full">
       <!-- Mobile header -->
-      <div class="lg:hidden bg-white shadow-md border-b border-gray-200 sticky top-0 z-40">
+      <div class="lg:hidden bg-white shadow-md border-b border-gray-200 sticky top-0 z-40 flex-shrink-0">
         <div class="flex items-center justify-between h-16 px-4">
           <button
             @click="toggleSidebar"
@@ -246,7 +247,7 @@
       </div>
 
       <!-- Page content -->
-      <main class="flex-1 overflow-y-auto">
+      <main class="flex-1 overflow-y-auto w-full">
         <slot />
       </main>
     </div>

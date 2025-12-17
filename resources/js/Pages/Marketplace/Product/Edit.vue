@@ -1,263 +1,253 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Edit Product</h1>
-            <p class="text-sm text-gray-500">
-              Update pricing, availability, and quality details.
-            </p>
+  <div class="min-h-screen bg-gray-50/50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-4">
+            <button
+              @click="router.push('/marketplace/my-products')"
+              class="p-2 -ml-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-xl font-bold text-gray-900">Edit Product</h1>
+              <p class="text-xs text-gray-500 mt-0.5">Update your product details and pricing</p>
+            </div>
           </div>
-          <button
-            @click="router.push('/marketplace/my-products')"
-            class="text-sm text-gray-600 hover:text-gray-800"
-          >
-            Back to list
-          </button>
+          
+          <div class="flex items-center gap-3">
+            <button
+              @click="deleteProduct"
+              class="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div v-if="loadingProduct" class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-        Loading product details...
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Loading State -->
+      <div v-if="loadingProduct" class="flex flex-col items-center justify-center py-20">
+        <LoadingSpinner>Loading product details...</LoadingSpinner>
       </div>
 
-      <div v-else class="bg-white rounded-lg shadow p-6 space-y-6">
-        <div class="flex justify-end">
-          <button
-            @click="deleteProduct"
-            class="text-sm text-red-600 hover:text-red-800"
-          >
-            Delete product
-          </button>
-        </div>
+      <!-- Main Form -->
+      <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column: Main Info -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
+            
+            <InputField
+              v-model="form.name"
+              label="Product Name"
+              placeholder="e.g. Premium Jasmine Rice"
+              required
+              :error="errors.name?.[0]"
+            />
 
-        <form @submit.prevent="submit" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="form-label">Product Name *</label>
-              <input
-                v-model="form.name"
-                type="text"
-                class="form-input"
-                required
-              />
-              <p v-if="errors.name" class="form-error">{{ errors.name[0] }}</p>
-            </div>
-
-            <div>
-              <label class="form-label">Rice Variety *</label>
-              <select
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SelectDropdown
                 v-model="form.rice_variety_id"
-                class="form-input"
+                label="Rice Variety"
                 required
+                :error="errors.rice_variety_id?.[0]"
               >
-                <option value="">Select variety</option>
-                <option
-                  v-for="variety in riceVarieties"
-                  :key="variety.id"
-                  :value="variety.id"
-                >
+                <option v-for="variety in riceVarieties" :key="variety.id" :value="variety.id">
                   {{ variety.name }}
                 </option>
-              </select>
-              <p v-if="errors.rice_variety_id" class="form-error">{{ errors.rice_variety_id[0] }}</p>
-            </div>
+              </SelectDropdown>
 
-            <div>
-              <label class="form-label">Quality Grade *</label>
-              <select
+              <SelectDropdown
                 v-model="form.quality_grade"
-                class="form-input"
+                label="Quality Grade"
                 required
+                :error="errors.quality_grade?.[0]"
               >
-                <option
-                  v-for="(label, value) in qualityGrades"
-                  :key="value"
-                  :value="value"
-                >
+                <option v-for="(label, value) in qualityGrades" :key="value" :value="value">
                   {{ label }}
                 </option>
-              </select>
+              </SelectDropdown>
             </div>
 
             <div>
-              <label class="form-label">Quantity Available *</label>
-              <input
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Description <span class="text-red-500">*</span></label>
+              <textarea
+                v-model="form.description"
+                rows="4"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                placeholder="Describe your product..."
+                required
+              ></textarea>
+              <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description[0] }}</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Inventory & Pricing</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputField
                 v-model="form.quantity_available"
                 type="number"
+                label="Quantity Available"
+                placeholder="0.00"
+                required
                 min="0"
                 step="0.01"
-                class="form-input"
-                required
+                :error="errors.quantity_available?.[0]"
               />
-              <p v-if="errors.quantity_available" class="form-error">{{ errors.quantity_available[0] }}</p>
-            </div>
 
-            <div>
-              <label class="form-label">Unit *</label>
-              <select
+              <SelectDropdown
                 v-model="form.unit"
-                class="form-input"
+                label="Unit"
                 required
+                :error="errors.unit?.[0]"
               >
-                <option
-                  v-for="unit in units"
-                  :key="unit"
-                  :value="unit"
-                >
+                <option v-for="unit in units" :key="unit" :value="unit">
                   {{ unit }}
                 </option>
-              </select>
-            </div>
+              </SelectDropdown>
 
-            <div>
-              <label class="form-label">Price per Unit (₱) *</label>
-              <input
+              <InputField
                 v-model="form.price_per_unit"
                 type="number"
+                label="Price per Sack (₱)"
+                placeholder="0.00"
+                required
                 min="0"
                 step="0.01"
-                class="form-input"
-                required
+                :error="errors.price_per_unit?.[0]"
               />
-              <p v-if="errors.price_per_unit" class="form-error">{{ errors.price_per_unit[0] }}</p>
-            </div>
 
-            <div>
-              <label class="form-label">Moisture Content (%)</label>
-              <input
+              <InputField
+                v-model="form.minimum_order_quantity"
+                type="number"
+                label="Min. Order Quantity"
+                placeholder="Optional"
+                min="0"
+                step="0.1"
+                :error="errors.minimum_order_quantity?.[0]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Additional Details -->
+        <div class="space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Specifications</h2>
+
+            <SelectDropdown
+              v-model="form.processing_method"
+              label="Processing Method"
+              placeholder="Select method"
+            >
+              <option v-for="(label, value) in processingMethods" :key="value" :value="value">
+                {{ label }}
+              </option>
+            </SelectDropdown>
+
+            <div class="grid grid-cols-2 gap-4">
+              <InputField
                 v-model="form.moisture_content"
                 type="number"
+                label="Moisture (%)"
+                placeholder="e.g. 14"
                 min="5"
                 max="25"
                 step="0.1"
-                class="form-input"
               />
-            </div>
 
-            <div>
-              <label class="form-label">Purity Percentage</label>
-              <input
+              <InputField
                 v-model="form.purity_percentage"
                 type="number"
+                label="Purity (%)"
+                placeholder="e.g. 98"
                 min="50"
                 max="100"
                 step="0.1"
-                class="form-input"
               />
             </div>
-          </div>
 
-          <div>
-            <label class="form-label">Description *</label>
-            <textarea
-              v-model="form.description"
-              rows="4"
-              class="form-input"
-              required
-            ></textarea>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="form-label">Processing Method</label>
-              <select
-                v-model="form.processing_method"
-                class="form-input"
-              >
-                <option value="">Select method</option>
-                <option
-                  v-for="(label, value) in processingMethods"
-                  :key="value"
-                  :value="value"
-                >
-                  {{ label }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label">Minimum Order Quantity</label>
-              <input
-                v-model="form.minimum_order_quantity"
-                type="number"
-                min="0"
-                step="0.1"
-                class="form-input"
-              />
-            </div>
-          </div>
-
-          <div class="flex items-center">
-            <input
-              id="is_organic"
-              v-model="form.is_organic"
-              type="checkbox"
-              class="h-4 w-4 text-green-600 border-gray-300 rounded"
+            <InputField
+              v-model="form.certification"
+              label="Certification"
+              placeholder="e.g. GAP, Organic"
             />
-            <label for="is_organic" class="ml-2 block text-sm text-gray-700">
-              Certified organic
-            </label>
-          </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="form-label">Storage Conditions</label>
-              <input
-                v-model="form.storage_conditions"
-                type="text"
-                class="form-input"
-              />
-            </div>
-
-            <div>
-              <label class="form-label">Certification</label>
-              <input
-                v-model="form.certification"
-                type="text"
-                class="form-input"
-              />
+            <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-100">
+              <label for="is_organic" class="text-sm font-medium text-green-900 cursor-pointer select-none">
+                Certified Organic
+              </label>
+              <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input
+                  type="checkbox"
+                  name="is_organic"
+                  id="is_organic"
+                  v-model="form.is_organic"
+                  class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
+                  :class="{ 'translate-x-5 border-green-500': form.is_organic, 'border-gray-300': !form.is_organic }"
+                />
+                <label
+                  for="is_organic"
+                  class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer transition-colors duration-200"
+                  :class="{ 'bg-green-500': form.is_organic, 'bg-gray-300': !form.is_organic }"
+                ></label>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label class="form-label">Notes</label>
-            <textarea
-              v-model="form.notes"
-              rows="3"
-              class="form-input"
-            ></textarea>
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Storage & Notes</h2>
+            
+            <InputField
+              v-model="form.storage_conditions"
+              label="Storage Conditions"
+              placeholder="e.g. Cool, dry place"
+            />
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Internal Notes</label>
+              <textarea
+                v-model="form.notes"
+                rows="3"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                placeholder="Private notes..."
+              ></textarea>
+            </div>
           </div>
 
-          <div class="flex justify-end gap-3">
-            <button
-              type="button"
-              @click="router.push('/marketplace/my-products')"
-              class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="submitting"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <svg
-                v-if="submitting"
-                class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
+          <!-- Sticky Action Bar for Mobile/Desktop -->
+          <div class="sticky bottom-6">
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 flex gap-3">
+              <button
+                type="button"
+                @click="router.push('/marketplace/my-products')"
+                class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
               >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ submitting ? 'Saving...' : 'Update Product' }}
-            </button>
+                Cancel
+              </button>
+              <button
+                @click="submit"
+                :disabled="submitting"
+                class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="submitting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ submitting ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
     </main>
   </div>
@@ -267,6 +257,9 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMarketplaceStore } from '@/stores/marketplace'
+import InputField from '@/Components/Forms/InputField.vue'
+import SelectDropdown from '@/Components/Forms/SelectDropdown.vue'
+import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -281,7 +274,8 @@ const form = reactive({
   name: '',
   description: '',
   quantity_available: '',
-  unit: 'kg',
+  quantity_available: '',
+  unit: 'sacks',
   price_per_unit: '',
   quality_grade: 'premium',
   moisture_content: '',
@@ -294,7 +288,7 @@ const form = reactive({
   notes: ''
 })
 
-const units = ['kg', 'tons', 'bags', 'sacks']
+const units = ['sacks']
 const qualityGrades = {
   premium: 'Premium',
   grade_a: 'Grade A',
@@ -326,11 +320,12 @@ const loadProduct = async () => {
       processing_method: product.processing_method,
       storage_conditions: product.storage_conditions,
       certification: product.certification,
-      is_organic: product.is_organic,
+      is_organic: Boolean(product.is_organic),
       minimum_order_quantity: product.minimum_order_quantity,
       notes: product.notes
     })
   } catch (error) {
+    console.error('Error loading product:', error)
     router.push('/marketplace/my-products')
   } finally {
     loadingProduct.value = false
@@ -365,6 +360,8 @@ const submit = async () => {
   } catch (error) {
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors
+    } else {
+      console.error('Error updating product:', error)
     }
   } finally {
     submitting.value = false
@@ -372,13 +369,14 @@ const submit = async () => {
 }
 
 const deleteProduct = async () => {
-  if (!confirm('Delete this product? This action cannot be undone.')) return
+  if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
 
   try {
     await marketplaceStore.deleteRiceProduct(route.params.id)
     router.push('/marketplace/my-products')
   } catch (error) {
     console.error('Failed to delete product:', error)
+    alert('Failed to delete product. Please try again.')
   }
 }
 
@@ -388,18 +386,13 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped lang="postcss">
-@reference "tailwindcss";
-.form-label {
-  @apply block text-sm font-medium text-gray-700 mb-2;
+<style scoped>
+/* Custom Toggle Switch */
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #10b981;
 }
-
-.form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500;
-}
-
-.form-error {
-  @apply mt-1 text-xs text-red-600;
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #10b981;
 }
 </style>
-
