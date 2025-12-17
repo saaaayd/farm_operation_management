@@ -115,52 +115,23 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label for="province" class="block text-sm font-semibold text-gray-700 mb-2">Province</label>
-                <select
-                id="province"
-                v-model="form.provinceCode"
-                @change="fetchCities"
-                required
-                class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
-                >
-                <option value="">Select Province</option>
-                <option v-for="p in provinces" :key="p.code" :value="p.code">
-                  {{ p.name }}
-                </option>
-              </select>
+                <div class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600">
+                  Bukidnon
+                </div>
             </div>
             
             <div>
               <label for="city" class="block text-sm font-semibold text-gray-700 mb-2">City / Municipality</label>
-              <select
-              id="city"
-              v-model="form.cityCode"
-              @change="fetchBarangays"
-              :disabled="!form.provinceCode"
-              required
-              class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
-              >
-              <option value="">Select City or Municipality</option>
-              <option v-for="c in cities" :key="c.code" :value="c.code">
-                {{ c.name }}
-              </option>
-            </select>
-          </div>
+              <div class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600">
+                City of Malaybalay
+              </div>
+            </div>
           
           <div class="md:col-span-2">
             <label for="barangay" class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-            <select
-            id="barangay"
-            v-model="form.barangayCode"
-            @change="setAddress"
-            :disabled="!form.cityCode"
-            required
-            class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
-            >
-            <option value="">Select Barangay</option>
-            <option v-for="b in barangays" :key="b.code" :value="b.code">
-              {{ b.name }}
-            </option>
-          </select>
+            <div class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600">
+              Managok
+            </div>
         </div>
       </div>
       
@@ -484,9 +455,7 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const error = ref('');
 
-const provinces = ref([]);
-const cities = ref([]);
-const barangays = ref([]);
+
 
 const form = reactive({
   // Basic Information
@@ -496,11 +465,8 @@ const form = reactive({
   farming_experience: '',
   farm_description: '',
   
-  // Location (Philippine system)
-  provinceCode: '',
-  cityCode: '',
-  barangayCode: '',
-  address: '',
+  // Farm Location - Static
+  address: 'Managok, City of Malaybalay, Bukidnon',
   
   // Field Information
   field_name: '',
@@ -528,51 +494,12 @@ const form = reactive({
 });
 
 
-// Load provinces on mount
+// Load provinces on mount - REMOVED (Static Location)
 onMounted(async () => {
-  try {
-    const res = await axios.get('/api/locations/provinces');
-    provinces.value = res.data;
-  } catch (err) {
-    error.value = 'Failed to load provinces. Please refresh the page.';
-  }
+  // Static location assumed
 });
 
-// Fetch cities when province changes
-const fetchCities = async () => {
-  if (!form.provinceCode) return;
-  try {
-    const res = await axios.get(`/api/locations/provinces/${form.provinceCode}/cities`);
-    cities.value = res.data;
-    barangays.value = [];
-    form.cityCode = '';
-    form.barangayCode = '';
-    form.address = '';
-  } catch (err) {
-    error.value = 'Failed to load cities. Please try again.';
-  }
-};
 
-// Fetch barangays when city changes
-const fetchBarangays = async () => {
-  if (!form.cityCode) return;
-  try {
-    const res = await axios.get(`/api/locations/cities/${form.cityCode}/barangays`);
-    barangays.value = res.data;
-    form.barangayCode = '';
-    form.address = '';
-  } catch (err) {
-    error.value = 'Failed to load barangays. Please try again.';
-  }
-};
-
-// Build address string when barangay selected
-const setAddress = () => {
-  const province = provinces.value.find(p => p.code === form.provinceCode)?.name || '';
-  const city = cities.value.find(c => c.code === form.cityCode)?.name || '';
-  const barangay = barangays.value.find(b => b.code === form.barangayCode)?.name || '';
-  form.address = `${barangay}, ${city}, ${province}`;
-};
 
 const submitProfile = async () => {
   // Clear previous errors
