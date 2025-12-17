@@ -44,7 +44,34 @@
           </div>
           
           <div>
-            <label for="rice_variety_id" class="block text-sm font-semibold text-gray-700 mb-2">Rice Variety</label>
+            <label for="inventory_item_id" class="block text-sm font-semibold text-gray-700 mb-2">Seed Source (Inventory)</label>
+            <select
+              id="inventory_item_id"
+              v-model="form.data.inventory_item_id"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+              :class="{ 'border-red-500': form.errors.inventory_item_id }"
+            >
+              <option value="">Select from Inventory</option>
+              <option
+                v-for="item in inventoryStore.riceSeeds"
+                :key="item.id"
+                :value="item.id"
+                :disabled="item.current_stock <= 0"
+              >
+                {{ item.name }} (Available: {{ item.current_stock }} {{ item.unit || 'kg' }})
+              </option>
+            </select>
+            <p v-if="form.errors.inventory_item_id" class="mt-1 text-xs text-red-600">{{ form.errors.inventory_item_id }}</p>
+            <div v-if="selectedRiceVariety" class="mt-2 p-2 bg-green-50 rounded text-xs text-green-700 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              Linked to Variety: <strong>{{ selectedRiceVariety.name }}</strong>
+            </div>
+          </div>
+
+          <div>
+            <label for="rice_variety_id" class="block text-sm font-semibold text-gray-700 mb-2">
+              Rice Variety <span class="text-xs font-normal text-gray-500">(Auto-matched)</span>
+            </label>
             <select
               id="rice_variety_id"
               v-model="form.data.rice_variety_id"
@@ -61,6 +88,9 @@
               </option>
             </select>
             <p v-if="form.errors.rice_variety_id" class="mt-1 text-xs text-red-600">{{ form.errors.rice_variety_id }}</p>
+            <p v-if="selectedRiceVariety" class="mt-1 text-xs text-gray-500">
+               Maturity: {{ selectedRiceVariety.maturity_days }} days
+            </p>
           </div>
 
           <div>
@@ -211,6 +241,9 @@
               :class="{ 'border-red-500': form.errors.seed_rate }"
             />
             <p v-if="form.errors.seed_rate" class="mt-1 text-xs text-red-600">{{ form.errors.seed_rate }}</p>
+            <p v-if="selectedInventoryItem" class="mt-1 text-xs text-gray-500">
+              Stock Available: {{ selectedInventoryItem.current_stock }} {{ selectedInventoryItem.unit || 'kg' }}
+            </p>
           </div>
         </div>
       </div>
@@ -258,6 +291,7 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
 import { useMarketplaceStore } from '@/stores/marketplace'
+import { useInventoryStore } from '@/stores/inventory'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 
 const props = defineProps({
@@ -269,7 +303,9 @@ const props = defineProps({
 
 const router = useRouter()
 const farmStore = useFarmStore()
+
 const marketplaceStore = useMarketplaceStore()
+const inventoryStore = useInventoryStore()
 
 const isEditMode = computed(() => !!props.planting)
 const riceVarieties = computed(() => marketplaceStore.riceVarieties || [])
@@ -306,6 +342,8 @@ const validateAreaPlanted = () => {
     }
   }
 }
+
+
 
 // Track if harvest date was manually changed
 const harvestDateManuallyChanged = ref(false)
@@ -394,6 +432,7 @@ const getInitialFormData = () => {
     season: defaultSeason,
     status: defaultStatus,
     notes: props.planting?.notes || null,
+    inventory_item_id: '', // Add inventory item tracking
   }
 }
 
@@ -402,6 +441,34 @@ const form = ref({
   errors: {},
   processing: false,
 })
+
+// Get selected inventory item
+const selectedInventoryItem = computed(() => {
+  if (!form.value.data.inventory_item_id) return null;
+  return inventoryStore.riceSeeds.find(i => i.id == form.value.data.inventory_item_id);
+});
+
+// Watch for inventory item selection to auto-select rice variety
+watch(() => form.value.data.inventory_item_id, (newId) => {
+  if (!newId) {
+    form.value.data.rice_variety_id = '';
+    return;
+  }
+  
+  const item = inventoryStore.riceSeeds.find(i => i.id == newId);
+  if (item && item.name) {
+    // Attempt to fuzzy match the inventory item name with rice varieties
+    // E.g. "IR64 Seeds" -> matches "IR64"
+    const match = riceVarieties.value.find(v => 
+      item.name.toLowerCase().includes(v.name.toLowerCase()) || 
+      v.name.toLowerCase().includes(item.name.toLowerCase())
+    );
+    
+    if (match) {
+      form.value.data.rice_variety_id = match.id;
+    }
+  }
+});
 
 // If the planting prop changes (e.g., in edit mode), reset the form
 watch(() => props.planting, () => {
@@ -417,7 +484,8 @@ const calculateExpectedHarvestDate = () => {
       selectedRiceVariety.value?.maturity_days) {
     const plantingDate = new Date(form.value.data.planting_date)
     const harvestDate = new Date(plantingDate)
-    harvestDate.setDate(harvestDate.getDate() + selectedRiceVariety.value.maturity_days)
+    const maturityDays = Number(selectedRiceVariety.value.maturity_days) || 0
+    harvestDate.setDate(harvestDate.getDate() + maturityDays)
     form.value.data.expected_harvest_date = formatDateForInput(harvestDate.toISOString())
   }
 }
@@ -472,6 +540,10 @@ onMounted(async () => {
     if (marketplaceStore.riceVarieties.length === 0) {
       await marketplaceStore.fetchRiceVarieties()
     }
+    // Fetch inventory items
+    if (inventoryStore.items.length === 0) {
+      await inventoryStore.fetchItems();
+    }
     
     // If in edit mode and harvest date exists, mark as manually changed to preserve it
     if (isEditMode.value && form.value.data.expected_harvest_date) {
@@ -521,6 +593,19 @@ const submitForm = async () => {
       form.value.data.planting_date && 
       selectedRiceVariety.value?.maturity_days) {
     calculateExpectedHarvestDate()
+  }
+
+  // Validate seed quantity against inventory stock
+  if (form.value.data.inventory_item_id && form.value.data.seed_rate) {
+    const item = inventoryStore.riceSeeds.find(i => i.id == form.value.data.inventory_item_id);
+    if (item) {
+      const quantityNeeded = Number(form.value.data.seed_rate);
+      if (quantityNeeded > item.current_stock) {
+        form.value.errors.seed_rate = `Insufficient stock. You only have ${item.current_stock} ${item.unit || 'kg'} available.`;
+        form.value.processing = false;
+        return;
+      }
+    }
   }
 
   // --- DATA CLEANING STEP ---

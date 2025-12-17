@@ -203,9 +203,21 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
+    path: '/inventory/create',
+    name: 'inventory-create',
+    component: () => import('@/Pages/Inventory/Create.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
     path: '/inventory/:id',
     name: 'inventory-detail',
     component: InventoryDetail,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/inventory/:id/edit',
+    name: 'inventory-edit',
+    component: () => import('@/Pages/Inventory/Edit.vue'),
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 

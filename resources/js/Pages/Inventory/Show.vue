@@ -259,99 +259,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" @click="closeEditModal"></div>
-
-        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
-            <h3 class="text-xl leading-6 font-bold text-gray-900">Edit Product</h3>
-            <p class="text-sm text-gray-500 mt-1">Update the details below.</p>
-          </div>
-
-          <form @submit.prevent="submitEditForm" class="p-6 space-y-5">
-            <div v-if="editFormError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {{ editFormError }}
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Item Name <span class="text-red-500">*</span></label>
-                <input v-model="editForm.name" required type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Urea 46-0-0">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                <select v-model="editForm.category" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
-                  <option value="" disabled>Select...</option>
-                  <option value="seeds">Seeds</option>
-                  <option value="fertilizer">Fertilizer</option>
-                  <option value="pesticide">Pesticide</option>
-                  <option value="equipment">Equipment</option>
-                  <option value="tools">Tools</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
-                <select v-model="editForm.unit" required class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
-                  <option value="kg">Kilograms (kg)</option>
-                  <option value="liters">Liters</option>
-                  <option value="bags">Bags</option>
-                  <option value="pieces">Pieces</option>
-                  <option value="pounds">Pounds</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Current Stock</label>
-                <input v-model.number="editForm.current_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Alert Level (Min)</label>
-                <input v-model.number="editForm.minimum_stock" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
-              </div>
-              <div class="col-span-2">
-                <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Unit Price ($)</label>
-                <input v-model.number="editForm.unit_price" type="number" step="0.01" min="0" class="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input v-model="editForm.location" type="text" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm" placeholder="e.g. Warehouse A">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                <input v-model="editForm.expiry_date" type="date" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm">
-              </div>
-              <div class="col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description / Notes</label>
-                <textarea v-model="editForm.description" rows="2" class="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 shadow-sm"></textarea>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-              <button type="button" @click="closeEditModal" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
-                Cancel
-              </button>
-              <button type="submit" :disabled="loading" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium disabled:opacity-50 flex items-center">
-                <span v-if="loading" class="mr-2 animate-spin">⟳</span>
-                Update Item
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
 import { useInventoryStore } from '@/stores/inventory'
@@ -383,20 +295,6 @@ const usageHistory = ref([])
 const suppliers = ref([])
 const loadingTransactions = ref(false)
 const loadingUsageHistory = ref(false)
-const showEditModal = ref(false)
-const editFormError = ref('')
-
-const editForm = reactive({
-  name: '',
-  category: '',
-  unit: 'kg',
-  current_stock: 0,
-  minimum_stock: 0,
-  unit_price: 0,
-  location: '',
-  expiry_date: '',
-  description: ''
-})
 
 const totalValue = computed(() => {
   const qty = item.value.current_stock || item.value.quantity || 0
@@ -456,42 +354,14 @@ const formatDate = (date) => {
 }
 
 const editItem = () => {
-  editFormError.value = ''
-  // Populate form with current item data
-  Object.assign(editForm, {
-    name: item.value.name || '',
-    category: item.value.category || '',
-    unit: item.value.unit || 'kg',
-    current_stock: Number(item.value.current_stock ?? item.value.quantity ?? 0),
-    minimum_stock: Number(item.value.minimum_stock ?? item.value.min_stock ?? 0),
-    unit_price: Number(item.value.unit_price ?? 0),
-    location: item.value.location || '',
-    expiry_date: item.value.expiry_date || '',
-    description: item.value.description || ''
-  })
-  showEditModal.value = true
-}
-
-const closeEditModal = () => {
-  showEditModal.value = false
-  editFormError.value = ''
-}
-
-const submitEditForm = async () => {
-  editFormError.value = ''
-  try {
-    await inventoryStore.updateItem(item.value.id, editForm)
-    await reloadFromStore()
-    closeEditModal()
-  } catch (e) {
-    console.error('Error updating item:', e)
-    editFormError.value = e.response?.data?.message || 'Failed to update item. Please check inputs.'
-  }
+  router.push(`/inventory/${item.value.id}/edit`)
 }
 
 const adjustStock = () => {
   // Show stock adjustment modal
   console.log('Adjust stock')
+  // Note: Ideally this would also be extracted to a clearer flow, but keeping prompt-based for now to minimize scope creep
+  // or it might use a separate StockAdjustment component. For now, retaining placeholder.
 }
 
 const addStock = async () => {
