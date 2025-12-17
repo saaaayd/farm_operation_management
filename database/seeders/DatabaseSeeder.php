@@ -43,29 +43,7 @@ class DatabaseSeeder extends Seeder
             'bob@farmops.com' => 'bob123',
         ];
 
-        // Create admin user (or update existing)
-        $admin = User::updateOrCreate(
-            ['email' => 'admin@farmops.com'],
-            [
-                'first_name' => 'Admin',
-                'last_name' => 'User',
-                'name' => 'Admin User',
-                'password' => Hash::make($userPasswords['admin@farmops.com']),
-                'role' => 'admin',
-                'phone' => '+1-555-0100',
-                'address' => [
-                    'street' => '123 Admin Street',
-                    'city' => 'Admin City',
-                    'state' => 'AC',
-                    'country' => 'USA',
-                    'postal_code' => '12345'
-                ],
-                'approval_status' => 'approved', // Admins are auto-approved
-                'approved_by' => null,
-                'approved_at' => now(),
-                'phone_verified_at' => now(),
-            ]
-        );
+
 
 
         // Create farmers
@@ -85,9 +63,6 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '54321'
                 ],
-                'approval_status' => 'approved', // Seeded users are pre-approved
-                'approved_by' => $admin->id,
-                'approved_at' => now(),
                 'phone_verified_at' => now(),
             ]
         );
@@ -108,9 +83,6 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '67890'
                 ],
-                'approval_status' => 'approved', // Seeded users are pre-approved
-                'approved_by' => $admin->id,
-                'approved_at' => now(),
                 'phone_verified_at' => now(),
             ]
         );
@@ -310,9 +282,6 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '13579'
                 ],
-                'approval_status' => 'approved', // Seeded users are pre-approved
-                'approved_by' => $admin->id,
-                'approved_at' => now(),
                 'phone_verified_at' => now(),
             ]
         );
@@ -333,9 +302,6 @@ class DatabaseSeeder extends Seeder
                     'country' => 'USA',
                     'postal_code' => '24680'
                 ],
-                'approval_status' => 'approved', // Seeded users are pre-approved
-                'approved_by' => $admin->id,
-                'approved_at' => now(),
                 'phone_verified_at' => now(),
             ]
         );
