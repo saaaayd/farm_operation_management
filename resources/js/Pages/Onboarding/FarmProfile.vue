@@ -406,113 +406,6 @@
 </div>
 </div>
 
-<!-- Rice Varieties and Farming Practices -->
-<div class="border-b border-gray-200 pb-8">
-  <div class="flex items-center mb-6">
-    <div class="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-      <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </div>
-    <h3 class="text-xl font-semibold text-gray-900">Rice Varieties and Farming Practices</h3>
-  </div>
-  
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="flex flex-col">
-      <label for="preferred_varieties" class="block text-sm font-semibold text-gray-700 mb-2">Preferred Rice Varieties</label>
-      <div class="flex-1 flex flex-col justify-between border border-gray-300 rounded-lg p-4 bg-gray-50">
-        <div v-for="variety in riceVarieties" :key="variety.value" class="flex items-center flex-1">
-          <input
-            :id="variety.value"
-            v-model="form.preferred_varieties"
-            :value="variety.value"
-            type="checkbox"
-            class="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-          />
-          <label :for="variety.value" class="ml-3 text-base text-gray-700">
-            {{ variety.label }}
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex flex-col space-y-6">
-      <div>
-        <label for="planting_method" class="block text-sm font-semibold text-gray-700 mb-2">Preferred Planting Method</label>
-        <select
-        id="planting_method"
-        v-model="form.planting_method"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
-        >
-        <option value="">Select planting method</option>
-        <option value="direct_seeding">Direct Seeding</option>
-        <option value="transplanting">Transplanting</option>
-        <option value="broadcasting">Broadcasting</option>
-        <option value="drilling">Drilling</option>
-      </select>
-    </div>
-
-    <div>
-      <label for="previous_yield" class="block text-sm font-semibold text-gray-700 mb-2">Previous Average Yield (tons/ha)</label>
-      <input
-      id="previous_yield"
-      v-model="form.previous_yield"
-      type="number"
-      step="0.1"
-      min="0"
-      class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-      placeholder="3.5"
-      />
-    </div>
-
-    <div>
-      <label for="target_yield" class="block text-sm font-semibold text-gray-700 mb-2">Target Yield (tons/ha)</label>
-      <input
-      id="target_yield"
-      v-model="form.target_yield"
-      type="number"
-      step="0.1"
-      min="0"
-      class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-      placeholder="4.0"
-      />
-    </div>
-
-    <div>
-      <label for="cropping_seasons" class="block text-sm font-semibold text-gray-700 mb-2">Cropping Seasons per Year</label>
-      <select
-      id="cropping_seasons"
-      v-model="form.cropping_seasons"
-      class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
-      >
-      <option value="">Select seasons</option>
-      <option value="1">1 Season (Wet or Dry)</option>
-      <option value="2">2 Seasons (Wet & Dry)</option>
-      <option value="3">3 Seasons (Continuous)</option>
-    </select>
-  </div>
-  </div>
-</div>
-
-<div class="mt-6">
-  <label for="farming_challenges" class="block text-sm font-semibold text-gray-700 mb-3">Main Farming Challenges (select all that apply)</label>
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-    <div v-for="challenge in farmingChallenges" :key="challenge.value" class="flex items-center">
-      <input
-        :id="challenge.value"
-        v-model="form.farming_challenges"
-        :value="challenge.value"
-        type="checkbox"
-        class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-      />
-      <label :for="challenge.value" class="ml-2 text-sm text-gray-700">
-        {{ challenge.label }}
-      </label>
-    </div>
-  </div>
-</div>
-</div>
-
 <!-- Additional Information -->
 <div>
   <div class="flex items-center mb-6">
@@ -628,40 +521,12 @@ const form = reactive({
   drainage_quality: '',
   
   // Rice Varieties and Practices
-  preferred_varieties: [],
-  planting_method: '',
-  previous_yield: '',
-  target_yield: '',
-  cropping_seasons: '',
-  farming_challenges: [],
+
   
   // Additional
   notes: '',
 });
 
-const riceVarieties = [
-  { value: 'ir64', label: 'IR64 - High yielding variety' },
-  { value: 'jasmine', label: 'Jasmine Rice - Aromatic' },
-  { value: 'basmati', label: 'Basmati - Premium aromatic' },
-  { value: 'brown_rice', label: 'Brown Rice - Nutritious' },
-  { value: 'glutinous', label: 'Glutinous Rice - Sticky' },
-  { value: 'red_rice', label: 'Red Rice - Antioxidant rich' },
-  { value: 'black_rice', label: 'Black Rice - Superfood' },
-  { value: 'local_variety', label: 'Local Traditional Variety' }
-];
-
-const farmingChallenges = [
-  { value: 'pests', label: 'Pest Management' },
-  { value: 'diseases', label: 'Disease Control' },
-  { value: 'water_shortage', label: 'Water Shortage' },
-  { value: 'flooding', label: 'Flooding Issues' },
-  { value: 'soil_fertility', label: 'Soil Fertility' },
-  { value: 'weather', label: 'Weather Variability' },
-  { value: 'labor', label: 'Labor Shortage' },
-  { value: 'market_access', label: 'Market Access' },
-  { value: 'input_costs', label: 'High Input Costs' },
-  { value: 'storage', label: 'Storage Facilities' }
-];
 
 // Load provinces on mount
 onMounted(async () => {
@@ -774,12 +639,7 @@ const submitProfile = async () => {
       drainage_quality: form.drainage_quality,
       
       // Rice Varieties and Practices
-      preferred_varieties: form.preferred_varieties || [],
-      planting_method: form.planting_method || null,
-      previous_yield: form.previous_yield || null,
-      target_yield: form.target_yield || null,
-      cropping_seasons: form.cropping_seasons || null,
-      farming_challenges: form.farming_challenges || [],
+
     };
     
     await farmStore.createRiceFarmProfile(profileData);

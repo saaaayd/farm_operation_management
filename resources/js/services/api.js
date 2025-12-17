@@ -37,7 +37,7 @@ const shouldRetry = (error) => {
   if (error.response && error.response.status >= 400 && error.response.status < 500) {
     return error.response.status === 408; // Only retry on request timeout
   }
-  
+
   return (
     !error.response || // Network error
     error.response.status >= 500 || // Server error
@@ -64,7 +64,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // Log error for debugging
     console.error('API Error:', error);
 
@@ -82,7 +82,7 @@ api.interceptors.response.use(
       }
       return Promise.reject(error);
     }
-    
+
     // Handle timeout and network errors with retry
     if (shouldRetry(error) && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -100,26 +100,26 @@ api.interceptors.response.use(
         return Promise.reject(retryError);
       }
     }
-    
+
     // Handle server errors gracefully
     if (error.response?.status >= 500) {
       console.error('Server error detected:', error.response.status);
       // Show user-friendly error message
       error.userMessage = 'Server is temporarily unavailable. Please try again later.';
     }
-    
+
     // Handle network errors
     if (!error.response) {
       console.error('Network error or server unreachable');
       error.userMessage = 'Network connection failed. Please check your internet connection.';
     }
-    
+
     // Handle timeout errors
     if (error.code === 'ECONNABORTED') {
       console.error('Request timeout');
       error.userMessage = 'Request timed out. Please try again.';
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -161,7 +161,7 @@ export const farmProfileAPI = {
       cropping_seasons: data.cropping_seasons || null,
       farming_challenges: data.farming_challenges || [],
     };
-    
+
     console.log("📦 Sending payload to /api/farmer/profile:", payload);
     return api.post('/farmer/profile', payload);
   },
@@ -176,10 +176,10 @@ export const farmProfileAPI = {
       rice_area: parseFloat(data.rice_area) || 0,
       farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
       farm_description: data.farm_description || null,
-      
+
       // Field Information
       field_name: data.field_name || 'Main Rice Field',
-      
+
       // Soil Information
       soil_type: data.soil_type,
       soil_ph: data.soil_ph ? parseFloat(data.soil_ph) : null,
@@ -188,26 +188,20 @@ export const farmProfileAPI = {
       phosphorus_level: data.phosphorus_level ? parseFloat(data.phosphorus_level) : null,
       potassium_level: data.potassium_level ? parseFloat(data.potassium_level) : null,
       elevation: data.elevation ? parseFloat(data.elevation) : null,
-      
+
+
       // Water Management
       water_source: data.water_source,
       irrigation_type: data.irrigation_type,
       water_access: data.water_access,
       drainage_quality: data.drainage_quality,
-      
-      // Rice Varieties and Practices
-      preferred_varieties: Array.isArray(data.preferred_varieties) ? data.preferred_varieties : [],
-      planting_method: data.planting_method || null,
-      previous_yield: data.previous_yield ? parseFloat(data.previous_yield) : null,
-      target_yield: data.target_yield ? parseFloat(data.target_yield) : null,
-      cropping_seasons: data.cropping_seasons || null,
-      farming_challenges: Array.isArray(data.farming_challenges) ? data.farming_challenges : [],
     };
-    
+
+
     console.log("📦 Sending rice farm profile data to API:", payload);
     return api.post('/farmer/profile', payload);
   },
-  
+
   update: (profileData) => api.put('/farmer/profile', profileData),
 };
 
@@ -288,7 +282,7 @@ export const riceMarketplaceAPI = {
   updateProduct: (id, productData) => api.put(`/rice-marketplace/products/${id}`, productData),
   deleteProduct: (id) => api.delete(`/rice-marketplace/products/${id}`),
   getStats: () => api.get('/rice-marketplace/stats'),
-  
+
   // Orders
   getOrders: (filters = {}) => api.get('/rice-marketplace/orders', { params: filters }),
   getOrderById: (id) => api.get(`/rice-marketplace/orders/${id}`),
@@ -344,7 +338,7 @@ export const laborAPI = {
   createLaborer: (laborerData) => api.post('/laborers', laborerData),
   updateLaborer: (id, laborerData) => api.put(`/laborers/${id}`, laborerData),
   deleteLaborer: (id) => api.delete(`/laborers/${id}`),
-  
+
   getWages: () => api.get('/labor-wages'),
   getWageById: (id) => api.get(`/labor-wages/${id}`),
   createWage: (wageData) => api.post('/labor-wages', wageData),
