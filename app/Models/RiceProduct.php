@@ -37,10 +37,6 @@ class RiceProduct extends Model
         'payment_terms',
         'contact_info',
         'notes',
-        'approval_status',
-        'approved_by',
-        'approved_at',
-        'rejection_reason',
     ];
 
     protected $casts = [
@@ -58,7 +54,6 @@ class RiceProduct extends Model
         'contact_info' => 'array',
         'is_organic' => 'boolean',
         'is_available' => 'boolean',
-        'approved_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -399,59 +394,4 @@ class RiceProduct extends Model
         return $earthRadius * $c;
     }
 
-    /**
-     * Get the admin who approved this product
-     */
-    public function approver()
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    /**
-     * Check if product is approved
-     */
-    public function isApproved(): bool
-    {
-        return $this->approval_status === 'approved';
-    }
-
-    /**
-     * Check if product is pending approval
-     */
-    public function isPending(): bool
-    {
-        return $this->approval_status === 'pending';
-    }
-
-    /**
-     * Check if product is rejected
-     */
-    public function isRejected(): bool
-    {
-        return $this->approval_status === 'rejected';
-    }
-
-    /**
-     * Scope to get approved products
-     */
-    public function scopeApproved($query)
-    {
-        return $query->where('approval_status', 'approved');
-    }
-
-    /**
-     * Scope to get pending products
-     */
-    public function scopePending($query)
-    {
-        return $query->where('approval_status', 'pending');
-    }
-
-    /**
-     * Scope to get rejected products
-     */
-    public function scopeRejected($query)
-    {
-        return $query->where('approval_status', 'rejected');
-    }
 }

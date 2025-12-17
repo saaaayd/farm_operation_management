@@ -1,13 +1,10 @@
 <template>
   <div>
-    <!-- Admin Dashboard -->
-    <AdminDashboard v-if="authStore.user?.role === 'admin'" />
-    
     <!-- Farmer Dashboard -->
-    <RiceFarmingDashboard v-else-if="authStore.user?.role === 'farmer'" />
+    <RiceFarmingDashboard v-if="authStore.user?.role === 'farmer'" />
     
-    <!-- User Dashboard -->
-    <UserDashboard v-else-if="authStore.user?.role === 'user'" />
+    <!-- Buyer Dashboard -->
+    <UserDashboard v-else-if="authStore.user?.role === 'buyer'" />
     
     <!-- Fallback for unknown roles -->
     <div v-else class="p-6 max-w-7xl mx-auto">
@@ -21,7 +18,6 @@
 
 <script setup>
 import { useAuthStore } from '@/stores/auth';
-import AdminDashboard from './AdminDashboard.vue';
 import RiceFarmingDashboard from './RiceFarmingDashboard.vue';
 import UserDashboard from './UserDashboard.vue';
 

@@ -19,11 +19,7 @@ class FieldController extends Controller
         try {
         $user = $request->user();
         
-        $query = Field::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Field::where('user_id', $user->id);
         
             // Eager load plantings with rice variety and latest weather using a constraint
             $fields = $query->with([
@@ -154,7 +150,7 @@ class FieldController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
@@ -179,7 +175,7 @@ class FieldController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
@@ -217,7 +213,7 @@ class FieldController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         

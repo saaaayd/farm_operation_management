@@ -17,13 +17,10 @@ class WeatherHistoryController extends Controller
     {
         $user = $request->user();
         
-        $query = WeatherLog::where('field_id', $fieldId);
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('field', function ($q) use ($user) {
+        $query = WeatherLog::where('field_id', $fieldId)
+            ->whereHas('field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-        }
         
         // Apply date filters
         if ($request->has('date_from')) {
@@ -51,13 +48,10 @@ class WeatherHistoryController extends Controller
     {
         $user = $request->user();
         
-        $query = WeatherLog::where('field_id', $fieldId);
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('field', function ($q) use ($user) {
+        $query = WeatherLog::where('field_id', $fieldId)
+            ->whereHas('field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-        }
         
         // Apply date filters
         if ($request->has('date_from')) {
@@ -123,13 +117,10 @@ class WeatherHistoryController extends Controller
     {
         $user = $request->user();
         
-        $query = WeatherLog::where('field_id', $fieldId);
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('field', function ($q) use ($user) {
+        $query = WeatherLog::where('field_id', $fieldId)
+            ->whereHas('field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-        }
         
         // Apply date filters
         if ($request->has('date_from')) {
@@ -203,13 +194,10 @@ class WeatherHistoryController extends Controller
     {
         $user = $request->user();
         
-        $query = WeatherLog::where('field_id', $fieldId);
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('field', function ($q) use ($user) {
+        $query = WeatherLog::where('field_id', $fieldId)
+            ->whereHas('field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-        }
         
         // Apply date filters
         if ($request->has('date_from')) {
@@ -307,13 +295,10 @@ class WeatherHistoryController extends Controller
         
         foreach ($request->field_ids as $fieldId) {
             $query = WeatherLog::where('field_id', $fieldId)
-                ->whereBetween('date', [$request->date_from, $request->date_to]);
-            
-            if (!$user->isAdmin()) {
-                $query->whereHas('field', function ($q) use ($user) {
+                ->whereBetween('date', [$request->date_from, $request->date_to])
+                ->whereHas('field', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 });
-            }
             
             $logs = $query->get();
             

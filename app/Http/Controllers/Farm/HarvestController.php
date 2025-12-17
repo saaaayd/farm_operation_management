@@ -20,13 +20,9 @@ class HarvestController extends Controller
     {
         $user = $request->user();
         
-        $query = Harvest::query();
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('planting.field', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-        }
+        $query = Harvest::whereHas('planting.field', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
         
         $harvests = $query->with(['planting.field', 'planting.riceVariety'])->get();
         
@@ -62,7 +58,7 @@ class HarvestController extends Controller
         $planting = Planting::with(['field', 'riceVariety'])->findOrFail($request->planting_id);
         $user = $request->user();
         
-        if (!$user->isAdmin() && $planting->field->user_id !== $user->id) {
+        if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to planting'
             ], 403);
@@ -117,7 +113,7 @@ class HarvestController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $harvest->planting->field->user_id !== $user->id) {
+        if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -137,7 +133,7 @@ class HarvestController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $harvest->planting->field->user_id !== $user->id) {
+        if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -198,7 +194,7 @@ class HarvestController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $harvest->planting->field->user_id !== $user->id) {
+        if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

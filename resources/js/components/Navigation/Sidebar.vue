@@ -57,38 +57,6 @@
             Dashboard
           </router-link>
 
-          <!-- Admin Section -->
-          <template v-if="authStore.user?.role === 'admin'">
-            <div class="nav-section-title">Administration</div>
-            
-            <router-link
-              to="/admin/users"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/admin/users') }"
-            >
-              <UsersIcon class="nav-icon" />
-              User Management
-            </router-link>
-
-            <router-link
-              to="/admin/system"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/admin/system') }"
-            >
-              <CogIcon class="nav-icon" />
-              System Settings
-            </router-link>
-
-            <router-link
-              to="/admin/reports"
-              class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/admin/reports') }"
-            >
-              <ChartBarIcon class="nav-icon" />
-              System Reports
-            </router-link>
-          </template>
-
           <!-- Farmer Section -->
           <template v-if="authStore.user?.role === 'farmer'">
             <!-- Core Farm Management -->
@@ -187,8 +155,8 @@
             </router-link>
           </template>
 
-          <!-- User (Marketplace Buyer) Section -->
-          <template v-if="authStore.user?.role === 'user'">
+          <!-- Marketplace Buyer Section -->
+          <template v-if="authStore.user?.role === 'buyer'">
             <div class="nav-section-title">Marketplace</div>
             
             <router-link
@@ -292,9 +260,6 @@ import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
 import {
   HomeIcon,
-  UsersIcon,
-  CogIcon,
-  ChartBarIcon,
   MapIcon,
   GlobeAltIcon,
   ArrowPathIcon,

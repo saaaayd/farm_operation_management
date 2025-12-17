@@ -17,11 +17,7 @@ class LaborerController extends Controller
     {
         $user = $request->user();
         
-        $query = Laborer::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Laborer::where('user_id', $user->id);
         
         // Apply filters
         if ($request->has('status')) {
@@ -93,7 +89,7 @@ class LaborerController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -113,7 +109,7 @@ class LaborerController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -159,7 +155,7 @@ class LaborerController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -179,7 +175,7 @@ class LaborerController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

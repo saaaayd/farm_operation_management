@@ -17,11 +17,7 @@ class FarmController extends Controller
     {
         $user = $request->user();
         
-        $query = Farm::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Farm::where('user_id', $user->id);
         
         $farms = $query->with(['fields', 'user'])->get();
         
@@ -73,7 +69,7 @@ class FarmController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $farm->user_id !== $user->id) {
+        if ($farm->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -93,7 +89,7 @@ class FarmController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $farm->user_id !== $user->id) {
+        if ($farm->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -131,7 +127,7 @@ class FarmController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $farm->user_id !== $user->id) {
+        if ($farm->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

@@ -357,7 +357,6 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard'),
   getFarmerStats: () => api.get('/dashboard'),
   getBuyerStats: () => api.get('/dashboard'),
-  getAdminStats: () => api.get('/dashboard'),
 };
 
 // Analytics API
@@ -406,60 +405,6 @@ export const riceFarmingAPI = {
   advanceStage: (plantingId, stageData) => api.post(`/rice-farming/plantings/${plantingId}/advance-stage`, stageData),
   getRecommendations: (plantingId) => api.get(`/rice-farming/plantings/${plantingId}/recommendations`),
   markStageDelayed: (stageId, delayData) => api.post(`/rice-farming/stages/${stageId}/delay`, delayData),
-};
-
-// Admin API
-export const adminAPI = {
-  // User Management
-  getUsers: (params = {}) => api.get('/admin/users', { params }),
-  createUser: (userData) => api.post('/admin/users', userData),
-  getUserById: (id) => api.get(`/admin/users/${id}`),
-  updateUser: (id, userData) => api.put(`/admin/users/${id}`, userData),
-  deleteUser: (id) => api.delete(`/admin/users/${id}`),
-  getUsersByRole: (role, params = {}) => api.get(`/admin/users/by-role/${role}`, { params }),
-
-  // User Approval (FR-A.2)
-  getPendingUsers: (params = {}) => api.get('/admin/user-approvals/pending', { params }),
-  approveUser: (id) => api.post(`/admin/user-approvals/${id}/approve`),
-  rejectUser: (id, reason) => api.post(`/admin/user-approvals/${id}/reject`, { rejection_reason: reason }),
-  getUserApprovalStats: () => api.get('/admin/user-approvals/stats'),
-
-  // Product Approval (FR-C.2)
-  getPendingProducts: (params = {}) => api.get('/admin/product-approvals/pending', { params }),
-  getAllProducts: (params = {}) => api.get('/admin/product-approvals/all', { params }),
-  approveProduct: (id) => api.post(`/admin/product-approvals/${id}/approve`),
-  rejectProduct: (id, reason) => api.post(`/admin/product-approvals/${id}/reject`, { rejection_reason: reason }),
-  getProductApprovalStats: () => api.get('/admin/product-approvals/stats'),
-
-  // Enhanced Dashboard (FR-B.1)
-  getDashboard: () => api.get('/admin/dashboard'),
-
-  // Reports & Analytics (FR-B.2, FR-B.3)
-  getSalesTrends: (params = {}) => api.get('/admin/reports/sales-trends', { params }),
-  getExpenseSummary: (params = {}) => api.get('/admin/reports/expense-summary', { params }),
-  getInventoryUsage: () => api.get('/admin/reports/inventory-usage'),
-  getFinancialAudit: (params = {}) => api.get('/admin/reports/financial-audit', { params }),
-
-  // Activity Logs & Audit Trails (FR-B.4)
-  getActivityLogs: (params = {}) => api.get('/admin/activity-logs', { params }),
-  getActivityLogStats: () => api.get('/admin/activity-logs/stats'),
-  getAuditTrail: (modelType, modelId) => api.get(`/admin/activity-logs/audit-trail/${modelType}/${modelId}`),
-
-  // Laborer Management (FR-A.4)
-  getLaborers: (params = {}) => api.get('/admin/laborers', { params }),
-  createLaborer: (laborerData) => api.post('/admin/laborers', laborerData),
-  getLaborerById: (id) => api.get(`/admin/laborers/${id}`),
-  updateLaborer: (id, laborerData) => api.put(`/admin/laborers/${id}`, laborerData),
-  deleteLaborer: (id) => api.delete(`/admin/laborers/${id}`),
-
-  // Message Moderation (FR-C.3)
-  getAllMessages: (params = {}) => api.get('/admin/messages', { params }),
-  getOrderMessages: (orderId) => api.get(`/admin/messages/orders/${orderId}`),
-  deleteMessage: (id, reason) => api.delete(`/admin/messages/${id}`, { data: { reason } }),
-  getActiveConversations: (params = {}) => api.get('/admin/messages/conversations', { params }),
-
-  // System Settings
-  getSystemStats: () => api.get('/admin/system-stats'),
 };
 
 export default api;

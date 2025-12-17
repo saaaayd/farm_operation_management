@@ -24,11 +24,7 @@ class InventoryItemController extends Controller
                 return response()->json(['message' => 'Unauthenticated'], 401);
             }
             
-            $query = InventoryItem::query();
-            
-            if (!$user->isAdmin()) {
-                $query->where('user_id', $user->id);
-            }
+            $query = InventoryItem::where('user_id', $user->id);
             
             // Apply filters
             if ($request->has('category') && $request->category) {
@@ -148,7 +144,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $inventoryItem->user_id !== $user->id) {
+        if ($inventoryItem->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -166,7 +162,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $inventoryItem->user_id !== $user->id) {
+        if ($inventoryItem->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -231,7 +227,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $inventoryItem->user_id !== $user->id) {
+        if ($inventoryItem->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -251,7 +247,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $inventoryItem->user_id !== $user->id) {
+        if ($inventoryItem->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -301,7 +297,7 @@ class InventoryItemController extends Controller
     public function addStock(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
-        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+        if ($item->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
         
@@ -328,7 +324,7 @@ class InventoryItemController extends Controller
     public function removeStock(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
-        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+        if ($item->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
         
@@ -356,11 +352,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        $query = InventoryItem::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = InventoryItem::where('user_id', $user->id);
         
         // Corrected to use current_stock
         $lowStockItems = $query->whereRaw('current_stock <= minimum_stock')
@@ -387,7 +379,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $item->user_id !== $user->id) {
+        if ($item->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 

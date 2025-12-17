@@ -130,7 +130,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
           
           // Log each product for debugging
           products.forEach((product, index) => {
-            console.log(`  Product ${index + 1}: ${product.name} (ID: ${product.id}, Status: ${product.approval_status}, Farmer ID: ${product.farmer_id})`);
+            console.log(`  Product ${index + 1}: ${product.name} (ID: ${product.id}, Status: ${product.production_status}, Farmer ID: ${product.farmer_id})`);
           });
         } else {
           console.warn('Invalid products data received:', response.data);

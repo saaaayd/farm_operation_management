@@ -149,69 +149,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get admin dashboard data
-     * Delegates to AdminDashboardController for comprehensive admin dashboard
-     */
-    public function adminDashboard(Request $request): JsonResponse
-    {
-        $user = $request->user();
-
-        if (!$user->isAdmin()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        // Use the dedicated AdminDashboardController
-        $adminDashboardController = new \App\Http\Controllers\Admin\AdminDashboardController();
-        return $adminDashboardController->index($request);
-    }
-
-    /**
-     * Get user growth data for the last N days
-     */
-    private function getUserGrowthData(int $days = 30): array
-    {
-        $startDate = Carbon::now()->subDays($days)->startOfDay();
-        $endDate = Carbon::now()->endOfDay();
-
-        // Get total users before the start date (baseline)
-        $baselineUsers = \App\Models\User::where('created_at', '<', $startDate)->count();
-
-        // Get daily user registration counts
-        // Using database-agnostic date formatting
-        $dailyCounts = \App\Models\User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->where('created_at', '>=', $startDate)
-            ->where('created_at', '<=', $endDate)
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->date => (int) $item->count];
-            });
-
-        // Generate labels for all days in the range
-        $labels = [];
-        $data = [];
-        $cumulative = $baselineUsers;
-
-        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
-            $dateKey = $date->format('Y-m-d');
-            $labels[] = $date->format('M d');
-            
-            $count = $dailyCounts->get($dateKey, 0);
-            $cumulative += $count;
-            $data[] = $cumulative;
-        }
-
-        return [
-            'labels' => $labels,
-            'daily_registrations' => $dailyCounts->toArray(),
-            'cumulative_users' => $data,
-            'total_new_users' => $dailyCounts->sum(),
-            'baseline_users' => $baselineUsers,
-        ];
-    }
-
-    /**
      * Get dashboard data based on user role
      */
     public function index(Request $request): JsonResponse
@@ -219,7 +156,6 @@ class DashboardController extends Controller
         $user = $request->user();
 
         return match($user->role) {
-            'admin' => $this->adminDashboard($request),
             'farmer' => $this->farmerDashboard($request),
             'buyer' => $this->buyerDashboard($request),
             default => response()->json(['message' => 'Invalid user role'], 400)

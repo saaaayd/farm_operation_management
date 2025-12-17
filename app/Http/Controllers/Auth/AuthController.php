@@ -53,11 +53,10 @@ class AuthController extends Controller
             'role' => $role,
             'phone' => $request->phone,
             'address' => $request->address,
-            'approval_status' => 'pending', // New registrations require admin approval
         ]);
 
         // Log the registration
-        \App\Models\ActivityLog::log('user.registered', $user, null, $user->toArray(), "New {$role} registration pending approval");
+        \App\Models\ActivityLog::log('user.registered', $user, null, $user->toArray(), "New {$role} registration");
         
         $token = $user->createToken('auth-token')->plainTextToken;
         
@@ -91,14 +90,6 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Invalid credentials'
             ], 401);
-        }
-
-        // Check if user is approved (admin is always approved)
-        if (!$user->isAdmin() && !$user->isApproved()) {
-            return response()->json([
-                'message' => 'Your account is pending approval. Please wait for administrator approval.',
-                'approval_status' => $user->approval_status
-            ], 403);
         }
         
         $token = $user->createToken('auth-token')->plainTextToken;

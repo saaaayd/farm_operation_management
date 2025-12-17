@@ -17,11 +17,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
         
-        $query = Expense::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Expense::where('user_id', $user->id);
         
         // Apply filters
         if ($request->has('category')) {
@@ -93,7 +89,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $expense->user_id !== $user->id) {
+        if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -111,7 +107,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $expense->user_id !== $user->id) {
+        if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -154,7 +150,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $expense->user_id !== $user->id) {
+        if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -174,11 +170,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
         
-        $query = Expense::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Expense::where('user_id', $user->id);
         
         if ($request->has('date_from')) {
             $query->where('date', '>=', $request->date_from);

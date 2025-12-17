@@ -30,7 +30,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -94,7 +94,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -167,7 +167,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -208,7 +208,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -227,7 +227,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -254,16 +254,12 @@ class WeatherController extends Controller
     {
         $user = $request->user();
 
-        if ($user->isAdmin()) {
-            $updated = $this->weatherService->updateAllFieldsWeather();
-        } else {
-            $fields = Field::where('user_id', $user->id)->get();
-            $updated = 0;
+        $fields = Field::where('user_id', $user->id)->get();
+        $updated = 0;
 
-            foreach ($fields as $field) {
-                if ($this->weatherService->updateFieldWeather($field)) {
-                    $updated++;
-                }
+        foreach ($fields as $field) {
+            if ($this->weatherService->updateFieldWeather($field)) {
+                $updated++;
             }
         }
 
@@ -280,12 +276,9 @@ class WeatherController extends Controller
     {
         $user = $request->user();
 
-        $query = Field::query();
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
-
-        $fields = $query->with('latestWeather')->get();
+        $fields = Field::where('user_id', $user->id)
+            ->with('latestWeather')
+            ->get();
 
         $dashboardData = [
             'total_fields' => $fields->count(),
@@ -320,7 +313,7 @@ class WeatherController extends Controller
     {
         // Check if user can access this field
         $user = $request->user();
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -362,12 +355,9 @@ class WeatherController extends Controller
     {
         $user = $request->user();
 
-        $query = Field::query();
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
-
-        $fields = $query->with(['latestWeather', 'plantings.riceVariety'])->get();
+        $fields = Field::where('user_id', $user->id)
+            ->with(['latestWeather', 'plantings.riceVariety'])
+            ->get();
 
         $dashboardData = [
             'total_fields' => $fields->count(),

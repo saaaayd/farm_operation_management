@@ -8,9 +8,6 @@ import Dashboard from '@/Pages/Dashboard.vue';
 import Profile from '@/Pages/Profile.vue';
 
 // Farmer-specific components
-import FarmerDashboard from '@/Pages/Farmer/Dashboard.vue';
-import BuyerDashboard from '@/Pages/Buyer/Dashboard.vue';
-import AdminDashboard from '@/Pages/Admin/Dashboard.vue';
 
 // Farm Management
 import FarmerFieldsIndex from '@/Pages/Farmer/Fields/Index.vue';
@@ -49,10 +46,6 @@ import InventoryDetail from '@/Pages/Inventory/Show.vue';
 // Weather
 import WeatherDashboard from '@/Pages/Weather/Dashboard.vue';
 import FieldWeather from '@/Pages/Weather/FieldWeather.vue';
-
-// Admin
-import UsersList from '@/Pages/Admin/Users/Index.vue';
-import SystemStats from '@/Pages/Admin/SystemStats.vue';
 
 // Reports
 import FinancialReports from '@/Pages/Reports/Financial.vue';
@@ -302,86 +295,6 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 
-  // Admin Routes
-  {
-    path: '/admin',
-    name: 'admin',
-    component: AdminDashboard,
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/users',
-    name: 'admin-users',
-    component: UsersList,
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/user-approvals',
-    name: 'admin-user-approvals',
-    component: () => import('@/Pages/Admin/UserApprovals/Index.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/product-approvals',
-    name: 'admin-product-approvals',
-    component: () => import('@/Pages/Admin/ProductApprovals/Index.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/stats',
-    name: 'admin-stats',
-    component: SystemStats,
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/users/create',
-    name: 'admin-users-create',
-    component: () => import('@/Pages/Admin/Users/Create.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/users/:id',
-    name: 'admin-users-show',
-    component: () => import('@/Pages/Admin/Users/Show.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/users/:id/edit',
-    name: 'admin-users-edit',
-    component: () => import('@/Pages/Admin/Users/Edit.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/laborers',
-    name: 'admin-laborers',
-    component: () => import('@/Pages/Admin/Laborers/Index.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/messages',
-    name: 'admin-messages',
-    component: () => import('@/Pages/Admin/Messages/Index.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/system',
-    name: 'admin-system',
-    component: () => import('@/Pages/Admin/System/Settings.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/logs',
-    name: 'admin-logs',
-    component: () => import('@/Pages/Admin/System/Logs.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  {
-    path: '/admin/reports',
-    name: 'admin-reports',
-    component: () => import('@/Pages/Admin/Reports/Index.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
-  },
-  
   // Reports Routes
   {
     path: '/reports/financial',
@@ -416,14 +329,8 @@ export const setupRouterGuards = (router) => {
       // Handle root path redirect
       if (to.path === '/') {
         if (authStore.isAuthenticated) {
-          // Redirect based on user role
-          if (authStore.isAdmin) {
-            console.log('Router: Redirecting admin user to admin dashboard');
-            next('/admin');
-          } else {
-            console.log('Router: Redirecting authenticated user to dashboard');
-            next('/dashboard');
-          }
+          console.log('Router: Redirecting authenticated user to dashboard');
+          next('/dashboard');
         } else {
           console.log('Router: Redirecting unauthenticated user to login');
           next('/login');
@@ -440,14 +347,8 @@ export const setupRouterGuards = (router) => {
       
       // Check if route requires guest (not authenticated)
       if (to.meta.requiresGuest && authStore.isAuthenticated) {
-        // Redirect based on user role
-        if (authStore.isAdmin) {
-          console.log('Router: Guest route accessed by admin, redirecting to admin dashboard');
-          next('/admin');
-        } else {
-          console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
-          next('/dashboard');
-        }
+        console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
+        next('/dashboard');
         return;
       }
       
@@ -495,14 +396,8 @@ export const setupRouterGuards = (router) => {
       // Check if user is ALREADY onboarded but tries to go back to /onboarding
       // Only redirect if we have user data (to avoid redirecting when user is null on reload)
       if (to.meta.requiresOnboarding && user && !userHasNoFarm) {
-        // Redirect based on user role
-        if (authStore.isAdmin) {
-          console.log('Router: Admin user is already onboarded, redirecting from /onboarding to /admin');
-          next('/admin');
-        } else {
-          console.log('Router: User is already onboarded, redirecting from /onboarding');
-          next('/dashboard');
-        }
+        console.log('Router: User is already onboarded, redirecting from /onboarding');
+        next('/dashboard');
         return;
       }
       
@@ -519,14 +414,8 @@ export const setupRouterGuards = (router) => {
       // Check role-based access
       if (to.meta.roles && authStore.user) {
         if (!to.meta.roles.includes(authStore.user.role)) {
-          // Redirect based on user role
-          if (authStore.isAdmin) {
-            console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to admin dashboard`);
-            next('/admin');
-          } else {
-            console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
-            next('/dashboard');
-          }
+          console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
+          next('/dashboard');
           return;
         }
       }

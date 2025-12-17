@@ -36,7 +36,7 @@ class NewOrderPlaced implements ShouldBroadcast
     {
         return [
             new PrivateChannel('farmer-orders.' . $this->farmerId),
-            new PrivateChannel('admin-orders'),
+            new PrivateChannel('orders-notifications'),
         ];
     }
 

@@ -18,11 +18,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        $query = LaborWage::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = LaborWage::where('user_id', $user->id);
         
         // Apply filters
         if ($request->has('laborer_id')) {
@@ -78,7 +74,7 @@ class WageController extends Controller
         $laborer = Laborer::findOrFail($request->laborer_id);
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to laborer'
             ], 403);
@@ -110,7 +106,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $wage->user_id !== $user->id) {
+        if ($wage->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -130,7 +126,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $wage->user_id !== $user->id) {
+        if ($wage->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -172,7 +168,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $wage->user_id !== $user->id) {
+        if ($wage->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -192,7 +188,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $wage->user_id !== $user->id) {
+        if ($wage->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -224,7 +220,7 @@ class WageController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $laborer->user_id !== $user->id) {
+        if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

@@ -116,7 +116,7 @@ class ProductController extends Controller
         
         $query = $category->harvests();
         
-        if (!$user->isAdmin()) {
+        if ($user && $user->isFarmer()) {
             $query->whereHas('planting.field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
@@ -141,7 +141,7 @@ class ProductController extends Controller
         
         $query = \App\Models\Harvest::query();
         
-        if (!$user->isAdmin()) {
+        if ($user && $user->isFarmer()) {
             $query->whereHas('planting.field', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });

@@ -5,7 +5,7 @@ A comprehensive Vue.js 3 frontend for the RiceFARM monolithic rice farming manag
 ## 🚀 Features
 
 ### Core Functionality
-- **Role-based Authentication**: Farmer, Buyer, and Admin roles with different access levels
+- **Role-based Authentication**: Farmer and Buyer roles with different access levels
 - **Farm Profile Onboarding**: Mandatory setup for new farmers with field details and rice varietal preferences
 - **Rice Operations Management**: Complete lifecycle from planting to harvest
 - **Weather Analytics**: Real-time weather data and historical analysis
@@ -40,7 +40,6 @@ resources/js/
 │   │   ├── Weather/     # Weather analytics
 │   │   └── Reports/     # Reporting & analytics
 │   ├── Buyer/           # Buyer-specific pages
-│   ├── Admin/           # Admin pages
 │   └── Marketplace/     # Marketplace pages
 ├── stores/              # Pinia stores
 │   ├── auth.js          # Authentication state
@@ -97,11 +96,6 @@ resources/js/
 - **Order Management**: Track order history, status, and pre-order availability
 - **In-app Messaging**: Chat with farmers on each order to coordinate pickup or delivery (payments remain offline)
 - **Product Details**: View rice variety information and farmer details
-
-### 👨‍💼 Admin Role
-- **User Management**: Manage farmers and buyers
-- **System Overview**: Monitor system-wide statistics
-- **Content Management**: Manage categories and products
 
 ## 🔧 Key Components
 

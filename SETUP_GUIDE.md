@@ -38,7 +38,6 @@ php artisan serve
 
 ### 3. Default Login Credentials
 
-**Admin**: admin@farmops.com / password
 **Farmer**: john@farmops.com / password  
 **Buyer**: alice@farmops.com / password
 
@@ -66,7 +65,7 @@ php artisan serve
 
 ## 📱 Key Features
 
-- **Role-based Dashboard**: Different views for Admin/Farmer/Buyer
+- **Role-based Dashboard**: Different views for Farmer/Buyer
 - **Field Management**: GPS tracking and soil data
 - **Weather Integration**: Real-time data and forecasts
 - **Task Management**: Assign work to laborers
@@ -99,9 +98,8 @@ php artisan serve
 
 ## 🎯 Usage
 
-1. **Admin**: Manage all users and system-wide stats
-2. **Farmers**: Manage fields, plantings, tasks, inventory
-3. **Buyers**: Browse products, place orders, track deliveries
+1. **Farmers**: Manage fields, plantings, tasks, inventory, and marketplace listings
+2. **Buyers**: Browse products, place orders, track deliveries
 
 ## 🔒 Security
 

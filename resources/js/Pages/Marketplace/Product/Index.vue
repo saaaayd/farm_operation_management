@@ -116,17 +116,14 @@
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
                     :class="{
-                      'bg-yellow-100 text-yellow-800': product.approval_status === 'pending',
-                      'bg-green-100 text-green-800': product.approval_status === 'approved',
-                      'bg-red-100 text-red-800': product.approval_status === 'rejected'
+                      'bg-green-100 text-green-800': product.production_status === 'available',
+                      'bg-blue-100 text-blue-800': product.production_status === 'in_production',
+                      'bg-red-100 text-red-800': product.production_status === 'out_of_stock'
                     }"
                     class="px-2 py-1 text-xs font-medium rounded-full capitalize"
                   >
-                    {{ product.approval_status || 'pending' }}
+                    {{ product.production_status || 'available' }}
                   </span>
-                  <p v-if="product.rejection_reason" class="text-xs text-red-600 mt-1 max-w-xs">
-                    {{ product.rejection_reason }}
-                  </p>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                   {{ formatQuantity(product.quantity_available, product.unit) }}

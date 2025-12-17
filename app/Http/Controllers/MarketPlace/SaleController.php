@@ -20,11 +20,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        $query = Sale::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Sale::where('user_id', $user->id);
         
         // Apply filters
         if ($request->has('buyer_id')) {
@@ -82,7 +78,7 @@ class SaleController extends Controller
         $harvest = Harvest::with('planting.field')->findOrFail($request->harvest_id);
         $user = $request->user();
         
-        if (!$user->isAdmin() && $harvest->planting->field->user_id !== $user->id) {
+        if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to harvest'
             ], 403);
@@ -90,7 +86,7 @@ class SaleController extends Controller
 
         // Check if user owns the buyer
         $buyer = Buyer::findOrFail($request->buyer_id);
-        if (!$user->isAdmin() && $buyer->user_id !== $user->id) {
+        if ($buyer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to buyer'
             ], 403);
@@ -145,7 +141,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $sale->user_id !== $user->id) {
+        if ($sale->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -165,7 +161,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $sale->user_id !== $user->id) {
+        if ($sale->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -209,7 +205,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $sale->user_id !== $user->id) {
+        if ($sale->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -229,7 +225,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $sale->user_id !== $user->id) {
+        if ($sale->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -261,11 +257,7 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
-        $query = Sale::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        }
+        $query = Sale::where('user_id', $user->id);
         
         if ($request->has('date_from')) {
             $query->where('sale_date', '>=', $request->date_from);

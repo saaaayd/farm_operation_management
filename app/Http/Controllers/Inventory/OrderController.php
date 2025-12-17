@@ -19,11 +19,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        $query = Order::query();
-        
-        if (!$user->isAdmin()) {
-            $query->where('buyer_id', $user->id);
-        }
+        $query = Order::where('buyer_id', $user->id);
         
         // Apply filters
         if ($request->has('status')) {
@@ -124,7 +120,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
+        if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -144,7 +140,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
+        if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -184,7 +180,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
+        if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -204,7 +200,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $order->buyer_id !== $user->id) {
+        if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);

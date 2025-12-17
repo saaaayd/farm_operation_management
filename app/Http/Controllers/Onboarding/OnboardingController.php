@@ -376,7 +376,7 @@ class OnboardingController extends Controller
     {
         $user = Auth::user();
         
-        // This would typically require admin permissions or special circumstances
+        // This would typically require elevated support permissions or special circumstances
         $this->onboardingService->resetOnboarding($user->id);
         
         return response()->json([

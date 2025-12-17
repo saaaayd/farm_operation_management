@@ -30,18 +30,17 @@ class RiceMarketplaceController extends Controller
                 'show_my_products' => $showMyProducts,
             ]);
             
-            // For buyers, show only approved products that are available or in production (for pre-order)
+            // For buyers, show only products that are available or in production (for pre-order)
             // For farmers viewing their own products, show all statuses
             $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews']);
             
             if ($showMyProducts) {
-                // Show all products for the logged-in farmer regardless of approval status
+                // Show all products for the logged-in farmer
                 $query->where('farmer_id', $user->id);
                 \Log::info('Querying for farmer products', ['farmer_id' => $user->id]);
             } else {
-                // For buyers, show only approved products
-                $query->where('approval_status', 'approved')
-                      ->availableOrPreOrder();
+                // For buyers, show only available products
+                $query->availableOrPreOrder();
             }
 
             // Apply filters
@@ -174,7 +173,7 @@ class RiceMarketplaceController extends Controller
                 'harvest',
                 'reviews.buyer',
                 'reviews' => function ($query) {
-                    $query->approved()->latest();
+                    $query->latest();
                 }
             ])->findOrFail($id);
 
@@ -269,12 +268,11 @@ class RiceMarketplaceController extends Controller
             $product = RiceProduct::create(array_merge($validated, [
                 'farmer_id' => $user->id,
                 'is_available' => true,
-                'approval_status' => 'pending', // Products require admin approval
                 'production_status' => $validated['production_status'] ?? RiceProduct::STATUS_AVAILABLE, // Ensure production_status is set
             ]));
 
             // Log product creation
-            \App\Models\ActivityLog::log('product.created', $product, null, $product->toArray(), "New product listing pending approval");
+            \App\Models\ActivityLog::log('product.created', $product, null, $product->toArray(), "New product listing published");
 
             return response()->json([
                 'message' => 'Rice product created successfully',

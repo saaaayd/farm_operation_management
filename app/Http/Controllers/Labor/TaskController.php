@@ -25,14 +25,12 @@ class TaskController extends Controller
         // Only include tasks that have a planting (planting_id is not null)
         $query->whereNotNull('planting_id');
 
-        if (!$user->isAdmin()) {
-            // Only get tasks that have a planting with a field owned by the user
-            $query->whereHas('planting', function ($q) use ($user) {
-                $q->whereHas('field', function ($fieldQuery) use ($user) {
-                    $fieldQuery->where('user_id', $user->id);
-                });
+        // Only get tasks that have a planting with a field owned by the user
+        $query->whereHas('planting', function ($q) use ($user) {
+            $q->whereHas('field', function ($fieldQuery) use ($user) {
+                $fieldQuery->where('user_id', $user->id);
             });
-        }
+        });
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -86,7 +84,7 @@ class TaskController extends Controller
         $planting = Planting::with('field')->findOrFail($request->planting_id);
         $user = $request->user();
 
-        if (!$user->isAdmin() && !$this->ownsPlanting($user->id, $planting)) {
+        if (!$this->ownsPlanting($user->id, $planting)) {
             return response()->json([
                 'message' => 'Unauthorized access to planting',
             ], 403);
@@ -117,7 +115,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isAdmin() && !$this->ownsTask($user->id, $task)) {
+        if (!$this->ownsTask($user->id, $task)) {
             return response()->json([
                 'message' => 'Unauthorized access',
             ], 403);
@@ -137,7 +135,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isAdmin() && !$this->ownsTask($user->id, $task)) {
+        if (!$this->ownsTask($user->id, $task)) {
             return response()->json([
                 'message' => 'Unauthorized access',
             ], 403);
@@ -166,7 +164,7 @@ class TaskController extends Controller
         if ($request->has('planting_id')) {
             $planting = Planting::with('field')->findOrFail($request->planting_id);
 
-            if (!$user->isAdmin() && !$this->ownsPlanting($user->id, $planting)) {
+            if (!$this->ownsPlanting($user->id, $planting)) {
                 return response()->json([
                     'message' => 'Unauthorized access to planting',
                 ], 403);
@@ -215,7 +213,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isAdmin() && !$this->ownsTask($user->id, $task)) {
+        if (!$this->ownsTask($user->id, $task)) {
             return response()->json([
                 'message' => 'Unauthorized access',
             ], 403);
@@ -235,7 +233,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isAdmin() && !$this->ownsTask($user->id, $task)) {
+        if (!$this->ownsTask($user->id, $task)) {
             return response()->json([
                 'message' => 'Unauthorized access',
             ], 403);

@@ -20,13 +20,9 @@ class PlantingController extends Controller
     {
         $user = $request->user();
         
-        $query = Planting::query();
-        
-        if (!$user->isAdmin()) {
-            $query->whereHas('field', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-        }
+        $query = Planting::whereHas('field', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
         
         $plantings = $query->with(['field', 'riceVariety'])->get();
         
@@ -68,7 +64,7 @@ class PlantingController extends Controller
         $field = Field::findOrFail($request->field_id);
         $user = $request->user();
         
-        if (!$user->isAdmin() && $field->user_id !== $user->id) {
+        if ($field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to field'
             ], 403);
@@ -137,7 +133,7 @@ class PlantingController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $planting->field->user_id !== $user->id) {
+        if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -163,7 +159,7 @@ class PlantingController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $planting->field->user_id !== $user->id) {
+        if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -196,7 +192,7 @@ class PlantingController extends Controller
         if ($request->has('field_id')) {
             $field = Field::findOrFail($request->field_id);
 
-            if (!$user->isAdmin() && $field->user_id !== $user->id) {
+            if ($field->user_id !== $user->id) {
                 return response()->json([
                     'message' => 'Unauthorized access to field'
                 ], 403);
@@ -297,7 +293,7 @@ class PlantingController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin() && $planting->field->user_id !== $user->id) {
+        if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
