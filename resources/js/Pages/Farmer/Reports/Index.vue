@@ -1,48 +1,39 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <router-link to="/dashboard" class="text-gray-500 hover:text-gray-700 mr-4">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </router-link>
-            <div>
-              <h1 class="text-xl font-semibold text-gray-900">Farm Reports & Analytics</h1>
-              <p class="text-sm text-gray-500">Analyze your rice farming performance and financial data</p>
-            </div>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-3xl font-bold text-gray-800">Farm Reports & Analytics</h1>
           </div>
-          
-          <div class="flex space-x-3">
-            <select 
-              v-model="selectedPeriod"
-              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="30">Last 30 Days</option>
-              <option value="90">Last 3 Months</option>
-              <option value="365">Last Year</option>
-              <option value="all">All Time</option>
-            </select>
-            <button 
-              @click="exportReport"
-              :disabled="loading || !!loadError"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export Report
-            </button>
-          </div>
+          <p class="text-gray-500 mt-1">Analyze your rice farming performance and financial data</p>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <select 
+            v-model="selectedPeriod"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white shadow-sm"
+          >
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 3 Months</option>
+            <option value="365">Last Year</option>
+            <option value="all">All Time</option>
+          </select>
+          <button 
+            @click="exportReport"
+            :disabled="loading || !!loadError"
+            class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Report
+          </button>
         </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
       <div v-if="loadError" class="bg-red-50 border border-red-200 rounded-md p-6 mb-8">
         <div class="flex">
           <div class="flex-shrink-0">
@@ -362,7 +353,8 @@
         </div>
       </div>
       </div>
-    </main>
+      </div>
+    </div>
   </div>
 </template>
 

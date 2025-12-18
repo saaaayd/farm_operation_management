@@ -16,20 +16,24 @@ class LaborerController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Laborer::where('user_id', $user->id);
-        
+
         // Apply filters
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        
+
         if ($request->has('skill_level')) {
             $query->where('skill_level', $request->skill_level);
         }
-        
-        $laborers = $query->orderBy('name')->get();
-        
+
+        if ($request->has('skill_level')) {
+            $query->where('skill_level', $request->skill_level);
+        }
+
+        $laborers = $query->with('groups')->orderBy('name')->get();
+
         return response()->json([
             'laborers' => $laborers
         ]);
@@ -52,6 +56,8 @@ class LaborerController extends Controller
             'hire_date' => 'required|date',
             'emergency_contact' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'groups' => 'nullable|array',
+            'groups.*' => 'exists:laborer_groups,id',
         ]);
 
         if ($validator->fails()) {
@@ -76,6 +82,12 @@ class LaborerController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        if ($request->has('groups')) {
+            $laborer->groups()->sync($request->groups);
+        }
+
+        $laborer->load('groups');
+
         return response()->json([
             'message' => 'Laborer created successfully',
             'laborer' => $laborer
@@ -88,14 +100,14 @@ class LaborerController extends Controller
     public function show(Request $request, Laborer $laborer): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
         }
 
-        $laborer->load(['tasks', 'wages']);
+        $laborer->load(['tasks', 'wages', 'groups']);
 
         return response()->json([
             'laborer' => $laborer
@@ -108,7 +120,7 @@ class LaborerController extends Controller
     public function update(Request $request, Laborer $laborer): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -127,6 +139,8 @@ class LaborerController extends Controller
             'hire_date' => 'sometimes|required|date',
             'emergency_contact' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'groups' => 'nullable|array',
+            'groups.*' => 'exists:laborer_groups,id',
         ]);
 
         if ($validator->fails()) {
@@ -137,10 +151,24 @@ class LaborerController extends Controller
         }
 
         $laborer->update($request->only([
-            'name', 'phone', 'email', 'address', 'skill_level',
-            'specialization', 'hourly_rate', 'status', 'hire_date',
-            'emergency_contact', 'notes'
+            'name',
+            'phone',
+            'email',
+            'address',
+            'skill_level',
+            'specialization',
+            'hourly_rate',
+            'status',
+            'hire_date',
+            'emergency_contact',
+            'notes'
         ]));
+
+        if ($request->has('groups')) {
+            $laborer->groups()->sync($request->groups);
+        }
+
+        $laborer->load('groups');
 
         return response()->json([
             'message' => 'Laborer updated successfully',
@@ -154,7 +182,7 @@ class LaborerController extends Controller
     public function destroy(Request $request, Laborer $laborer): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -174,7 +202,7 @@ class LaborerController extends Controller
     public function performance(Request $request, Laborer $laborer): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($laborer->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -182,11 +210,11 @@ class LaborerController extends Controller
         }
 
         $tasks = $laborer->tasks();
-        
+
         if ($request->has('date_from')) {
             $tasks->where('created_at', '>=', $request->date_from);
         }
-        
+
         if ($request->has('date_to')) {
             $tasks->where('created_at', '<=', $request->date_to);
         }

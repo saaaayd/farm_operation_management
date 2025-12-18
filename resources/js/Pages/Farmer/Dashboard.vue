@@ -29,48 +29,25 @@
       </div>
     </div>
     <!-- Header -->
-    <header class="bg-gradient-to-r from-white to-green-50 shadow-md border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-5">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-            </div>
-            <div class="ml-4">
-              <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">RiceFARM Dashboard</h1>
-              <p class="text-sm text-gray-600 mt-0.5">Welcome back, <span class="font-semibold text-gray-800">{{ authStore.user?.name }}</span></p>
-            </div>
-          </div>
-          
-          <div class="flex items-center space-x-4">
-            <button
-              @click="logout"
-              class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
-              title="Logout"
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">RiceFARM Dashboard</h1>
+          <p class="text-gray-500 mt-1">Welcome back, <span class="font-semibold text-gray-800">{{ authStore.user?.name }}</span></p>
         </div>
       </div>
-    </header>
 
-    <!-- Loading State -->
-    <div v-if="isInitialLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Loading dashboard...</p>
+      <!-- Loading State -->
+      <div v-if="isInitialLoading" class="py-8">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p class="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
-    </div>
 
-    <!-- Main Content -->
-    <main v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content -->
+      <div v-else>
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-green-100 transition-all duration-200 transform hover:-translate-y-1">
@@ -327,7 +304,8 @@
           </button>
         </div>
       </div>
-    </main>
+      </div>
+    </div>
   </div>
 </template>
 

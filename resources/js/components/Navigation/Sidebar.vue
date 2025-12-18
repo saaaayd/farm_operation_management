@@ -98,6 +98,15 @@
             </router-link>
 
             <router-link
+              to="/laborers"
+              class="nav-item"
+              :class="{ 'nav-item-active': $route.path.startsWith('/laborers') }"
+            >
+              <UserGroupIcon class="nav-icon" />
+              Laborers
+            </router-link>
+
+            <router-link
               to="/inventory"
               class="nav-item"
               :class="{ 'nav-item-active': $route.path.startsWith('/inventory') }"

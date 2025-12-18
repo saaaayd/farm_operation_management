@@ -23,6 +23,12 @@ import TasksCalendar from '@/Pages/Farmer/Tasks/Calendar.vue';
 import HarvestsIndex from '@/Pages/Farmer/Harvests/Index.vue';
 import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
 
+// Laborer Management
+import LaborersIndex from '@/Pages/Farmer/Laborers/Index.vue';
+import LaborersCreate from '@/Pages/Farmer/Laborers/Create.vue';
+import LaborersEdit from '@/Pages/Farmer/Laborers/Edit.vue';
+import LaborerGroupsIndex from '@/Pages/Farmer/LaborerGroups/Index.vue';
+
 // Weather
 import WeatherAnalytics from '@/Pages/Farmer/Weather/Analytics.vue';
 
@@ -169,6 +175,32 @@ const routes = [
     path: '/harvests/create',
     name: 'harvests-create',
     component: HarvestsCreate,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+
+  // Laborer Routes
+  {
+    path: '/laborers',
+    name: 'laborers',
+    component: LaborersIndex,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/laborers/create',
+    name: 'laborers-create',
+    component: LaborersCreate,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/laborers/:id/edit',
+    name: 'laborers-edit',
+    component: LaborersEdit,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/laborers/groups',
+    name: 'laborer-groups',
+    component: LaborerGroupsIndex,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 

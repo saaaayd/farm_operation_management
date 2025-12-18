@@ -33,16 +33,16 @@ Route::middleware('auth:sanctum')->group(function () {
             $response = Http::timeout(10)
                 ->retry(2, 100)
                 ->get('https://psgc.gitlab.io/api/provinces/');
-            
+
             if ($response->successful()) {
                 return response()->json($response->json());
             }
-            
+
             \Log::warning('PSGC API returned non-200 status', [
                 'status' => $response->status(),
                 'body' => $response->body()
             ]);
-            
+
             return response()->json([
                 'error' => 'Failed to fetch provinces',
                 'message' => 'Location service temporarily unavailable'
@@ -67,17 +67,17 @@ Route::middleware('auth:sanctum')->group(function () {
             $response = Http::timeout(10)
                 ->retry(2, 100)
                 ->get("https://psgc.gitlab.io/api/provinces/{$code}/cities-municipalities/");
-            
+
             if ($response->successful()) {
                 return response()->json($response->json());
             }
-            
+
             \Log::warning('PSGC API returned non-200 status', [
                 'status' => $response->status(),
                 'code' => $code,
                 'body' => $response->body()
             ]);
-            
+
             return response()->json([
                 'error' => 'Failed to fetch cities',
                 'message' => 'Location service temporarily unavailable'
@@ -102,17 +102,17 @@ Route::middleware('auth:sanctum')->group(function () {
             $response = Http::timeout(10)
                 ->retry(2, 100)
                 ->get("https://psgc.gitlab.io/api/cities-municipalities/{$code}/barangays/");
-            
+
             if ($response->successful()) {
                 return response()->json($response->json());
             }
-            
+
             \Log::warning('PSGC API returned non-200 status', [
                 'status' => $response->status(),
                 'code' => $code,
                 'body' => $response->body()
             ]);
-            
+
             return response()->json([
                 'error' => 'Failed to fetch barangays',
                 'message' => 'Location service temporarily unavailable'
@@ -145,11 +145,11 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->withHeaders([
                     'User-Agent' => 'RiceFARM Application (https://ricefarm.app)',
                 ])->get('https://nominatim.openstreetmap.org/search', [
-                    'q' => $query,
-                    'format' => 'json',
-                    'limit' => 1,
-                    'countrycodes' => 'ph',
-                ]);
+                        'q' => $query,
+                        'format' => 'json',
+                        'limit' => 1,
+                        'countrycodes' => 'ph',
+                    ]);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -165,13 +165,13 @@ Route::middleware('auth:sanctum')->group(function () {
                     'message' => 'Geocoding service returned invalid data'
                 ], 502);
             }
-            
+
             \Log::warning('Nominatim API returned non-200 status', [
                 'status' => $response->status(),
                 'query' => $query,
                 'body' => $response->body()
             ]);
-            
+
             return response()->json([
                 'error' => 'Failed to geocode location',
                 'message' => 'Geocoding service temporarily unavailable'
@@ -205,7 +205,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [RiceFarmProfileController::class, 'getProfile']);
         Route::post('/profile', [RiceFarmProfileController::class, 'createRiceFarmProfile']);
         Route::put('/profile', [RiceFarmProfileController::class, 'updateProfile']);
-    });    
+    });
 
     // Rice Varieties routes
     Route::prefix('rice-varieties')->group(function () {
@@ -230,7 +230,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [WeatherController::class, 'dashboard']);
         Route::get('/rice-dashboard', [WeatherController::class, 'getRiceDashboard']);
         Route::post('/update-all', [WeatherController::class, 'updateAllWeather']);
-        
+
         // ColorfulClouds Weather API proxy (to avoid CORS)
         Route::get('/colorfulclouds', function (Request $request) {
             $lat = $request->query('lat');
@@ -238,15 +238,15 @@ Route::middleware('auth:sanctum')->group(function () {
             $unit = $request->query('unit', 'imperial');
             $lang = $request->query('lang', 'en_US');
             $granu = $request->query('granu', 'realtime');
-            
+
             if (!$lat || !$lon) {
                 return response()->json(['error' => 'Latitude and longitude are required'], 400);
             }
-            
+
             try {
                 $token = config('services.colorfulclouds.api_token', 'S45Fnpxcwyq0QT4b');
                 $url = "https://api.caiyunapp.com/v2.5/{$token}/{$lon},{$lat}/weather.json";
-                
+
                 $response = Http::timeout(10)
                     ->retry(2, 100)
                     ->get($url, [
@@ -254,16 +254,16 @@ Route::middleware('auth:sanctum')->group(function () {
                         'unit' => $unit,
                         'granu' => $granu,
                     ]);
-                
+
                 if ($response->successful()) {
                     return response()->json($response->json());
                 }
-                
+
                 \Log::warning('ColorfulClouds API returned non-200 status', [
                     'status' => $response->status(),
                     'body' => $response->body()
                 ]);
-                
+
                 return response()->json([
                     'error' => 'Failed to fetch weather data',
                     'message' => 'Weather service temporarily unavailable'
@@ -282,7 +282,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 ], 500);
             }
         });
-        
+
         Route::prefix('fields/{field}')->group(function () {
             Route::get('/current', [WeatherController::class, 'getCurrentWeather']);
             Route::get('/forecast', [WeatherController::class, 'getForecast']);
@@ -341,12 +341,20 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Labor management routes
-    Route::middleware('farmer')->prefix('laborers')->group(function () {
+    Route::middleware(['auth:sanctum', 'farmer'])->prefix('laborers')->group(function () {
         Route::get('/', [\App\Http\Controllers\Labor\LaborerController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Labor\LaborerController::class, 'store']);
         Route::get('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'show']);
         Route::put('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'update']);
         Route::delete('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'destroy']);
+
+        // Groups
+        Route::prefix('groups')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'store']);
+            Route::put('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'update']);
+            Route::delete('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'destroy']);
+        });
     });
 
     Route::middleware('farmer')->prefix('labor-wages')->group(function () {
@@ -375,14 +383,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'getProducts']);
         Route::get('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getProduct']);
         Route::get('/stats', [\App\Http\Controllers\RiceMarketplaceController::class, 'getMarketplaceStats']);
-        
+
         // Product management (farmers only)
         Route::middleware('farmer')->group(function () {
             Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
             Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
             Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
         });
-        
+
         // Order management
         Route::get('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrders']);
         Route::get('/orders/{order}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrder']);
@@ -407,7 +415,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/products/{product}', [\App\Http\Controllers\MarketPlace\ProductController::class, 'show']);
         Route::get('/categories', [\App\Http\Controllers\MarketPlace\ProductController::class, 'index']);
         Route::get('/categories/{category}/products', [\App\Http\Controllers\MarketPlace\ProductController::class, 'getByCategory']);
-        
+
         // Cart management (simplified - using session for now)
         Route::prefix('cart')->group(function () {
             Route::get('/', [\App\Http\Controllers\MarketPlace\ProductController::class, 'getAvailableProducts']);

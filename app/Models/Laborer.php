@@ -84,4 +84,11 @@ class Laborer extends Model
             ->whereIn('status', [Task::STATUS_PENDING, Task::STATUS_IN_PROGRESS])
             ->count();
     }
+    /**
+     * Get the groups that the laborer belongs to.
+     */
+    public function groups()
+    {
+        return $this->belongsToMany(LaborerGroup::class, 'group_laborer');
+    }
 }
