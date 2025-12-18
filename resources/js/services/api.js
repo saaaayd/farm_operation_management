@@ -344,6 +344,9 @@ export const laborAPI = {
   createWage: (wageData) => api.post('/labor-wages', wageData),
   updateWage: (id, wageData) => api.put(`/labor-wages/${id}`, wageData),
   deleteWage: (id) => api.delete(`/labor-wages/${id}`),
+
+  // Groups
+  getGroups: () => api.get('/laborers/groups'),
 };
 
 // Dashboard API

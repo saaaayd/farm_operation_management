@@ -20,4 +20,12 @@ class LaborerGroup extends Model
     {
         return $this->belongsToMany(Laborer::class, 'group_laborer');
     }
+
+    /**
+     * Get the tasks assigned to the group.
+     */
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }

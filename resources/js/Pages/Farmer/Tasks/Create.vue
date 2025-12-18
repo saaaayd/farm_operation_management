@@ -92,31 +92,63 @@
               <p v-if="errors.due_date" class="form-error">{{ errors.due_date[0] }}</p>
             </div>
 
-            <div class="space-y-2">
-              <label class="form-label">Assign to (optional)</label>
-              <select
-                v-model="form.assigned_to"
-                class="form-input"
-                :disabled="loadingLaborers"
-              >
-                <option value="">No assignment</option>
-                <option
-                  v-for="laborer in laborers"
-                  :key="laborer.id"
-                  :value="laborer.id"
-                >
-                  {{ laborer.name }}{{ laborer.phone ? ` (${laborer.phone})` : '' }}
-                </option>
-              </select>
-              <p v-if="loadingLaborers" class="text-xs text-gray-400">
-                Loading laborers...
-              </p>
-              <p v-else-if="laborers.length === 0" class="text-xs text-gray-400">
-                No laborers available. You can assign a laborer later or create one in the Laborers section.
-              </p>
-              <p v-else class="text-xs text-gray-400">
-                Select a laborer to assign this task to, or leave blank to assign later.
-              </p>
+            <div class="space-y-4">
+              <label class="form-label">Assignment (optional)</label>
+              
+              <!-- Assignment Type Toggle -->
+              <div class="flex gap-4 mb-2">
+                  <label class="inline-flex items-center">
+                    <input type="radio" v-model="form.assignment_type" value="individual" class="form-radio text-green-600">
+                    <span class="ml-2">Individual Laborer</span>
+                  </label>
+                  <label class="inline-flex items-center">
+                    <input type="radio" v-model="form.assignment_type" value="group" class="form-radio text-green-600">
+                    <span class="ml-2">Laborer Group</span>
+                  </label>
+              </div>
+
+              <!-- Individual Assignment -->
+              <div v-if="form.assignment_type === 'individual'" class="space-y-2">
+                  <select
+                    v-model="form.assigned_to"
+                    class="form-input"
+                    :disabled="loadingLaborers"
+                  >
+                    <option value="">Select laborer</option>
+                    <option
+                      v-for="laborer in laborers"
+                      :key="laborer.id"
+                      :value="laborer.id"
+                    >
+                      {{ laborer.name }}{{ laborer.phone ? ` (${laborer.phone})` : '' }}
+                    </option>
+                  </select>
+                  <p v-if="loadingLaborers" class="text-xs text-gray-400">Loading laborers...</p>
+                  <p v-else-if="laborers.length === 0" class="text-xs text-gray-400">No laborers available.</p>
+              </div>
+
+              <!-- Group Assignment -->
+              <div v-else-if="form.assignment_type === 'group'" class="space-y-2">
+                   <select
+                    v-model="form.laborer_group_id"
+                    class="form-input"
+                    :disabled="loadingLaborers"
+                  >
+                    <option value="">Select group</option>
+                    <option
+                      v-for="group in groups"
+                      :key="group.id"
+                      :value="group.id"
+                    >
+                      {{ group.name }} ({{ group.laborers_count }} members)
+                    </option>
+                  </select>
+                  <p v-if="loadingLaborers" class="text-xs text-gray-400">Loading groups...</p>
+                  <p v-else-if="groups.length === 0" class="text-xs text-gray-400">
+                      No groups available. 
+                      <router-link to="/laborers/groups" class="text-blue-600 hover:underline">Create a group</router-link>
+                  </p>
+              </div>
             </div>
           </div>
 
@@ -177,13 +209,16 @@ const submitting = ref(false)
 const errors = ref({})
 const loadingLaborers = ref(false)
 const laborers = ref([])
+const groups = ref([])
 
 const form = reactive({
   task_type: '',
   planting_id: '',
   due_date: formatDateForInput(new Date()),
   description: '',
-  assigned_to: ''
+  assigned_to: '',
+  laborer_group_id: '',
+  assignment_type: 'individual' // 'individual' or 'group'
 })
 
 const plantings = computed(() => farmStore.plantings || [])
@@ -240,12 +275,17 @@ const submitTask = async () => {
       description: form.description.trim(),
     }
 
-    // Only include assigned_to if a laborer is selected
-    if (form.assigned_to && form.assigned_to.toString().trim()) {
-      const assignedToNum = Number(form.assigned_to)
-      if (!isNaN(assignedToNum) && assignedToNum > 0) {
-        payload.assigned_to = assignedToNum
-      }
+    // Handle Assignment
+    if (form.assignment_type === 'individual' && form.assigned_to) {
+        const assignedToNum = Number(form.assigned_to)
+        if (!isNaN(assignedToNum) && assignedToNum > 0) {
+            payload.assigned_to = assignedToNum
+        }
+    } else if (form.assignment_type === 'group' && form.laborer_group_id) {
+        const groupIdNum = Number(form.laborer_group_id)
+        if (!isNaN(groupIdNum) && groupIdNum > 0) {
+            payload.laborer_group_id = groupIdNum
+        }
     }
 
     await farmStore.createTask(payload)
@@ -259,14 +299,19 @@ const submitTask = async () => {
   }
 }
 
-const loadLaborers = async () => {
+const loadLaborersAndGroups = async () => {
   try {
     loadingLaborers.value = true
-    const response = await laborAPI.getLaborers()
-    laborers.value = response.data.laborers || response.data || []
+    const [laborerRes, groupRes] = await Promise.all([
+        laborAPI.getLaborers(),
+        laborAPI.getGroups()
+    ])
+    laborers.value = laborerRes.data.laborers || laborerRes.data || []
+    groups.value = groupRes.data.groups || []
   } catch (error) {
-    console.error('Failed to load laborers:', error)
+    console.error('Failed to load laborers or groups:', error)
     laborers.value = []
+    groups.value = []
   } finally {
     loadingLaborers.value = false
   }
@@ -283,8 +328,8 @@ onMounted(async () => {
     loaders.push(farmStore.fetchTasks())
   }
 
-  // Load laborers for assignment
-  loadLaborers()
+  // Load laborers and groups for assignment
+  loadLaborersAndGroups()
 
   if (!loaders.length) {
     return

@@ -26,8 +26,10 @@ import HarvestsCreate from '@/Pages/Farmer/Harvests/Create.vue';
 // Laborer Management
 import LaborersIndex from '@/Pages/Farmer/Laborers/Index.vue';
 import LaborersCreate from '@/Pages/Farmer/Laborers/Create.vue';
+import LaborersShow from '@/Pages/Farmer/Laborers/Show.vue';
 import LaborersEdit from '@/Pages/Farmer/Laborers/Edit.vue';
 import LaborerGroupsIndex from '@/Pages/Farmer/LaborerGroups/Index.vue';
+import LaborerGroupsShow from '@/Pages/Farmer/LaborerGroups/Show.vue';
 
 // Weather
 import WeatherAnalytics from '@/Pages/Farmer/Weather/Analytics.vue';
@@ -179,6 +181,19 @@ const routes = [
   },
 
   // Laborer Routes
+  // Groups first to avoid catching by :id
+  {
+    path: '/laborers/groups',
+    name: 'laborer-groups',
+    component: LaborerGroupsIndex,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/laborers/groups/:id',
+    name: 'laborer-groups-show',
+    component: LaborerGroupsShow,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
   {
     path: '/laborers',
     name: 'laborers',
@@ -192,15 +207,15 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
-    path: '/laborers/:id/edit',
-    name: 'laborers-edit',
-    component: LaborersEdit,
+    path: '/laborers/:id',
+    name: 'laborers-show',
+    component: LaborersShow,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
-    path: '/laborers/groups',
-    name: 'laborer-groups',
-    component: LaborerGroupsIndex,
+    path: '/laborers/:id/edit',
+    name: 'laborers-edit',
+    component: LaborersEdit,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 

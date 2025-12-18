@@ -15,6 +15,7 @@ class Task extends Model
         'description',
         'status',
         'assigned_to',
+        'laborer_group_id',
     ];
 
     protected $casts = [
@@ -58,6 +59,14 @@ class Task extends Model
     }
 
     /**
+     * Get the laborer group assigned to this task
+     */
+    public function laborerGroup()
+    {
+        return $this->belongsTo(LaborerGroup::class, 'laborer_group_id');
+    }
+
+    /**
      * Get the labor wages for this task
      */
     public function laborWages()
@@ -70,8 +79,8 @@ class Task extends Model
      */
     public function isOverdue(): bool
     {
-        return $this->due_date < Carbon::now() && 
-               $this->status !== self::STATUS_COMPLETED;
+        return $this->due_date < Carbon::now() &&
+            $this->status !== self::STATUS_COMPLETED;
     }
 
     /**

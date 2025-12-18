@@ -344,17 +344,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['auth:sanctum', 'farmer'])->prefix('laborers')->group(function () {
         Route::get('/', [\App\Http\Controllers\Labor\LaborerController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Labor\LaborerController::class, 'store']);
-        Route::get('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'show']);
-        Route::put('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'update']);
-        Route::delete('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'destroy']);
 
         // Groups
         Route::prefix('groups')->group(function () {
             Route::get('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'store']);
+            Route::get('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'show']);
             Route::put('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'update']);
             Route::delete('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'destroy']);
         });
+
+        Route::get('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'show']);
+        Route::put('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'update']);
+        Route::delete('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'destroy']);
     });
 
     Route::middleware('farmer')->prefix('labor-wages')->group(function () {

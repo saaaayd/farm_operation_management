@@ -79,12 +79,21 @@
                />
             </div>
              <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Emergency Contact</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Emergency Contact Name</label>
               <input
-                 v-model="form.emergency_contact"
+                 v-model="form.emergency_contact_name"
                  type="text"
                  class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                 placeholder="Name and Phone Number"
+                 placeholder="Name"
+               />
+            </div>
+             <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Emergency Contact Phone</label>
+              <input
+                 v-model="form.emergency_contact_phone"
+                 type="text"
+                 class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+                 placeholder="Phone Number"
                />
             </div>
           </div>
@@ -129,18 +138,6 @@
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Hourly Rate (₱) *</label>
-              <input
-                v-model.number="form.hourly_rate"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                placeholder="0.00"
-              />
-            </div>
-            <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Status *</label>
               <select
                 v-model="form.status"
@@ -151,6 +148,30 @@
                 <option value="inactive">Inactive</option>
                 <option value="on_leave">On Leave</option>
               </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Rate Type *</label>
+              <select
+                v-model="form.rate_type"
+                required
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+              >
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="per_job">Per Job</option>
+              </select>
+            </div>
+            <div v-if="form.rate_type !== 'per_job'">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Rate (₱) *</label>
+              <input
+                v-model.number="form.rate"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+                placeholder="0.00"
+              />
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Hire Date *</label>
@@ -256,10 +277,12 @@ const form = reactive({
   address: '',
   skill_level: '',
   specialization: '',
-  hourly_rate: '',
+  rate: '',
+  rate_type: 'hourly',
   status: 'active',
   hire_date: new Date().toISOString().split('T')[0],
-  emergency_contact: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
   notes: '',
   groups: [],
 })

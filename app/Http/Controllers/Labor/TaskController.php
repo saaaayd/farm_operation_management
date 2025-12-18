@@ -20,7 +20,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        $query = Task::query()->with(['planting.field', 'laborer']);
+        $query = Task::query()->with(['planting.field', 'laborer', 'laborerGroup']);
 
         // Only include tasks that have a planting (planting_id is not null)
         $query->whereNotNull('planting_id');
@@ -64,7 +64,7 @@ class TaskController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // Accept the payload sent by the frontend (task_type, planting_id, assigned_to)
+        // Accept the payload sent by the frontend (task_type, planting_id, assigned_to, laborer_group_id)
         $validator = Validator::make($request->all(), [
             'planting_id' => ['required', 'exists:plantings,id'],
             'task_type' => ['required', 'string', Rule::in($this->taskTypeOptions())],
@@ -72,6 +72,7 @@ class TaskController extends Controller
             'description' => ['required', 'string'],
             'status' => ['nullable', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
+            'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
         ]);
 
         if ($validator->fails()) {
@@ -98,9 +99,10 @@ class TaskController extends Controller
             'description' => $request->description,
             'status' => $request->input('status', Task::STATUS_PENDING),
             'assigned_to' => $request->assigned_to,
+            'laborer_group_id' => $request->laborer_group_id,
         ]);
 
-        $task->load(['planting.field', 'laborer']);
+        $task->load(['planting.field', 'laborer', 'laborerGroup']);
 
         return response()->json([
             'message' => 'Task created successfully',
@@ -121,7 +123,7 @@ class TaskController extends Controller
             ], 403);
         }
 
-        $task->load(['planting.field', 'laborer']);
+        $task->load(['planting.field', 'laborer', 'laborerGroup']);
 
         return response()->json([
             'task' => $task,
@@ -150,6 +152,7 @@ class TaskController extends Controller
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'required', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
+            'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
         ]);
 
         if ($validator->fails()) {
@@ -193,12 +196,16 @@ class TaskController extends Controller
             $data['assigned_to'] = $requestData['assigned_to'];
         }
 
+        if (array_key_exists('laborer_group_id', $requestData)) {
+            $data['laborer_group_id'] = $requestData['laborer_group_id'];
+        }
+
         if (!empty($data)) {
             $task->fill($data);
             $task->save();
         }
 
-        $task->load(['planting.field', 'laborer']);
+        $task->load(['planting.field', 'laborer', 'laborerGroup']);
 
         return response()->json([
             'message' => 'Task updated successfully',

@@ -127,7 +127,7 @@
                 </button>
             </div>
 
-            <div class="p-6 h-full flex flex-col cursor-pointer" @click="goToEdit(laborer)">
+            <div class="p-6 h-full flex flex-col cursor-pointer" @click="goToShow(laborer)">
               <!-- Header -->
               <div class="flex items-start justify-between mb-5">
                 <div class="flex-1">
@@ -183,9 +183,10 @@
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Hourly Rate</dt>
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</dt>
                     <dd class="text-sm font-semibold text-gray-700 mt-0.5 truncate">
-                      ₱{{ laborer.hourly_rate ? Number(laborer.hourly_rate).toFixed(2) : '0.00' }}
+                      <span v-if="laborer.rate_type === 'per_job'">Per Job</span>
+                      <span v-else>₱{{ laborer.rate ? Number(laborer.rate).toFixed(2) : '0.00' }} / {{ laborer.rate_type === 'daily' ? 'day' : 'hr' }}</span>
                     </dd>
                   </div>
                 </div>
@@ -254,6 +255,10 @@ const goToCreate = () => {
 
 const goToGroups = () => {
     router.push('/laborers/groups')
+}
+
+const goToShow = (laborer) => {
+    router.push(`/laborers/${laborer.id}`)
 }
 
 const goToEdit = (laborer) => {
