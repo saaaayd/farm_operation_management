@@ -350,6 +350,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'store']);
             Route::get('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'show']);
+            Route::post('/{laborerGroup}/members', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'addMembers']);
             Route::put('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'update']);
             Route::delete('/{laborerGroup}', [\App\Http\Controllers\Labor\LaborerGroupController::class, 'destroy']);
         });

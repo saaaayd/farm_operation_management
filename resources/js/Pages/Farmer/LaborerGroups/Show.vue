@@ -15,28 +15,8 @@
           </button>
         </div>
 
-        <!-- Stats Overview -->
-        <div v-if="group && group.stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="text-xs font-medium text-gray-500 uppercase">Total Members</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">{{ group.laborers ? group.laborers.length : 0 }}</p>
-            </div>
-             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="text-xs font-medium text-gray-500 uppercase">Hourly Run Rate</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">₱{{ group.stats.total_hourly_cost ? Number(group.stats.total_hourly_cost).toFixed(2) : '0.00' }}</p>
-                <p class="text-xs text-gray-400 mt-1">*Est. hourly cost of active members</p>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="text-xs font-medium text-gray-500 uppercase">Active Tasks</p>
-                <p class="text-2xl font-bold text-blue-600 mt-1">{{ group.stats.active_tasks || 0 }}</p>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="text-xs font-medium text-gray-500 uppercase">Tasks Completed</p>
-                <p class="text-2xl font-bold text-green-600 mt-1">{{ group.stats.completed_tasks || 0 }}</p>
-            </div>
-        </div>
-
-        <div v-if="group" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <!-- Group Header and Tabs -->
+        <div v-if="group" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
           <div class="flex flex-col md:flex-row justify-between items-start gap-6">
             <div class="flex items-center gap-4">
                <span
@@ -52,8 +32,14 @@
             </div>
             
              <div class="flex items-center gap-3">
-               <!-- Future: Add Edit/Delete Actions here if needed on this page -->
-               <div class="text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+               <button 
+                  @click="openAddMemberModal"
+                  class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+               >
+                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                   Add Members
+               </button>
+               <div class="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                   Created {{ formatDate(group.created_at) }}
                </div>
             </div>
@@ -80,6 +66,10 @@
               </button>
           </div>
         </div>
+
+
+        
+
         
         <div v-else-if="loading" class="h-64 bg-white rounded-xl shadow-sm border border-gray-100 animate-pulse"></div>
       </div>
@@ -180,14 +170,139 @@
           <button @click="router.push('/laborers/groups')" class="text-blue-600 hover:underline mt-2">Back to Groups</button>
       </div>
 
+       <!-- Stats Overview -->
+        <div v-if="group && group.stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-8 border-t border-gray-200 pt-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <p class="text-xs font-medium text-gray-500 uppercase">Total Members</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ group.laborers ? group.laborers.length : 0 }}</p>
+            </div>
+             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <p class="text-xs font-medium text-gray-500 uppercase">Total Daily Cost</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">₱{{ group.stats.total_daily_cost ? Number(group.stats.total_daily_cost).toFixed(2) : '0.00' }}</p>
+                <p class="text-xs text-gray-400 mt-1">*Sum of all member daily rates</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <p class="text-xs font-medium text-gray-500 uppercase">Active Tasks</p>
+                <p class="text-2xl font-bold text-blue-600 mt-1">{{ group.stats.active_tasks || 0 }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <p class="text-xs font-medium text-gray-500 uppercase">Tasks Completed</p>
+                <p class="text-2xl font-bold text-green-600 mt-1">{{ group.stats.completed_tasks || 0 }}</p>
+            </div>
+        </div>
+
+        <!-- Performance & Scoping Charts -->
+        <div v-if="group && group.stats" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Task Status Breakdown</h3>
+                <div class="h-64 relative">
+                    <Doughnut v-if="statusChartData" :data="statusChartData" :options="chartOptions" />
+                    <div v-else class="flex items-center justify-center h-full text-gray-400">No data available</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Task Types Distribution</h3>
+                 <div class="h-64 relative">
+                    <Bar v-if="taskTypeChartData" :data="taskTypeChartData" :options="chartOptions" />
+                    <div v-else class="flex items-center justify-center h-full text-gray-400">No data available</div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Add Members Modal -->
+    <div v-if="showAddMemberModal" class="relative z-50">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showAddMemberModal = false"></div>
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+             <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xl">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Add Members to {{ group?.name }}</h3>
+                        
+                        <!-- Search -->
+                        <div class="mb-4">
+                            <input 
+                                v-model="memberSearch" 
+                                type="text" 
+                                placeholder="Search available laborers..." 
+                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            >
+                        </div>
+                        
+                        <!-- List -->
+                        <div class="max-h-64 overflow-y-auto border border-gray-100 rounded-lg">
+                            <div v-if="filteredAvailableLaborers.length === 0" class="p-4 text-gray-500 text-center text-sm">
+                                {{ availableLaborers.length === 0 ? 'No available laborers found.' : 'No matches found.' }}
+                            </div>
+                            <div v-else class="divide-y divide-gray-100">
+                                <label 
+                                    v-for="laborer in filteredAvailableLaborers" 
+                                    :key="laborer.id" 
+                                    class="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                >
+                                    <input 
+                                        type="checkbox" 
+                                        :value="laborer.id" 
+                                        v-model="selectedLaborers"
+                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <div class="ml-3">
+                                        <p class="text-sm font-medium text-gray-900">{{ laborer.name }}</p>
+                                        <p class="text-xs text-gray-500">{{ laborer.specialization || 'General Laborer' }}</p>
+                                    </div>
+                                    <div class="ml-auto text-xs text-gray-400">
+                                         <span v-if="laborer.rate_type === 'per_job'">Per Job</span>
+                                         <span v-else>₱{{ laborer.rate ? Number(laborer.rate).toFixed(2) : '0.00' }}/{{ laborer.rate_type === 'daily' ? 'day' : 'hr' }}</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 text-sm text-gray-500 text-right">
+                            {{ selectedLaborers.length }} selected
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                        <button 
+                            type="button" 
+                            @click="addMembers" 
+                            :disabled="addMemberLoading || selectedLaborers.length === 0"
+                            class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {{ addMemberLoading ? 'Adding...' : 'Add Selected Members' }}
+                        </button>
+                        <button 
+                            type="button" 
+                            @click="showAddMemberModal = false" 
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+             </div>
+        </div>
     </div>
   </div>
+</div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale
+} from 'chart.js'
+import { Doughnut, Bar } from 'vue-chartjs'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 
 const route = useRoute()
@@ -197,6 +312,54 @@ const groupId = route.params.id
 const loading = ref(true)
 const group = ref(null)
 const activeTab = ref('members')
+
+// Chart Data Computeds
+const statusChartData = computed(() => {
+    if (!group.value || !group.value.stats || !group.value.stats.status_breakdown) return null;
+    
+    // Default zero values
+    const breakdown = group.value.stats.status_breakdown;
+    
+    return {
+        labels: ['Pending', 'In Progress', 'Completed', 'Cancelled'],
+        datasets: [{
+            backgroundColor: ['#FBBF24', '#3B82F6', '#10B981', '#9CA3AF'],
+            data: [
+                breakdown['pending'] || 0,
+                breakdown['in_progress'] || 0,
+                breakdown['completed'] || 0,
+                breakdown['cancelled'] || 0
+            ]
+        }]
+    }
+})
+
+const taskTypeChartData = computed(() => {
+    if (!group.value || !group.value.stats || !group.value.stats.task_type_breakdown) return null;
+    
+    const breakdown = group.value.stats.task_type_breakdown;
+    const labels = Object.keys(breakdown).map(k => k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()));
+    const data = Object.values(breakdown);
+    
+    return {
+        labels: labels,
+        datasets: [{
+            label: 'Tasks by Type',
+            backgroundColor: '#6366F1',
+            data: data
+        }]
+    }
+})
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+     plugins: {
+        legend: {
+            position: 'bottom'
+        }
+    }
+}
 
 const fetchGroup = async () => {
   loading.value = true
@@ -209,6 +372,60 @@ const fetchGroup = async () => {
     loading.value = false
   }
 }
+
+// Add Members Logic
+const showAddMemberModal = ref(false)
+const addMemberLoading = ref(false)
+const availableLaborers = ref([])
+const selectedLaborers = ref([])
+const memberSearch = ref('')
+
+const filteredAvailableLaborers = computed(() => {
+    if (!memberSearch.value) return availableLaborers.value
+    const search = memberSearch.value.toLowerCase()
+    return availableLaborers.value.filter(l => l.name.toLowerCase().includes(search))
+})
+
+const openAddMemberModal = async () => {
+    showAddMemberModal.value = true
+    selectedLaborers.value = []
+    memberSearch.value = ''
+    try {
+        // Fetch all laborers first - optimizing this to exclude current members normally done here
+        // But for simplicity, we fetch all and filter in JS or rely on backend response
+        const { data } = await axios.get('/api/laborers') 
+        
+        // Filter out existing members
+        const currentMemberIds = group.value.laborers.map(l => l.id)
+        availableLaborers.value = data.laborers.filter(l => !currentMemberIds.includes(l.id))
+        
+    } catch (err) {
+        console.error('Failed to load laborers', err)
+    }
+}
+
+const addMembers = async () => {
+    if (selectedLaborers.value.length === 0) return
+    
+    addMemberLoading.value = true
+    try {
+        await axios.post(`/api/laborers/groups/${groupId}/members`, {
+            laborer_ids: selectedLaborers.value
+        })
+        
+        // Refresh group data
+        await fetchGroup()
+        showAddMemberModal.value = false
+        // Reset valid data
+        selectedLaborers.value = []
+    } catch (err) {
+        console.error('Failed to add members:', err)
+        alert('Failed to add members.')
+    } finally {
+        addMemberLoading.value = false
+    }
+}
+
 
 const getInitials = (name) => {
     return name ? name.substring(0, 2).toUpperCase() : 'LG'

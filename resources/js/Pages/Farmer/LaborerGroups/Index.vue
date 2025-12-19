@@ -36,6 +36,8 @@
            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
 
+
+
       <div v-else-if="groups.length === 0" class="bg-white rounded-2xl shadow-xl p-12 text-center border border-gray-100">
           <div class="inline-flex items-center justify-center h-20 w-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
             <svg class="h-10 w-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

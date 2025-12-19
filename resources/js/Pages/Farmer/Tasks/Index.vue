@@ -180,7 +180,7 @@
                     :class="getStatusClass(task.status)"
                     class="px-2 py-1 text-xs font-medium rounded-full"
                   >
-                    {{ task.status.replace('_', ' ') }}
+                    {{ formatStatus(task.status) }}
                   </span>
                   <span 
                     v-if="isOverdue(task)"
@@ -308,6 +308,14 @@ const filteredTasks = computed(() => {
 });
 
 const formatTaskType = (type) => getTaskTypeLabel(type) || 'Task';
+
+const formatStatus = (status) => {
+  if (!status) return '';
+  return status
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 const getStatusClass = (status) => {
   const classes = {

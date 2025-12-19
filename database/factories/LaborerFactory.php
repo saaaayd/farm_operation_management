@@ -20,7 +20,8 @@ class LaborerFactory extends Factory
         return [
             'name' => fake()->name(),
             'contact' => fake()->phoneNumber(),
-            'hourly_rate' => fake()->randomFloat(2, 12.00, 25.00),
+            'rate' => fake()->randomFloat(2, 300, 800),
+            'rate_type' => fake()->randomElement(['daily', 'per_job']),
         ];
     }
 }

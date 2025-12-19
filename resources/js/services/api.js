@@ -347,6 +347,7 @@ export const laborAPI = {
 
   // Groups
   getGroups: () => api.get('/laborers/groups'),
+  addMembers: (groupId, laborerIds) => api.post(`/laborers/groups/${groupId}/members`, { laborer_ids: laborerIds }),
 };
 
 // Dashboard API

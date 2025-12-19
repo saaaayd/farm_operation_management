@@ -160,7 +160,6 @@
                 required
                 class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               >
-                <option value="hourly">Hourly</option>
                 <option value="daily">Daily</option>
                 <option value="per_job">Per Job</option>
               </select>
@@ -284,7 +283,7 @@ const form = reactive({
   skill_level: '',
   specialization: '',
   rate: '',
-  rate_type: 'hourly',
+  rate_type: 'daily',
   status: 'active',
   hire_date: '',
   emergency_contact_name: '',
@@ -319,7 +318,7 @@ const fetchLaborer = async () => {
         form.skill_level = laborer.skill_level || ''
         form.specialization = laborer.specialization || ''
         form.rate = laborer.rate || ''
-        form.rate_type = laborer.rate_type || 'hourly'
+        form.rate_type = laborer.rate_type || 'daily'
         form.status = laborer.status || 'active'
         form.hire_date = laborer.hire_date || ''
         form.emergency_contact_name = laborer.emergency_contact_name || ''

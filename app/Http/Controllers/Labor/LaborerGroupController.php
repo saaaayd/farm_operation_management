@@ -17,7 +17,12 @@ class LaborerGroupController extends Controller
     public function index(Request $request): JsonResponse
     {
         $groups = LaborerGroup::where('user_id', $request->user()->id)
-            ->withCount('laborers')
+            ->withCount([
+                'laborers',
+                'tasks as active_tasks_count' => function ($query) {
+                    $query->whereIn('status', [Task::STATUS_PENDING, Task::STATUS_IN_PROGRESS]);
+                }
+            ])
             ->get();
 
         return response()->json([
@@ -107,20 +112,18 @@ class LaborerGroupController extends Controller
         // Task breakdown by type
         $taskTypeStats = $tasks->groupBy('task_type')->map->count();
 
-        // Total Hourly Cost (sum of rates for hourly workers)
-        // Check if rate is null, default to 0
-        $totalHourlyCost = $laborerGroup->laborers
-            ->filter(function ($laborer) {
-                // Assume default is hourly if not specified, or explicitly check 'hourly'
-                return strtolower($laborer->rate_type ?? 'hourly') === 'hourly';
-            })
-            ->sum('rate');
+        // Task breakdown by status
+        $statusBreakdown = $tasks->groupBy('status')->map->count();
+
+        // Total Daily Cost (sum of rates)
+        $totalDailyCost = $laborerGroup->laborers->sum('rate');
 
         $laborerGroup->stats = [
             'active_tasks' => $activeTaskCount,
             'completed_tasks' => $completedTaskCount,
-            'total_hourly_cost' => $totalHourlyCost,
+            'total_daily_cost' => $totalDailyCost,
             'task_type_breakdown' => $taskTypeStats,
+            'status_breakdown' => $statusBreakdown,
         ];
 
         return response()->json([
@@ -141,6 +144,37 @@ class LaborerGroupController extends Controller
 
         return response()->json([
             'message' => 'Group deleted successfully'
+        ]);
+    }
+
+    /**
+     * Add members to the group.
+     */
+    public function addMembers(Request $request, LaborerGroup $laborerGroup): JsonResponse
+    {
+        if ($laborerGroup->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'laborer_ids' => 'required|array',
+            'laborer_ids.*' => 'exists:laborers,id'
+        ]);
+
+        // Verify that all laborers belong to the user
+        $invalidLaborers = \App\Models\Laborer::whereIn('id', $request->laborer_ids)
+            ->where('user_id', '!=', $request->user()->id)
+            ->exists();
+
+        if ($invalidLaborers) {
+            return response()->json(['message' => 'Unauthorized access to one or more laborers'], 403);
+        }
+
+        // Attach laborers without detaching existing ones
+        $laborerGroup->laborers()->syncWithoutDetaching($request->laborer_ids);
+
+        return response()->json([
+            'message' => 'Laborers added to group successfully'
         ]);
     }
 }

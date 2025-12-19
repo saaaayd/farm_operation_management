@@ -156,7 +156,6 @@
                 required
                 class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
               >
-                <option value="hourly">Hourly</option>
                 <option value="daily">Daily</option>
                 <option value="per_job">Per Job</option>
               </select>
@@ -278,7 +277,7 @@ const form = reactive({
   skill_level: '',
   specialization: '',
   rate: '',
-  rate_type: 'hourly',
+  rate_type: 'daily',
   status: 'active',
   hire_date: new Date().toISOString().split('T')[0],
   emergency_contact_name: '',

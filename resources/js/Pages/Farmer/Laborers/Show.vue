@@ -126,7 +126,7 @@
                     </div>
                     <div v-if="laborer.rate_type !== 'per_job'">
                         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</dt>
-                        <dd class="text-sm font-semibold text-gray-700">₱{{ laborer.rate ? Number(laborer.rate).toFixed(2) : '0.00' }}</dd>
+                        <dd class="text-sm font-semibold text-gray-700">₱{{ laborer.rate ? Number(laborer.rate).toFixed(2) : '0.00' }} / day</dd>
                     </div>
                  </div>
             </div>

@@ -32,8 +32,8 @@ class LaborService
                 'phone' => $laborerData['phone'] ?? null,
                 'address' => $laborerData['address'] ?? null,
                 'skills' => $laborerData['skills'] ?? [],
-                'hourly_rate' => $laborerData['hourly_rate'] ?? 0,
-                'daily_rate' => $laborerData['daily_rate'] ?? 0,
+                'rate' => $laborerData['rate'] ?? 0,
+                'rate_type' => $laborerData['rate_type'] ?? 'daily',
                 'is_active' => $laborerData['is_active'] ?? true,
             ]);
         } catch (\Exception $e) {
@@ -64,7 +64,7 @@ class LaborService
     {
         try {
             $laborer = Laborer::findOrFail($laborerId);
-            
+
             // Check if laborer has assigned tasks
             $hasTasks = Task::where('assigned_to', $laborerId)->exists();
             if ($hasTasks) {
@@ -85,7 +85,7 @@ class LaborService
     public function recordWagePayment($wageData)
     {
         DB::beginTransaction();
-        
+
         try {
             $wage = LaborWage::create([
                 'laborer_id' => $wageData['laborer_id'],
@@ -101,7 +101,7 @@ class LaborService
 
             DB::commit();
             return $wage;
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to record wage payment: ' . $e->getMessage());
@@ -115,7 +115,7 @@ class LaborService
     public function getLaborerWages($laborerId, $period = '30')
     {
         $startDate = now()->subDays($period);
-        
+
         return LaborWage::where('laborer_id', $laborerId)
             ->where('payment_date', '>=', $startDate)
             ->with(['laborer', 'task'])
@@ -129,12 +129,12 @@ class LaborService
     public function getLaborCostSummary($farmId, $period = '30')
     {
         $startDate = now()->subDays($period);
-        
+
         $wages = LaborWage::whereHas('laborer', function ($q) use ($farmId) {
             $q->where('farm_id', $farmId);
         })
-        ->where('payment_date', '>=', $startDate)
-        ->get();
+            ->where('payment_date', '>=', $startDate)
+            ->get();
 
         $totalCost = $wages->sum('total_amount');
         $totalHours = $wages->sum('hours_worked');
@@ -207,13 +207,13 @@ class LaborService
     public function getLaborProductivity($farmId, $period = '30')
     {
         $startDate = now()->subDays($period);
-        
+
         $tasks = Task::whereHas('laborer', function ($q) use ($farmId) {
             $q->where('farm_id', $farmId);
         })
-        ->where('created_at', '>=', $startDate)
-        ->with(['laborer'])
-        ->get();
+            ->where('created_at', '>=', $startDate)
+            ->with(['laborer'])
+            ->get();
 
         $completedTasks = $tasks->where('status', 'completed');
         $totalTasks = $tasks->count();
@@ -225,7 +225,7 @@ class LaborService
                 'laborer_name' => $laborerTasks->first()->laborer->name ?? 'Unknown',
                 'total_tasks' => $laborerTasks->count(),
                 'completed_tasks' => $laborerTasks->where('status', 'completed')->count(),
-                'completion_rate' => $laborerTasks->count() > 0 ? 
+                'completion_rate' => $laborerTasks->count() > 0 ?
                     ($laborerTasks->where('status', 'completed')->count() / $laborerTasks->count()) * 100 : 0,
             ];
         });
@@ -246,8 +246,8 @@ class LaborService
         $wages = LaborWage::whereHas('laborer', function ($q) use ($farmId) {
             $q->where('farm_id', $farmId);
         })
-        ->whereBetween('payment_date', [$startDate, $endDate])
-        ->get();
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->get();
 
         return [
             'total_cost' => $wages->sum('total_amount'),
