@@ -10,6 +10,7 @@ class Planting extends Model
 
     protected $fillable = [
         'field_id',
+        'seed_planting_id',
         'rice_variety_id',
         'crop_type',
         'planting_date',
@@ -62,6 +63,14 @@ class Planting extends Model
     }
 
     /**
+     * Get the seed planting source
+     */
+    public function seedPlanting()
+    {
+        return $this->belongsTo(SeedPlanting::class);
+    }
+
+    /**
      * Get the planting stages for this planting
      */
     public function plantingStages()
@@ -98,8 +107,8 @@ class Planting extends Model
      */
     public function isOverdue(): bool
     {
-        return $this->expected_harvest_date < Carbon::now() && 
-               $this->status !== self::STATUS_HARVESTED;
+        return $this->expected_harvest_date < Carbon::now() &&
+            $this->status !== self::STATUS_HARVESTED;
     }
 
     /**
@@ -124,7 +133,7 @@ class Planting extends Model
     public function initializePlantingStages()
     {
         $growthStages = RiceGrowthStage::getAllStagesOrdered();
-        
+
         foreach ($growthStages as $stage) {
             $this->plantingStages()->create([
                 'rice_growth_stage_id' => $stage->id,
@@ -164,11 +173,11 @@ class Planting extends Model
     {
         $totalStages = $this->plantingStages()->count();
         $completedStages = $this->plantingStages()->completed()->count();
-        
+
         if ($totalStages === 0) {
             return 0;
         }
-        
+
         return round(($completedStages / $totalStages) * 100, 2);
     }
 

@@ -19,13 +19,13 @@ class PlantingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Planting::whereHas('field', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
-        
+
         $plantings = $query->with(['field', 'riceVariety'])->get();
-        
+
         return response()->json([
             'plantings' => $plantings
         ]);
@@ -38,6 +38,7 @@ class PlantingController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'field_id' => 'required|exists:fields,id',
+            'seed_planting_id' => 'nullable|exists:seed_plantings,id',
             'rice_variety_id' => 'nullable|exists:rice_varieties,id',
             'crop_name' => 'nullable|string|max:255',
             'crop_type' => 'nullable|string|max:255',
@@ -63,7 +64,7 @@ class PlantingController extends Controller
         // Check if user owns the field
         $field = Field::findOrFail($request->field_id);
         $user = $request->user();
-        
+
         if ($field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to field'
@@ -84,9 +85,6 @@ class PlantingController extends Controller
             }
         }
         if (!$varietyId) {
-            $varietyId = RiceVariety::value('id');
-        }
-        if (!$varietyId) {
             return response()->json([
                 'message' => 'No rice varieties available. Please add rice varieties first.'
             ], 422);
@@ -98,6 +96,7 @@ class PlantingController extends Controller
         }
 
         $seedRate = $request->input('seed_rate') ?? $request->input('seed_quantity');
+        $seedPlantingId = $request->input('seed_planting_id');
 
         $season = $request->input('season') ?? $this->determineSeasonFromDate($plantingDate);
 
@@ -108,6 +107,7 @@ class PlantingController extends Controller
 
         $planting = Planting::create([
             'field_id' => $request->field_id,
+            'seed_planting_id' => $seedPlantingId,
             'rice_variety_id' => $varietyId,
             'crop_type' => $request->input('crop_name') ?? $request->input('crop_type') ?? 'Rice',
             'planting_date' => $plantingDate,
@@ -119,6 +119,13 @@ class PlantingController extends Controller
             'season' => $season,
             'notes' => $request->notes,
         ]);
+
+        if ($seedPlantingId) {
+            $seedPlanting = \App\Models\SeedPlanting::find($seedPlantingId);
+            if ($seedPlanting) {
+                $seedPlanting->update(['status' => \App\Models\SeedPlanting::STATUS_TRANSPLANTED]);
+            }
+        }
 
         return response()->json([
             'message' => 'Planting created successfully',
@@ -132,7 +139,7 @@ class PlantingController extends Controller
     public function show(Request $request, Planting $planting): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -158,7 +165,7 @@ class PlantingController extends Controller
     public function update(Request $request, Planting $planting): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -292,7 +299,7 @@ class PlantingController extends Controller
     public function destroy(Request $request, Planting $planting): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'

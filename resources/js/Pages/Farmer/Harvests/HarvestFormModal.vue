@@ -319,13 +319,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  harvest: { // Pass the harvest object when editing
-    type: Object,
+  initialPlantingId: {
+    type: Number,
     default: null,
   },
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'saved'])
 
 const farmStore = useFarmStore()
 
@@ -374,7 +374,7 @@ const formatDateForInput = (dateString) => {
 }
 
 const getInitialFormData = () => ({
-  planting_id: props.harvest?.planting_id || '',
+  planting_id: props.harvest?.planting_id || props.initialPlantingId || '',
   harvest_date: formatDateForInput(props.harvest?.harvest_date),
   quantity: props.harvest?.quantity || '',
   unit: props.harvest?.unit || 'kg',
@@ -453,6 +453,7 @@ const submitForm = async () => {
     }
     // Refresh harvests list after create/update
     await farmStore.fetchHarvests()
+    emit('saved')
     closeModal() // Close modal on success
   } catch (err) {
     if (err.response && err.response.status === 422) {

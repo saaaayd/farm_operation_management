@@ -80,6 +80,15 @@
             </router-link>
 
             <router-link
+              to="/seed-plantings"
+              class="nav-item"
+              :class="{ 'nav-item-active': $route.path.startsWith('/seed-plantings') }"
+            >
+              <BeakerIcon class="nav-icon" />
+              Nursery
+            </router-link>
+
+            <router-link
               to="/harvests"
               class="nav-item"
               :class="{ 'nav-item-active': $route.path.startsWith('/harvests') }"
@@ -292,6 +301,7 @@ import {
   UserIcon,
   XMarkIcon,
   Bars3Icon,
+  BeakerIcon,
 } from '@heroicons/vue/24/outline';
 
 const router = useRouter();

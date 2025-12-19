@@ -63,6 +63,10 @@ import WeatherReports from '@/Pages/Reports/Weather.vue';
 // Financial
 import FinancialExpensesIndex from '@/Pages/Financial/Expenses/Index.vue';
 
+// Seed Plantings
+import SeedPlantingsIndex from '@/Pages/SeedPlantings/Index.vue';
+import SeedPlantingsCreate from '@/Pages/SeedPlantings/Create.vue';
+
 const routes = [
   {
     path: '/',
@@ -141,6 +145,20 @@ const routes = [
     path: '/plantings/:id/edit',
     name: 'plantings-edit',
     component: PlantingsEdit,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+
+  // Seed Planting Routes
+  {
+    path: '/seed-plantings',
+    name: 'seed-plantings',
+    component: SeedPlantingsIndex,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/seed-plantings/create',
+    name: 'seed-plantings-create',
+    component: SeedPlantingsCreate,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {

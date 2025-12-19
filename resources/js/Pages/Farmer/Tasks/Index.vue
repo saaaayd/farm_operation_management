@@ -261,6 +261,14 @@
         </router-link>
       </div>
     </div>
+    
+    <!-- Harvest Form Modal -->
+    <HarvestFormModal
+      :show="showHarvestModal"
+      :initial-planting-id="selectedHarvestTask?.planting_id"
+      @close="closeHarvestModal"
+      @saved="handleHarvestSaved"
+    />
   </div>
 </template>
 
@@ -268,7 +276,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
+
 import { buildTaskTypeOptions, getTaskTypeLabel } from '@/utils/taskTypes';
+import HarvestFormModal from '@/Pages/Farmer/Harvests/HarvestFormModal.vue';
 
 const router = useRouter();
 const farmStore = useFarmStore();
@@ -277,8 +287,12 @@ const loading = ref(false);
 const filters = ref({
   task_type: '',
   status: '',
+
   planting: ''
 });
+
+const showHarvestModal = ref(false);
+const selectedHarvestTask = ref(null);
 
 const tasks = computed(() => farmStore.tasks);
 const plantings = computed(() => farmStore.plantings);
@@ -352,10 +366,35 @@ const startTask = async (task) => {
 };
 
 const completeTask = async (task) => {
+  // If it's a harvesting task, open the harvest modal first
+  if (task.task_type === 'harvesting') {
+    selectedHarvestTask.value = task;
+    showHarvestModal.value = true;
+    return;
+  }
+
   try {
     await farmStore.updateTask(task.id, { status: 'completed' });
   } catch (error) {
     console.error('Failed to complete task:', error);
+  }
+};
+
+const closeHarvestModal = () => {
+  showHarvestModal.value = false;
+  selectedHarvestTask.value = null;
+};
+
+const handleHarvestSaved = async () => {
+  if (selectedHarvestTask.value) {
+    try {
+      // After harvest is logged, mark the task as completed
+      await farmStore.updateTask(selectedHarvestTask.value.id, { status: 'completed' });
+      // Clear selection
+      selectedHarvestTask.value = null;
+    } catch (error) {
+      console.error('Failed to complete task after harvest log:', error);
+    }
   }
 };
 

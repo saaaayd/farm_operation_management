@@ -44,6 +44,20 @@
           </div>
           
           <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Planting Source</label>
+            <div class="flex gap-4 mb-2">
+              <label class="inline-flex items-center">
+                <input type="radio" v-model="sourceType" value="direct" class="form-radio text-green-600">
+                <span class="ml-2 text-sm text-gray-700">Direct / Inventory</span>
+              </label>
+              <label class="inline-flex items-center">
+                <input type="radio" v-model="sourceType" value="nursery" class="form-radio text-green-600">
+                <span class="ml-2 text-sm text-gray-700">Nursery (Transplant)</span>
+              </label>
+            </div>
+          </div>
+
+          <div v-if="sourceType === 'direct'">
             <label for="inventory_item_id" class="block text-sm font-semibold text-gray-700 mb-2">Seed Source (Inventory)</label>
             <select
               id="inventory_item_id"
@@ -66,6 +80,26 @@
               <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
               Linked to Variety: <strong>{{ selectedRiceVariety.name }}</strong>
             </div>
+          </div>
+
+          <div v-else>
+            <label for="seed_planting_id" class="block text-sm font-semibold text-gray-700 mb-2">Nursery Source</label>
+            <select
+              id="seed_planting_id"
+              v-model="form.data.seed_planting_id"
+              class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
+              :class="{ 'border-red-500': form.errors.seed_planting_id }"
+            >
+              <option value="">Select Ready Seedlings</option>
+              <option
+                v-for="planting in readySeedPlantings"
+                :key="planting.id"
+                :value="planting.id"
+              >
+                {{ planting.rice_variety?.name }} - Sown: {{ formatDate(planting.planting_date) }} ({{ planting.quantity }} {{ planting.unit }})
+              </option>
+            </select>
+            <p v-if="readySeedPlantings.length === 0" class="mt-1 text-xs text-amber-600">No ready seedlings found in nursery.</p>
           </div>
 
           <div>
@@ -293,6 +327,12 @@ import { useFarmStore } from '@/stores/farm'
 import { useMarketplaceStore } from '@/stores/marketplace'
 import { useInventoryStore } from '@/stores/inventory'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
+import axios from 'axios';
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString();
+};
 
 const props = defineProps({
   planting: {
@@ -433,6 +473,7 @@ const getInitialFormData = () => {
     status: defaultStatus,
     notes: props.planting?.notes || null,
     inventory_item_id: '', // Add inventory item tracking
+    seed_planting_id: '', // Add seed planting source
   }
 }
 
@@ -448,10 +489,43 @@ const selectedInventoryItem = computed(() => {
   return inventoryStore.riceSeeds.find(i => i.id == form.value.data.inventory_item_id);
 });
 
-// Watch for inventory item selection to auto-select rice variety
+// Source Type state
+const sourceType = ref('direct');
+const readySeedPlantings = ref([]);
+
+// Fetch ready seed plantings
+const fetchReadySeedPlantings = async () => {
+  try {
+    const response = await axios.get('/api/seed-plantings/ready');
+    readySeedPlantings.value = response.data;
+  } catch (error) {
+    console.error('Error fetching ready seed plantings:', error);
+  }
+};
+
+onMounted(() => {
+  fetchReadySeedPlantings();
+});
+
+// Watch for seed_planting_id selection to autofill
+watch(() => form.value.data.seed_planting_id, (newId) => {
+  if (!newId) return;
+  
+  const seedPlanting = readySeedPlantings.value.find(p => p.id == newId);
+  if (seedPlanting) {
+    form.value.data.rice_variety_id = seedPlanting.rice_variety_id;
+    form.value.data.planting_method = 'transplanting';
+    // You might also want to set quantity/seed_rate based on the seed planting quantity
+    // but usually field planting seed_rate is per hectare, while seed planting quantity is total.
+  }
+});
+
+// Watch inventory item selection (existing logic)
 watch(() => form.value.data.inventory_item_id, (newId) => {
   if (!newId) {
-    form.value.data.rice_variety_id = '';
+    if (sourceType.value === 'direct') {
+       form.value.data.rice_variety_id = '';
+    }
     return;
   }
   

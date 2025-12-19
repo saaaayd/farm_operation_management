@@ -311,6 +311,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{planting}', [\App\Http\Controllers\Farm\PlantingController::class, 'destroy']);
     });
 
+    // Seed Planting (Nursery) routes
+    Route::middleware('farmer')->prefix('seed-plantings')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SeedPlantingController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\SeedPlantingController::class, 'store']);
+        Route::get('/ready', [\App\Http\Controllers\SeedPlantingController::class, 'getReady']);
+        Route::get('/{seedPlanting}', [\App\Http\Controllers\SeedPlantingController::class, 'show']);
+        Route::put('/{seedPlanting}', [\App\Http\Controllers\SeedPlantingController::class, 'update']);
+        Route::delete('/{seedPlanting}', [\App\Http\Controllers\SeedPlantingController::class, 'destroy']);
+    });
+
     // Rice Farming Lifecycle routes
     Route::middleware('farmer')->prefix('rice-farming')->group(function () {
         Route::post('/plantings', [\App\Http\Controllers\RiceFarmingLifecycleController::class, 'createRicePlanting']);
