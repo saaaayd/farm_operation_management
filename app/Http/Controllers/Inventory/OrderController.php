@@ -18,26 +18,26 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Order::where('buyer_id', $user->id);
-        
+
         // Apply filters
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        
+
         if ($request->has('date_from')) {
             $query->where('order_date', '>=', $request->date_from);
         }
-        
+
         if ($request->has('date_to')) {
             $query->where('order_date', '<=', $request->date_to);
         }
-        
+
         $orders = $query->with(['orderItems', 'supplier'])
             ->orderBy('order_date', 'desc')
             ->get();
-        
+
         return response()->json([
             'orders' => $orders
         ]);
@@ -105,7 +105,7 @@ class OrderController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'message' => 'Failed to create order',
                 'error' => $e->getMessage()
@@ -119,7 +119,7 @@ class OrderController extends Controller
     public function show(Request $request, Order $order): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -139,7 +139,7 @@ class OrderController extends Controller
     public function update(Request $request, Order $order): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -163,8 +163,12 @@ class OrderController extends Controller
         }
 
         $order->update($request->only([
-            'supplier_name', 'supplier_contact', 'order_date',
-            'expected_delivery_date', 'status', 'notes'
+            'supplier_name',
+            'supplier_contact',
+            'order_date',
+            'expected_delivery_date',
+            'status',
+            'notes'
         ]));
 
         return response()->json([
@@ -179,7 +183,7 @@ class OrderController extends Controller
     public function destroy(Request $request, Order $order): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -199,7 +203,7 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($order->buyer_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -225,6 +229,20 @@ class OrderController extends Controller
                 $inventoryItem = $orderItem->inventoryItem;
                 $inventoryItem->current_stock += $orderItem->quantity;
                 $inventoryItem->save();
+
+                // Log transaction
+                \App\Models\InventoryTransaction::create([
+                    'inventory_item_id' => $inventoryItem->id,
+                    'user_id' => $user->id,
+                    'transaction_type' => 'in',
+                    'quantity' => $orderItem->quantity,
+                    'unit_cost' => $orderItem->unit_price ?? $inventoryItem->unit_price ?? 0,
+                    'total_cost' => $orderItem->quantity * ($orderItem->unit_price ?? $inventoryItem->unit_price ?? 0),
+                    'reference_type' => 'Order',
+                    'reference_id' => $order->id,
+                    'notes' => 'Restock via Order #' . $order->id,
+                    'transaction_date' => now(), // Use now() or order delivery date
+                ]);
             }
         }
 
