@@ -27,10 +27,11 @@ export const useInventoryStore = defineStore('inventory', {
       try {
         if (!Array.isArray(state.items)) return [];
         return state.items.filter(item => {
-          return item && 
-                 typeof item.quantity === 'number' && 
-                 typeof item.min_stock === 'number' && 
-                 item.quantity <= item.min_stock;
+          // Normalize properties to handle both potential formats
+          const qty = item.current_stock !== undefined ? parseFloat(item.current_stock) : (item.quantity !== undefined ? parseFloat(item.quantity) : 0);
+          const min = item.minimum_stock !== undefined ? parseFloat(item.minimum_stock) : (item.min_stock !== undefined ? parseFloat(item.min_stock) : 0);
+
+          return item && qty <= min;
         });
       } catch (error) {
         console.warn('Error in lowStockItems getter:', error);
@@ -41,7 +42,8 @@ export const useInventoryStore = defineStore('inventory', {
       try {
         if (!Array.isArray(state.items)) return [];
         return state.items.filter(item => {
-          return item && typeof item.quantity === 'number' && item.quantity <= 0;
+          const qty = item.current_stock !== undefined ? parseFloat(item.current_stock) : (item.quantity !== undefined ? parseFloat(item.quantity) : 0);
+          return item && qty <= 0;
         });
       } catch (error) {
         console.warn('Error in outOfStockItems getter:', error);
@@ -99,36 +101,36 @@ export const useInventoryStore = defineStore('inventory', {
     async fetchItems() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await axios.get('/api/inventory');
-        
+
         if (!response.data) {
           console.warn('No inventory data received, using empty array');
           this.items = [];
           return { inventory_items: [] };
         }
-        
+
         // Handle different response formats
         const items = response.data.inventory_items || response.data.items || response.data.inventory || [];
-        
+
         if (!Array.isArray(items)) {
           console.warn('Invalid inventory items data received, using empty array');
           this.items = [];
           return { inventory_items: [] };
         }
-        
+
         this.items = items;
         console.log(`✓ Loaded ${this.items.length} inventory items`);
         return response.data;
       } catch (error) {
         console.error('Failed to fetch inventory items:', error);
         this.error = error.userMessage || error.response?.data?.message || 'Failed to fetch inventory items';
-        
+
         if (!this.items.length) {
           this.items = [];
         }
-        
+
         throw error;
       } finally {
         this.loading = false;

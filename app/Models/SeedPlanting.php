@@ -17,6 +17,7 @@ class SeedPlanting extends Model
         'unit',
         'status',
         'notes',
+        'batch_id',
     ];
 
     protected $casts = [

@@ -96,7 +96,7 @@
                 :key="planting.id"
                 :value="planting.id"
               >
-                {{ planting.rice_variety?.name }} - Sown: {{ formatDate(planting.planting_date) }} ({{ planting.quantity }} {{ planting.unit }})
+                {{ planting.batch_id ? `[${planting.batch_id}] ` : '' }}{{ planting.rice_variety?.name }} - Sown: {{ formatDate(planting.planting_date) }} ({{ planting.quantity }} {{ planting.unit }})
               </option>
             </select>
             <p v-if="readySeedPlantings.length === 0" class="mt-1 text-xs text-amber-600">No ready seedlings found in nursery.</p>

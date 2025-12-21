@@ -162,6 +162,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {
+    path: '/seed-plantings/:id',
+    name: 'seed-plantings-show',
+    component: () => import('@/Pages/SeedPlantings/Show.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
     path: '/tasks',
     name: 'tasks',
     component: TasksIndex,

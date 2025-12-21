@@ -128,6 +128,8 @@
                     <option value="sacks">Sacks</option>
                     <option value="bags">Bags</option>
                     <option value="trays">Trays</option>
+                    <option value="packets">Packets</option>
+                    <option value="pounds">Pounds</option>
                     <option value="grams">Grams (g)</option>
                   </select>
                 </div>
@@ -193,22 +195,44 @@
 
           <hr class="border-gray-100 my-8">
 
-          <!-- Section: Notes -->
+          <!-- Section: Notes & Batch ID -->
           <div class="mb-8">
             <h3 class="flex items-center text-lg font-semibold text-gray-900 mb-4">
               <span class="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 mr-3 text-sm">3</span>
               Additional Info
             </h3>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-              <div class="mt-1">
-                <textarea
-                  v-model="form.notes"
-                  rows="3"
-                  class="block w-full border-gray-200 rounded-xl focus:ring-green-500 focus:border-green-500 sm:text-sm transition-shadow shadow-sm hover:shadow-md"
-                  placeholder="Any special treatments, tray identifiers, or location notes..."
-                ></textarea>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+               <!-- Batch ID -->
+               <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Batch ID / Tag (Optional)</label>
+                <div class="relative rounded-xl shadow-sm">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <TagIcon class="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    v-model="form.batch_id"
+                    type="text"
+                    class="block w-full pl-10 pr-4 py-3 border-gray-200 rounded-xl focus:ring-green-500 focus:border-green-500 sm:text-sm transition-shadow shadow-sm hover:shadow-md"
+                    placeholder="e.g. NUR-2025-001"
+                  />
+                </div>
+              </div>
+
+               <!-- Notes -->
+               <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                  <div class="relative rounded-xl shadow-sm">
+                    <div class="absolute top-3 left-3 flex items-start pointer-events-none">
+                      <DocumentTextIcon class="h-5 w-5 text-gray-400" />
+                    </div>
+                    <textarea
+                      v-model="form.notes"
+                      rows="1"
+                      class="block w-full pl-10 pr-4 py-3 border-gray-200 rounded-xl focus:ring-green-500 focus:border-green-500 sm:text-sm transition-shadow shadow-sm hover:shadow-md resize-none"
+                      placeholder="Special notes..."
+                    ></textarea>
+                  </div>
               </div>
             </div>
           </div>
@@ -255,7 +279,8 @@ import {
   CalendarDaysIcon, 
   ClockIcon,
   InformationCircleIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  DocumentTextIcon
 } from '@heroicons/vue/24/outline';
 
 const router = useRouter();
@@ -271,6 +296,7 @@ const form = ref({
   unit: 'kg',
   planting_date: new Date().toISOString().split('T')[0],
   expected_transplant_date: '',
+  batch_id: '',
   notes: '',
 });
 
@@ -296,7 +322,7 @@ watch(() => form.value.inventory_item_id, (newId) => {
     const item = selectedInventoryItem.value;
     if (item && item.unit) {
         // Simple mapping, defaulting to kg if not found in our dropdown
-        if (['kg', 'bags', 'sacks', 'trays', 'grams'].includes(item.unit.toLowerCase())) {
+        if (['kg', 'bags', 'sacks', 'trays', 'grams', 'packets', 'pounds'].includes(item.unit.toLowerCase())) {
              form.value.unit = item.unit.toLowerCase();
         }
     }

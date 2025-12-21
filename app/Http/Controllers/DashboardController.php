@@ -10,6 +10,7 @@ use App\Models\InventoryItem;
 use App\Models\WeatherLog;
 use App\Models\Expense;
 use App\Models\Sale;
+use App\Models\SeedPlanting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
@@ -38,6 +39,12 @@ class DashboardController extends Controller
         $stats = [
             'total_fields' => $fields->count(),
             'active_plantings' => $plantings->where('status', '!=', 'harvested')->count(),
+            'active_seed_plantings' => SeedPlanting::where('user_id', $user->id)
+                ->whereIn('status', ['sown', 'germinating', 'ready'])
+                ->count(),
+            'ready_seed_plantings' => SeedPlanting::where('user_id', $user->id)
+                ->where('status', 'ready')
+                ->count(),
             'pending_tasks' => Task::whereIn('planting_id', $plantingIds)
                 ->where('status', Task::STATUS_PENDING)
                 ->count(),
@@ -69,7 +76,7 @@ class DashboardController extends Controller
             $latestWeather = WeatherLog::where('field_id', $field->_id)
                 ->orderBy('recorded_at', 'desc')
                 ->first();
-            
+
             if ($latestWeather) {
                 $weatherData[] = [
                     'field' => $field,
@@ -85,9 +92,9 @@ class DashboardController extends Controller
             ->sum('amount');
 
         // Monthly sales
-        $monthlySales = Sale::whereHas('harvest.planting.field', function($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
+        $monthlySales = Sale::whereHas('harvest.planting.field', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })
             ->whereMonth('sale_date', now()->month)
             ->whereYear('sale_date', now()->year)
             ->sum('total_amount');
@@ -155,7 +162,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        return match($user->role) {
+        return match ($user->role) {
             'farmer' => $this->farmerDashboard($request),
             'buyer' => $this->buyerDashboard($request),
             default => response()->json(['message' => 'Invalid user role'], 400)

@@ -22,18 +22,62 @@ class SeedPlantingController extends Controller
     {
         $validated = $request->validate([
             'rice_variety_id' => 'required|exists:rice_varieties,id',
+            'inventory_item_id' => 'nullable|exists:inventory_items,id',
             'planting_date' => 'required|date',
             'expected_transplant_date' => 'nullable|date|after:planting_date',
             'quantity' => 'required|numeric|min:0',
             'unit' => 'required|string',
             'notes' => 'nullable|string',
+            'batch_id' => 'nullable|string|max:50',
         ]);
+
+        // Deduct from inventory if inventory_item_id is provided
+        if (!empty($validated['inventory_item_id'])) {
+            $inventoryItem = \App\Models\InventoryItem::find($validated['inventory_item_id']);
+
+            if ($inventoryItem) {
+                if (!$inventoryItem->removeStock($validated['quantity'])) {
+                    return response()->json(['message' => "Insufficient stock. Available: {$inventoryItem->current_stock} {$inventoryItem->unit}"], 422);
+                }
+
+                // Log transaction
+                \App\Models\InventoryTransaction::create([
+                    'inventory_item_id' => $inventoryItem->id,
+                    'user_id' => Auth::id(),
+                    'transaction_type' => 'out',
+                    'quantity' => $validated['quantity'],
+                    'unit_cost' => $inventoryItem->unit_price,
+                    'total_cost' => $validated['quantity'] * ($inventoryItem->unit_price ?? 0),
+                    'reference_type' => 'SeedPlanting',
+                    'reference_id' => null, // Will update after creation
+                    'notes' => 'Used for nursery batch',
+                    'transaction_date' => now(),
+                ]);
+            }
+        }
 
         $seedPlanting = SeedPlanting::create([
             'user_id' => Auth::id(),
-            ...$validated,
+            'rice_variety_id' => $validated['rice_variety_id'],
+            'planting_date' => $validated['planting_date'],
+            'expected_transplant_date' => $validated['expected_transplant_date'] ?? null,
+            'quantity' => $validated['quantity'],
+            'unit' => $validated['unit'],
+            'notes' => $validated['notes'] ?? null,
+            'batch_id' => $validated['batch_id'] ?? null,
             'status' => 'sown'
         ]);
+
+        // Update transaction reference if exists
+        $latestTransaction = \App\Models\InventoryTransaction::where('inventory_item_id', $validated['inventory_item_id'] ?? null)
+            ->where('reference_type', 'SeedPlanting')
+            ->whereNull('reference_id')
+            ->latest()
+            ->first();
+
+        if ($latestTransaction) {
+            $latestTransaction->update(['reference_id' => $seedPlanting->id]);
+        }
 
         return response()->json($seedPlanting, 201);
     }
@@ -61,6 +105,7 @@ class SeedPlantingController extends Controller
             'unit' => 'string',
             'status' => 'in:sown,germinating,ready,transplanted,failed',
             'notes' => 'nullable|string',
+            'batch_id' => 'nullable|string|max:50',
         ]);
 
         $seedPlanting->update($validated);

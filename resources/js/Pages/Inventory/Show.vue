@@ -228,12 +228,7 @@
               >
                 📋 Set Reorder Point
               </button>
-              <button
-                @click="viewSuppliers"
-                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                🏪 View Suppliers
-              </button>
+
             </div>
           </div>
 
@@ -400,7 +395,7 @@ const setReorderPoint = async () => {
   }
   
   try {
-    await inventoryStore.updateItem(item.value.id, { reorder_point: reorderPoint })
+    await inventoryStore.updateItem(item.value.id, { minimum_stock: reorderPoint })
     await reloadFromStore()
     alert('Reorder point updated successfully')
   } catch (error) {
@@ -409,12 +404,7 @@ const setReorderPoint = async () => {
   }
 }
 
-const viewSuppliers = () => {
-  // Navigate to suppliers page if route exists
-  router.push('/suppliers').catch(() => {
-    alert('Suppliers page is not available yet')
-  })
-}
+
 
 const reloadFromStore = async () => {
   if (item.value.id) {

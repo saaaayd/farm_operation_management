@@ -223,6 +223,16 @@ export const plantingsAPI = {
   delete: (id) => api.delete(`/plantings/${id}`),
 };
 
+// Seed Plantings API
+export const seedPlantingsAPI = {
+  getAll: () => api.get('/seed-plantings'),
+  getById: (id) => api.get(`/seed-plantings/${id}`),
+  create: (data) => api.post('/seed-plantings', data),
+  update: (id, data) => api.put(`/seed-plantings/${id}`, data),
+  delete: (id) => api.delete(`/seed-plantings/${id}`),
+  getReady: () => api.get('/seed-plantings/ready'),
+};
+
 // Tasks API
 export const tasksAPI = {
   getAll: () => api.get('/tasks'),
