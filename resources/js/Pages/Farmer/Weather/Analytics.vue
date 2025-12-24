@@ -133,10 +133,10 @@
                 </div>
                 <div class="text-right">
                   <div class="text-lg font-semibold text-gray-900">
-                    {{ Math.round(day.temperature) }}°C
+                    {{ (day.temperature !== undefined && day.temperature !== null && !isNaN(day.temperature)) ? Math.round(day.temperature) : (day.high !== undefined ? Math.round(day.high) : '--') }}°C
                   </div>
                   <div class="text-sm text-gray-600">
-                    {{ day.humidity }}% humidity
+                    {{ Math.round(day.humidity || 0) }}% humidity
                   </div>
                 </div>
               </div>
@@ -207,7 +207,7 @@
                   <h4 class="text-sm font-medium">{{ alert.title }}</h4>
                   <p class="text-sm">{{ alert.message }}</p>
                   <p class="text-xs text-gray-500 mt-1">
-                    {{ formatDate(alert.created_at) }}
+                    {{ formatDate(alert.recorded_at || alert.created_at || new Date()) }}
                   </p>
                 </div>
               </div>
@@ -249,7 +249,7 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="record in weatherHistory.slice(0, 10)" :key="record.id">
+              <tr v-for="record in [...dailyWeatherHistory].reverse().slice(0, 10)" :key="record.id">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ formatDate(record.recorded_at) }}
                 </td>
@@ -304,6 +304,54 @@ const forecast = computed(() => Array.isArray(weatherStore.forecast) ? weatherSt
 const weatherHistory = computed(() => Array.isArray(weatherStore.weatherHistory) ? weatherStore.weatherHistory : []);
 const alerts = computed(() => Array.isArray(weatherStore.alerts) ? weatherStore.alerts : []);
 
+// Group weather history by day to avoid duplicate rows
+const dailyWeatherHistory = computed(() => {
+  if (!weatherHistory.value?.length) return [];
+  
+  const groups = {};
+  
+  weatherHistory.value.forEach(record => {
+     const dateRaw = record.recorded_at || record.created_at || new Date();
+     // Group by date only (YYYY-MM-DD)
+     const dateKey = new Date(dateRaw).toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+     
+     if (!groups[dateKey]) {
+        groups[dateKey] = {
+           dateKey,
+           rawDate: dateRaw,
+           temps: [],
+           hums: [],
+           winds: [],
+           conditions: []
+        };
+     }
+     if (record.temperature !== undefined) groups[dateKey].temps.push(Number(record.temperature));
+     if (record.humidity !== undefined) groups[dateKey].hums.push(Number(record.humidity));
+     if (record.wind_speed !== undefined) groups[dateKey].winds.push(Number(record.wind_speed));
+     if (record.conditions) groups[dateKey].conditions.push(record.conditions);
+  });
+  
+  const results = Object.values(groups).map(g => {
+     const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+     const avgTemp = avg(g.temps);
+     const avgHum = avg(g.hums);
+     const avgWind = avg(g.winds);
+     const condition = g.conditions[0] || 'Unknown';
+     
+     return {
+        id: g.dateKey,
+        recorded_at: g.rawDate,
+        temperature: avgTemp.toFixed(1),
+        humidity: Math.round(avgHum),
+        wind_speed: avgWind.toFixed(1),
+        conditions: condition
+     };
+  });
+  
+  // Sort Ascending (Oldest to Newest)
+  return results.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+});
+
 const isFavorableForFarming = computed(() => {
   if (!currentWeather.value) return false;
   
@@ -315,7 +363,7 @@ const isFavorableForFarming = computed(() => {
 });
 
 const temperatureChartData = computed(() => {
-  const data = weatherHistory.value.slice(-30); // Last 30 days
+  const data = dailyWeatherHistory.value.slice(-30); // Last 30 days
   return {
     labels: data.map(record => formatDate(record.recorded_at)),
     datasets: [{
@@ -329,7 +377,7 @@ const temperatureChartData = computed(() => {
 });
 
 const rainfallChartData = computed(() => {
-  const data = weatherHistory.value.slice(-30); // Last 30 days
+  const data = dailyWeatherHistory.value.slice(-30); // Last 30 days
   return {
     labels: data.map(record => formatDate(record.recorded_at)),
     datasets: [{

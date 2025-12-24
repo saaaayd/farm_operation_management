@@ -22,12 +22,18 @@ class ColorfulCloudsWeatherService
      */
     public function getCurrentWeather($latitude, $longitude, $unit = 'imperial', $lang = 'en_US')
     {
+        // Block invalid coordinates that might return default/test weather (e.g. 0,0)
+        if (empty($latitude) || empty($longitude) || ((float) $latitude === 0.0 && (float) $longitude === 0.0)) {
+            Log::warning("ColorfulClouds: Invalid coordinates provided: $latitude, $longitude");
+            return $this->getDefaultWeatherData($unit);
+        }
+
         try {
             $cacheKey = "colorfulclouds_weather_{$latitude}_{$longitude}_{$unit}";
-            
+
             return Cache::remember($cacheKey, 600, function () use ($latitude, $longitude, $unit, $lang) {
                 $url = "{$this->baseUrl}/{$this->apiToken}/{$longitude},{$latitude}/weather.json";
-                
+
                 $response = Http::get($url, [
                     'lang' => $lang,
                     'unit' => $unit,
@@ -43,7 +49,7 @@ class ColorfulCloudsWeatherService
                     'status' => $response->status(),
                     'body' => $response->body()
                 ]);
-                
+
                 throw new \Exception('Failed to fetch weather data from ColorfulClouds');
             });
         } catch (\Exception $e) {
@@ -59,17 +65,17 @@ class ColorfulCloudsWeatherService
     {
         try {
             $cacheKey = "colorfulclouds_forecast_{$latitude}_{$longitude}_{$days}_{$unit}";
-            
+
             return Cache::remember($cacheKey, 1800, function () use ($latitude, $longitude, $days, $unit, $lang) {
                 $url = "{$this->baseUrl}/{$this->apiToken}/{$longitude},{$latitude}/weather.json";
-                
+
                 $granu = $days <= 1 ? 'hourly' : 'daily';
                 $params = [
                     'lang' => $lang,
                     'unit' => $unit,
                     'granu' => $granu,
                 ];
-                
+
                 if ($granu === 'hourly') {
                     $params['hourlysteps'] = min($days * 24, 240);
                 } else {
@@ -77,7 +83,7 @@ class ColorfulCloudsWeatherService
                     // Add 1 extra to ensure we get enough days even if today is excluded
                     $params['dailysteps'] = min($days + 1, 10);
                 }
-                
+
                 $response = Http::get($url, $params);
 
                 if ($response->successful()) {
@@ -89,7 +95,7 @@ class ColorfulCloudsWeatherService
                     'status' => $response->status(),
                     'body' => $response->body()
                 ]);
-                
+
                 throw new \Exception('Failed to fetch forecast data from ColorfulClouds');
             });
         } catch (\Exception $e) {
@@ -151,7 +157,7 @@ class ColorfulCloudsWeatherService
     private function formatForecastData($data, $unit = 'imperial')
     {
         $forecast = [];
-        
+
         if (!isset($data['result'])) {
             Log::error('Invalid ColorfulClouds forecast data structure', ['data' => $data]);
             return [];
@@ -200,11 +206,11 @@ class ColorfulCloudsWeatherService
                 if (!isset($skycon['date'])) {
                     continue;
                 }
-                
+
                 // Parse date - ColorfulClouds returns datetime strings like "2024-01-15T00:00+08:00"
                 $dateValue = $skycon['date'];
                 $dateStr = null;
-                
+
                 if (is_numeric($dateValue)) {
                     // Timestamp
                     $dateStr = date('Y-m-d', $dateValue);
@@ -213,17 +219,17 @@ class ColorfulCloudsWeatherService
                     $dateTime = new \DateTime($dateValue);
                     $dateStr = $dateTime->format('Y-m-d');
                 }
-                
+
                 if (!$dateStr) {
                     continue;
                 }
-                
+
                 // Get corresponding temperature data
                 $temp = $temperatures[$index] ?? null;
                 if (!$temp || !isset($temp['max']) || !isset($temp['min'])) {
                     continue;
                 }
-                
+
                 $forecast[] = [
                     'date' => $dateStr,
                     'temperature' => round((($temp['max'] ?? 0) + ($temp['min'] ?? 0)) / 2, 1),
@@ -313,8 +319,10 @@ class ColorfulCloudsWeatherService
         $temp = $unit === 'imperial' ? 72 : 22;
         $windUnit = $unit === 'imperial' ? 10 : 16; // mph or km/h
 
+        // Use null for temperature to indicate data is missing/invalid rather than 0°C (freezing)
+        // Frontend should handle nulls gracefully or show "N/A"
         return [
-            'temperature' => $temp,
+            'temperature' => null,
             'humidity' => 60,
             'pressure' => 1013,
             'wind_speed' => $windUnit,

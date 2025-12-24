@@ -23,6 +23,7 @@ class Planting extends Model
         'season',
         'notes',
         'weather_conditions',
+        'seed_unit',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Planting extends Model
         'seed_rate' => 'decimal:2',
         'area_planted' => 'decimal:2',
         'weather_conditions' => 'array',
+        'seed_unit' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

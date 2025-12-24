@@ -165,12 +165,20 @@
                 </div>
                 <div class="flex items-center space-x-4">
                   <div class="text-right">
-                    <div class="font-medium text-gray-900">{{ Math.round(day.high) }}°C</div>
-                    <div class="text-sm text-gray-600">{{ Math.round(day.low) }}°C</div>
+                    <div class="font-medium text-gray-900">
+                      {{ (day.high !== null && !isNaN(day.high)) ? Math.round(day.high) + '°C' : '--' }}
+                    </div>
+                    <div class="text-sm text-gray-600">
+                      {{ (day.low !== null && !isNaN(day.low)) ? Math.round(day.low) + '°C' : '--' }}
+                    </div>
                   </div>
                   <div class="text-right text-sm text-gray-600">
-                    <div>{{ Math.round(day.rain_chance) }}% rain</div>
-                    <div>{{ Math.round(day.wind_speed * 3.6) }} km/h</div>
+                    <div>
+                      {{ (day.rain_chance !== null && !isNaN(day.rain_chance)) ? Math.round(day.rain_chance) + '%' : '--' }} rain
+                    </div>
+                    <div>
+                      {{ (day.wind_speed !== null && !isNaN(day.wind_speed)) ? Math.round(day.wind_speed * 3.6) + ' km/h' : '--' }}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -47,6 +47,7 @@ class PlantingController extends Controller
             'growth_duration' => 'nullable|integer|min:30|max:240',
             'planting_method' => 'nullable|string|in:direct_seeding,transplanting,broadcasting,broadcast',
             'seed_rate' => 'nullable|numeric|min:0',
+            'seed_unit' => 'nullable|string|max:50',
             'seed_quantity' => 'nullable|numeric|min:0',
             'area_planted' => 'nullable|numeric|min:0',
             'season' => 'nullable|string|in:wet,dry',
@@ -115,6 +116,7 @@ class PlantingController extends Controller
             'status' => $status,
             'planting_method' => $this->normalizePlantingMethod($request->input('planting_method')),
             'seed_rate' => $seedRate,
+            'seed_unit' => $request->seed_unit,
             'area_planted' => $areaPlanted,
             'season' => $season,
             'notes' => $request->notes,
@@ -181,6 +183,7 @@ class PlantingController extends Controller
             'growth_duration' => 'nullable|integer|min:30|max:240',
             'planting_method' => 'nullable|string|in:direct_seeding,transplanting,broadcasting',
             'seed_rate' => 'nullable|numeric|min:0',
+            'seed_unit' => 'nullable|string|max:50',
             'area_planted' => 'nullable|numeric|min:0',
             'season' => 'nullable|string|in:wet,dry',
             'status' => 'nullable|string|in:planned,planted,growing,ready,harvested,failed',
@@ -234,6 +237,10 @@ class PlantingController extends Controller
 
         if ($request->has('seed_rate')) {
             $data['seed_rate'] = $request->seed_rate;
+        }
+
+        if ($request->has('seed_unit')) {
+            $data['seed_unit'] = $request->seed_unit;
         }
 
         if ($request->has('area_planted')) {

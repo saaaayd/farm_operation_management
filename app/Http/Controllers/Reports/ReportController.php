@@ -38,7 +38,7 @@ class ReportController extends Controller
     {
         $user = Auth::user();
         $farms = Farm::where('user_id', $user->id)->get();
-        
+
         return response()->json([
             'farms' => $farms,
             'available_reports' => [
@@ -75,11 +75,11 @@ class ReportController extends Controller
             case 'summary':
                 $report = $this->financialService->generateFinancialReport($farmId, $startDate, $endDate, 'summary');
                 break;
-                
+
             case 'detailed':
                 $report = $this->financialService->generateFinancialReport($farmId, $startDate, $endDate, 'detailed');
                 break;
-                
+
             case 'trends':
                 $months = $startDate->diffInMonths($endDate) + 1;
                 $report = [
@@ -88,7 +88,7 @@ class ReportController extends Controller
                     'kpis' => $this->financialService->getFinancialKPIs($farmId, $startDate->diffInDays($endDate)),
                 ];
                 break;
-                
+
             case 'budget_analysis':
                 // This would require budget data from the request
                 $budgetData = $request->budget_data ?? [];
@@ -125,27 +125,27 @@ class ReportController extends Controller
                     'categories' => $this->inventoryService->getCategories(),
                 ];
                 break;
-                
+
             case 'detailed':
                 $report = [
                     'items' => $this->inventoryService->getUserInventory($userId),
                     'stats' => $this->inventoryService->getInventoryStats($userId),
                 ];
                 break;
-                
+
             case 'low_stock':
                 $report = [
                     'low_stock_items' => $this->inventoryService->getLowStockItems($userId),
                     'recommendations' => 'Review minimum stock levels and consider reordering items below threshold.',
                 ];
                 break;
-                
+
             case 'valuation':
                 $items = $this->inventoryService->getUserInventory($userId);
                 $totalValue = $items->sum(function ($item) {
                     return $item->quantity * $item->price;
                 });
-                
+
                 $report = [
                     'total_inventory_value' => $totalValue,
                     'items_by_value' => $items->sortByDesc(function ($item) {
@@ -191,35 +191,35 @@ class ReportController extends Controller
                     'cost_summary' => $this->laborService->getLaborCostSummary($farmId, $periodDays),
                 ];
                 break;
-                
+
             case 'detailed':
                 $laborers = $this->laborService->getLaborers($farmId);
                 $detailedReport = [];
-                
+
                 foreach ($laborers as $laborer) {
                     $detailedReport[] = [
                         'laborer' => $laborer,
                         'wages' => $this->laborService->getLaborerWages($laborer->id, $periodDays),
                     ];
                 }
-                
+
                 $report = [
                     'detailed_laborers' => $detailedReport,
                     'period_days' => $periodDays,
                 ];
                 break;
-                
+
             case 'productivity':
                 $report = [
                     'productivity_metrics' => $this->laborService->getLaborProductivity($farmId, $periodDays),
                     'available_laborers' => $this->laborService->getAvailableLaborers($farmId),
                 ];
                 break;
-                
+
             case 'costs':
                 $startDate = now()->subDays($periodDays);
                 $endDate = now();
-                
+
                 $report = [
                     'cost_analysis' => $this->laborService->calculateLaborCost($farmId, $startDate, $endDate),
                     'cost_summary' => $this->laborService->getLaborCostSummary($farmId, $periodDays),
@@ -260,21 +260,21 @@ class ReportController extends Controller
                     'latest_weather' => $field->latestWeather,
                 ];
                 break;
-                
+
             case 'analytics':
                 $report = [
                     'rice_analytics' => $this->weatherService->getRiceWeatherAnalytics($field, $periodDays),
                     'weather_stats' => $this->weatherService->getFieldWeatherStats($field, $periodDays),
                 ];
                 break;
-                
+
             case 'alerts':
                 $report = [
                     'current_alerts' => $this->weatherService->getWeatherAlerts($field),
                     'field_info' => $field,
                 ];
                 break;
-                
+
             case 'recommendations':
                 $report = [
                     'recommendations' => $this->weatherService->getRiceFarmingRecommendations($field),
@@ -306,22 +306,22 @@ class ReportController extends Controller
         $endDate = Carbon::parse($request->end_date);
 
         $farm = Farm::findOrFail($farmId);
-        
+
         // Get plantings in the period
         $plantings = \App\Models\Planting::whereHas('field', function ($q) use ($farmId) {
             $q->where('farm_id', $farmId);
         })
-        ->whereBetween('planting_date', [$startDate, $endDate])
-        ->with(['field', 'harvests', 'expenses', 'plantingStages.riceGrowthStage'])
-        ->get();
+            ->whereBetween('planting_date', [$startDate, $endDate])
+            ->with(['field', 'harvests', 'expenses', 'plantingStages.riceGrowthStage'])
+            ->get();
 
         // Get harvests in the period
         $harvests = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($farmId) {
             $q->where('farm_id', $farmId);
         })
-        ->whereBetween('harvest_date', [$startDate, $endDate])
-        ->with(['planting.field', 'sales'])
-        ->get();
+            ->whereBetween('harvest_date', [$startDate, $endDate])
+            ->with(['planting.field', 'sales'])
+            ->get();
 
         $report = [
             'farm' => $farm,
@@ -336,17 +336,25 @@ class ReportController extends Controller
                     return $planting->field->size_hectares;
                 }),
                 'total_yield' => $harvests->sum('yield_kg'),
-                'average_yield_per_hectare' => $plantings->count() > 0 ? 
-                    $harvests->sum('yield_kg') / $plantings->sum(function ($p) { return $p->field->size_hectares; }) : 0,
+                'average_yield_per_hectare' => $plantings->count() > 0 ?
+                    $harvests->sum('yield_kg') / $plantings->sum(function ($p) {
+                        return $p->field->size_hectares;
+                    }) : 0,
             ],
             'crop_breakdown' => $plantings->groupBy('crop_type')->map(function ($cropPlantings) {
                 $cropHarvests = $cropPlantings->flatMap->harvests;
                 return [
                     'plantings_count' => $cropPlantings->count(),
-                    'total_area' => $cropPlantings->sum(function ($p) { return $p->field->size_hectares; }),
+                    'total_area' => $cropPlantings->sum(function ($p) {
+                        return $p->field->size_hectares;
+                    }),
                     'total_yield' => $cropHarvests->sum('yield_kg'),
-                    'average_yield_per_hectare' => $cropPlantings->sum(function ($p) { return $p->field->size_hectares; }) > 0 ?
-                        $cropHarvests->sum('yield_kg') / $cropPlantings->sum(function ($p) { return $p->field->size_hectares; }) : 0,
+                    'average_yield_per_hectare' => $cropPlantings->sum(function ($p) {
+                        return $p->field->size_hectares;
+                    }) > 0 ?
+                        $cropHarvests->sum('yield_kg') / $cropPlantings->sum(function ($p) {
+                            return $p->field->size_hectares;
+                        }) : 0,
                 ];
             }),
             'plantings' => $plantings,
@@ -463,7 +471,7 @@ class ReportController extends Controller
     private function getReportData($type, $userId, $period)
     {
         $startDate = now()->subDays($period);
-        
+
         switch ($type) {
             case 'financial':
                 return $this->getFinancialReportData($userId, $startDate);
@@ -480,13 +488,13 @@ class ReportController extends Controller
     {
         // Get user's farm
         $farm = \App\Models\Farm::where('user_id', $userId)->first();
-        
+
         if (!$farm) {
             return ['message' => 'No farm found for user'];
         }
 
         $endDate = now();
-        
+
         // Get financial data directly
         $expenses = \App\Models\Expense::where('user_id', $userId)
             ->where('date', '>=', $startDate)
@@ -519,9 +527,9 @@ class ReportController extends Controller
         $plantings = \App\Models\Planting::whereHas('field', function ($query) use ($userId) {
             $query->where('user_id', $userId);
         })
-        ->where('planting_date', '>=', $startDate)
-        ->with(['harvests', 'field', 'riceVariety'])
-        ->get();
+            ->where('planting_date', '>=', $startDate)
+            ->with(['harvests', 'field', 'riceVariety'])
+            ->get();
 
         $yieldData = [];
         foreach ($plantings as $planting) {
@@ -556,10 +564,10 @@ class ReportController extends Controller
                 'period_days' => now()->diffInDays($startDate),
                 'report_type' => 'summary',
             ]);
-            
+
             $response = $this->generateWeatherReport($request);
             $data = json_decode($response->getContent(), true);
-            
+
             if (isset($data['report'])) {
                 $weatherData[] = [
                     'field_name' => $field->name,
@@ -597,7 +605,7 @@ class ReportController extends Controller
 
             // Generate Excel using Laravel Excel
             $exportClass = $this->getExportClass($reportType);
-            
+
             if (!$exportClass) {
                 return response()->json([
                     'message' => 'Export class not found for report type: ' . $reportType,
@@ -606,7 +614,7 @@ class ReportController extends Controller
             }
 
             $filename = 'report-' . $reportType . '-' . now()->format('Y-m-d') . '.xlsx';
-            
+
             return \Maatwebsite\Excel\Facades\Excel::download(
                 new $exportClass($reportData),
                 $filename
@@ -624,21 +632,21 @@ class ReportController extends Controller
     private function exportToCsv($data, $reportType)
     {
         $filename = 'report-' . $reportType . '-' . now()->format('Y-m-d') . '.csv';
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($data) {
+        $callback = function () use ($data) {
             $file = fopen('php://output', 'w');
-            
+
             // Write headers if data is structured
             if (is_array($data) && !empty($data)) {
                 if (isset($data[0]) && is_array($data[0])) {
                     fputcsv($file, array_keys($data[0]));
                 }
-                
+
                 // Write data rows
                 foreach ($data as $row) {
                     if (is_array($row)) {
@@ -646,7 +654,7 @@ class ReportController extends Controller
                     }
                 }
             }
-            
+
             fclose($file);
         };
 
@@ -662,7 +670,7 @@ class ReportController extends Controller
         ];
 
         $className = $classes[$reportType] ?? null;
-        
+
         if ($className && class_exists($className)) {
             return $className;
         }
@@ -740,7 +748,7 @@ class ReportController extends Controller
             $monthRevenue = $sales->filter(function ($sale) use ($monthKey) {
                 return Carbon::parse($sale->sale_date)->format('Y-m') === $monthKey;
             })->sum('total_amount');
-            
+
             $monthlyRevenue[] = [
                 'month' => $currentDate->format('M Y'),
                 'revenue' => $monthRevenue,
@@ -801,12 +809,12 @@ class ReportController extends Controller
         $harvests = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         })
-        ->whereBetween('harvest_date', [$startDate, $endDate])
-        ->with(['planting.field', 'planting.riceVariety'])
-        ->get();
+            ->whereBetween('harvest_date', [$startDate, $endDate])
+            ->with(['planting.field', 'planting.riceVariety'])
+            ->get();
 
         $totalYield = $harvests->sum('yield');
-        
+
         // Get total area from fields
         $fields = \App\Models\Field::where('user_id', $user->id)->get();
         $totalArea = $fields->sum('size_hectares') ?: $fields->sum('size');
@@ -817,8 +825,8 @@ class ReportController extends Controller
         $previousHarvests = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         })
-        ->whereBetween('harvest_date', [$previousStartDate, $startDate])
-        ->get();
+            ->whereBetween('harvest_date', [$previousStartDate, $startDate])
+            ->get();
         $previousTotalYield = $previousHarvests->sum('yield');
         $yieldIncrease = $previousTotalYield > 0 ? (($totalYield - $previousTotalYield) / $previousTotalYield) * 100 : 0;
 
@@ -847,7 +855,7 @@ class ReportController extends Controller
             });
             $totalYield = $cropHarvests->sum('yield');
             $yieldPerHectare = $totalArea > 0 ? $totalYield / $totalArea : 0;
-            
+
             // Get average market price from sales
             $sales = $cropHarvests->flatMap->sales;
             $marketPrice = $sales->count() > 0 ? $sales->avg('price_per_unit') : 0;
@@ -871,7 +879,7 @@ class ReportController extends Controller
             $monthYield = $harvests->filter(function ($harvest) use ($monthKey) {
                 return Carbon::parse($harvest->harvest_date)->format('Y-m') === $monthKey;
             })->sum('yield');
-            
+
             $monthlyYield[] = [
                 'month' => $currentDate->format('M Y'),
                 'yield' => $monthYield,
@@ -904,8 +912,14 @@ class ReportController extends Controller
         $days = min($period, 365); // Limit to 365 days for weather data
 
         // Get user's fields
-        $fields = \App\Models\Field::where('user_id', $user->id)->get();
-        
+        $fieldsQuery = \App\Models\Field::where('user_id', $user->id);
+
+        if ($request->has('field_id') && $request->field_id) {
+            $fieldsQuery->where('id', $request->field_id);
+        }
+
+        $fields = $fieldsQuery->get();
+
         if ($fields->isEmpty()) {
             return response()->json([
                 'data' => [
@@ -938,16 +952,20 @@ class ReportController extends Controller
         $avgTemperature = $weatherData->avg('temperature') ?: 0;
         $avgHumidity = $weatherData->avg('humidity') ?: 0;
         $avgWindSpeed = $weatherData->avg('wind_speed') ?: 0;
-        
+
         // Estimate rainfall from conditions (rainy/stormy conditions)
         $rainyDays = $weatherData->filter(function ($record) {
             return in_array($record->conditions, ['rainy', 'stormy']);
+        })->unique(function ($record) {
+            return Carbon::parse($record->recorded_at)->format('Y-m-d');
         })->count();
         $estimatedRainfall = $rainyDays * 5; // Rough estimate: 5mm per rainy day
-        
+
         // Estimate sunshine hours (clear days = more sunshine)
         $clearDays = $weatherData->filter(function ($record) {
             return $record->conditions === 'clear';
+        })->unique(function ($record) {
+            return Carbon::parse($record->recorded_at)->format('Y-m-d');
         })->count();
         $estimatedSunshineHours = $clearDays * 8; // Rough estimate: 8 hours per clear day
 
@@ -1008,17 +1026,37 @@ class ReportController extends Controller
         // Weather events (significant weather occurrences)
         $weatherEvents = [];
         $significantEvents = $weatherData->filter(function ($record) {
-            return in_array($record->conditions, ['stormy', 'rainy']) || 
-                   ($record->wind_speed ?? 0) > 15 ||
-                   ($record->temperature ?? 0) > 35 ||
-                   ($record->temperature ?? 0) < 5;
-        })->take(5);
-        
+            return in_array($record->conditions, ['stormy', 'rainy']) ||
+                ($record->wind_speed ?? 0) > 15 ||
+                ($record->temperature ?? 0) > 35 ||
+                ($record->temperature ?? 0) < 5;
+        })
+            ->groupBy(function ($record) {
+                return Carbon::parse($record->recorded_at)->format('Y-m-d');
+            })
+            ->map(function ($dayRecords) {
+                // Pick the most significant event for the day
+                // Priority: Storm > Wind > Heat/Cold > Rain
+                // Sort by arbitrary priority or specific metrics
+                return $dayRecords->sortByDesc(function ($record) {
+                    if ($record->conditions === 'stormy')
+                        return 100;
+                    if (($record->wind_speed ?? 0) > 15)
+                        return 80;
+                    if (($record->temperature ?? 0) > 35)
+                        return 60;
+                    if (($record->temperature ?? 0) < 5)
+                        return 60;
+                    return 40;
+                })->first();
+            })
+            ->take(5);
+
         foreach ($significantEvents as $record) {
             $eventType = 'weather';
             $title = 'Weather Event';
             $description = '';
-            
+
             if ($record->conditions === 'stormy') {
                 $eventType = 'storm';
                 $title = 'Storm Warning';
@@ -1040,7 +1078,7 @@ class ReportController extends Controller
                 $title = 'Low Temperature';
                 $description = 'Temperature dropped to ' . round($record->temperature ?? 0, 1) . '°C';
             }
-            
+
             $weatherEvents[] = [
                 'id' => 'event_' . ($record->id ?? uniqid()),
                 'type' => $eventType,
@@ -1053,6 +1091,31 @@ class ReportController extends Controller
             ];
         }
 
+        // Daily History (Unified table data)
+        $dailyHistory = $weatherData->groupBy(function ($record) {
+            return Carbon::parse($record->recorded_at)->format('Y-m-d');
+        })->map(function ($dayRecords, $date) {
+            $avgTemp = $dayRecords->avg('temperature') ?: 0;
+            $avgHumidity = $dayRecords->avg('humidity') ?: 0;
+            $avgWind = $dayRecords->avg('wind_speed') ?: 0;
+
+            // Estimate rainfall (same logic as summary)
+            $estimatedRainfall = $avgHumidity > 80 ? ($avgHumidity - 70) * 0.5 : 0;
+
+            // Determine dominant condition
+            $conditionCounts = $dayRecords->groupBy('conditions')->map->count();
+            $dominantCondition = $conditionCounts->sortDesc()->keys()->first() ?: 'Unknown';
+
+            return [
+                'date' => $date,
+                'temperature' => round($avgTemp, 1),
+                'rainfall' => round($estimatedRainfall, 1),
+                'wind_speed' => round($avgWind, 1),
+                'humidity' => round($avgHumidity, 0),
+                'condition' => $dominantCondition,
+            ];
+        })->sortByDesc('date')->values();
+
         return response()->json([
             'data' => [
                 'weather_summary' => [
@@ -1063,6 +1126,7 @@ class ReportController extends Controller
                 ],
                 'temperature_trends' => $temperatureTrends,
                 'rainfall_distribution' => $humidityDistribution,
+                'daily_history' => $dailyHistory,
                 'gdd_data' => [
                     'today' => round($todayGDD, 1),
                     'week' => round($weekGDD, 1),

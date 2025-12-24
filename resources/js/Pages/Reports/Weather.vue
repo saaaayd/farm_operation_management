@@ -22,7 +22,6 @@
           </button>
         </div>
       </div>
-
       <!-- Filters -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-lg font-semibold mb-4">Report Filters</h2>
@@ -46,9 +45,9 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Fields</option>
-              <option value="north">North Field</option>
-              <option value="south">South Field</option>
-              <option value="east">East Field</option>
+              <option v-for="field in fields" :key="field.id" :value="field.id">
+                {{ field.name }}
+              </option>
             </select>
           </div>
           <div>
@@ -216,6 +215,44 @@
         </div>
       </div>
 
+      <!-- Historical Weather Data -->
+      <div class="mt-8">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Historical Weather Data</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rainfall (mm)</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Humidity (%)</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wind (km/h)</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-if="dailyHistory.length === 0">
+                  <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No historical data available for this period.
+                  </td>
+                </tr>
+                <tr v-for="day in dailyHistory" :key="day.date">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDate(day.date) }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{{ day.condition }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ day.temperature }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ day.rainfall }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ day.humidity }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ day.wind_speed }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Weather Impact Analysis -->
       <div class="mt-8">
         <div class="bg-white rounded-lg shadow-md p-6">
@@ -278,9 +315,11 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { reportsAPI } from '@/services/api'
+import { reportsAPI, fieldsAPI } from '@/services/api'
 import LineChart from '@/Components/Charts/LineChart.vue'
 import BarChart from '@/Components/Charts/BarChart.vue'
+
+const fields = ref([])
 
 const dateRange = ref('last30days')
 const selectedField = ref('')
@@ -302,7 +341,10 @@ const gddData = ref({
   season: 0
 })
 
+
+
 const weatherEvents = ref([])
+const dailyHistory = ref([])
 
 const getEventIcon = (type) => {
   const icons = {
@@ -438,7 +480,7 @@ const loadWeatherData = async () => {
     }
     const period = periodMap[dateRange.value] || 30
     
-    const response = await reportsAPI.getWeatherReport(period)
+    const response = await reportsAPI.getWeatherReport(period, selectedField.value === 'all' ? null : selectedField.value)
     const data = response.data.data || response.data
     
     if (data.weather_summary) {
@@ -470,6 +512,12 @@ const loadWeatherData = async () => {
     if (data.weather_events) {
       weatherEvents.value = data.weather_events
     }
+
+    if (data.daily_history) {
+      dailyHistory.value = data.daily_history
+    } else {
+      dailyHistory.value = []
+    }
   } catch (error) {
     console.error('Error loading weather data:', error)
     alert('Failed to load weather data')
@@ -478,7 +526,22 @@ const loadWeatherData = async () => {
   }
 }
 
-onMounted(() => {
+import { useRoute } from 'vue-router'
+
+onMounted(async () => {
+  const route = useRoute()
+  if (route.query.field) {
+    selectedField.value = parseInt(route.query.field) || route.query.field
+  }
+  
+  // Load fields for dropdown
+  try {
+    const response = await fieldsAPI.getAll()
+    fields.value = response.data.data || response.data
+  } catch (error) {
+    console.error('Failed to load fields:', error)
+  }
+  
   loadWeatherData()
 })
 </script>

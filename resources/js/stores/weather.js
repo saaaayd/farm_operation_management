@@ -14,7 +14,7 @@ export const useWeatherStore = defineStore('weather', {
   getters: {
     hasWeatherData: (state) => !!state.currentWeather,
     criticalAlerts: (state) => state.alerts.filter(alert => alert.severity === 'critical'),
-    weatherWarnings: (state) => state.alerts.filter(alert => 
+    weatherWarnings: (state) => state.alerts.filter(alert =>
       [
         'heavy_rain',
         'drought',
@@ -66,7 +66,12 @@ export const useWeatherStore = defineStore('weather', {
       this.loading = true;
       try {
         const response = await axios.get(`/api/weather/fields/${fieldId}/history?days=${days}`);
-        this.weatherHistory = response.data.history;
+        // Handle paginated or direct response structure
+        if (response.data.weather_logs) {
+          this.weatherHistory = response.data.weather_logs.data || response.data.weather_logs;
+        } else {
+          this.weatherHistory = response.data.data || response.data.history || [];
+        }
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch weather history';

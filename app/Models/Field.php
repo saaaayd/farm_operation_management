@@ -46,6 +46,10 @@ class Field extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'available_area',
+    ];
+
     /**
      * Get the user that owns the field
      */
@@ -106,13 +110,13 @@ class Field extends Model
     {
         // Rice typically grows well in pH 5.5-7.0
         $phSuitable = $this->soil_ph >= 5.5 && $this->soil_ph <= 7.0;
-        
+
         // Need good water access for rice
         $waterSuitable = $this->water_access === 'good' || $this->water_access === 'excellent';
-        
+
         // Drainage should be controllable for rice
         $drainageSuitable = in_array($this->drainage_quality, ['good', 'moderate']);
-        
+
         return $phSuitable && $waterSuitable && $drainageSuitable;
     }
 
@@ -122,7 +126,7 @@ class Field extends Model
     public function getSoilFertilityStatus()
     {
         $scores = [];
-        
+
         // pH score (optimal 6.0-6.8 for rice)
         if ($this->soil_ph >= 6.0 && $this->soil_ph <= 6.8) {
             $scores['ph'] = 'optimal';
@@ -154,9 +158,12 @@ class Field extends Model
      */
     private function assessNutrientLevel($level)
     {
-        if ($level >= 30) return 'high';
-        if ($level >= 15) return 'medium';
-        if ($level >= 5) return 'low';
+        if ($level >= 30)
+            return 'high';
+        if ($level >= 15)
+            return 'medium';
+        if ($level >= 5)
+            return 'low';
         return 'very_low';
     }
 
@@ -166,7 +173,7 @@ class Field extends Model
     public function getRecommendedRiceVarieties()
     {
         $currentSeason = (now()->month >= 5 && now()->month <= 10) ? 'wet' : 'dry';
-        
+
         return RiceVariety::active()
             ->bySeason($currentSeason)
             ->get()
@@ -175,12 +182,12 @@ class Field extends Model
                 if (!$this->isSuitableForRice()) {
                     return false;
                 }
-                
+
                 // Filter by resistance level if soil conditions are challenging
                 if ($this->soil_ph < 5.8 || $this->soil_ph > 7.0) {
                     return $variety->resistance_level === 'high';
                 }
-                
+
                 return true;
             });
     }
@@ -296,11 +303,11 @@ class Field extends Model
         if ($fertility['nitrogen'] === 'low' || $fertility['nitrogen'] === 'very_low') {
             $recommendations[] = 'Apply nitrogen fertilizer before planting';
         }
-        
+
         if ($fertility['phosphorus'] === 'low' || $fertility['phosphorus'] === 'very_low') {
             $recommendations[] = 'Apply phosphorus fertilizer to improve root development';
         }
-        
+
         if ($fertility['potassium'] === 'low' || $fertility['potassium'] === 'very_low') {
             $recommendations[] = 'Apply potassium fertilizer for better disease resistance';
         }
@@ -315,5 +322,19 @@ class Field extends Model
         }
 
         return $recommendations;
+    }
+    /**
+     * Get available area for planting
+     */
+    public function getAvailableAreaAttribute()
+    {
+        // Calculate used area from active plantings
+        $usedArea = $this->plantings
+            ->filter(function ($planting) {
+                return in_array($planting->status, ['planned', 'planted', 'growing', 'ready']);
+            })
+            ->sum('area_planted');
+
+        return max(0, $this->size - $usedArea);
     }
 }

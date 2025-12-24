@@ -376,7 +376,11 @@ export const analyticsAPI = {
 export const reportsAPI = {
   getFinancialReport: (period = '365') => api.get(`/reports/financial?period=${period}`),
   getCropYieldReport: (period = '365') => api.get(`/reports/crop-yield?period=${period}`),
-  getWeatherReport: (period = '365') => api.get(`/reports/weather?period=${period}`),
+  getWeatherReport: (period = '365', fieldId = null) => {
+    let url = `/reports/weather?period=${period}`;
+    if (fieldId) url += `&field_id=${fieldId}`;
+    return api.get(url);
+  },
   getLaborCostReport: (period = '365') => api.get(`/reports/labor-cost?period=${period}`),
   getInventoryUsageReport: (period = '365') => api.get(`/reports/inventory-usage?period=${period}`),
 };
