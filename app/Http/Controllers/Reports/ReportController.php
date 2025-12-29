@@ -805,18 +805,40 @@ class ReportController extends Controller
         $startDate = now()->subDays($period);
         $endDate = now();
 
-        // Get harvests
-        $harvests = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($user) {
+        // Get filter parameters
+        $cropFilter = $request->get('crop', '');
+        $fieldFilter = $request->get('field', '');
+
+        // Get harvests with filters
+        $harvestsQuery = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($user, $fieldFilter) {
             $q->where('user_id', $user->id);
+            if ($fieldFilter) {
+                $q->where('id', $fieldFilter);
+            }
         })
             ->whereBetween('harvest_date', [$startDate, $endDate])
-            ->with(['planting.field', 'planting.riceVariety'])
-            ->get();
+            ->with(['planting.field', 'planting.riceVariety']);
+
+        // Apply crop filter
+        if ($cropFilter) {
+            $harvestsQuery->whereHas('planting', function ($q) use ($cropFilter) {
+                $q->where('rice_variety_id', $cropFilter)
+                    ->orWhereHas('riceVariety', function ($rq) use ($cropFilter) {
+                        $rq->where('name', 'like', "%{$cropFilter}%");
+                    });
+            });
+        }
+
+        $harvests = $harvestsQuery->get();
 
         $totalYield = $harvests->sum('yield');
 
-        // Get total area from fields
-        $fields = \App\Models\Field::where('user_id', $user->id)->get();
+        // Get total area from fields (apply filter if specified)
+        $fieldsQuery = \App\Models\Field::where('user_id', $user->id);
+        if ($fieldFilter) {
+            $fieldsQuery->where('id', $fieldFilter);
+        }
+        $fields = $fieldsQuery->get();
         $totalArea = $fields->sum('size_hectares') ?: $fields->sum('size');
         $avgYieldPerHectare = $totalArea > 0 ? $totalYield / $totalArea : 0;
 
@@ -1135,6 +1157,70 @@ class ReportController extends Controller
                 ],
                 'weather_events' => $weatherEvents,
             ],
+        ]);
+    }
+
+    /**
+     * Get filter options for crop yield report
+     */
+    public function getCropYieldFilterOptions()
+    {
+        $user = Auth::user();
+
+        // Get available seasons/years from harvests
+        $harvestYears = \App\Models\Harvest::whereHas('planting.field', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })
+            ->selectRaw('EXTRACT(YEAR FROM harvest_date) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year')
+            ->filter()
+            ->values();
+
+        // If no harvests, include current year and previous 2 years
+        if ($harvestYears->isEmpty()) {
+            $currentYear = now()->year;
+            $harvestYears = collect([$currentYear, $currentYear - 1, $currentYear - 2]);
+        }
+
+        $seasons = $harvestYears->map(function ($year) {
+            return [
+                'value' => (string) $year,
+                'label' => "{$year} Season"
+            ];
+        });
+
+        // Get available crop types (rice varieties)
+        $riceVarieties = \App\Models\RiceVariety::active()
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($variety) {
+                return [
+                    'value' => (string) $variety->id,
+                    'label' => $variety->name
+                ];
+            });
+
+        // Get user's fields  
+        $fields = \App\Models\Field::where('user_id', $user->id)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($field) {
+                return [
+                    'value' => (string) $field->id,
+                    'label' => $field->name
+                ];
+            });
+
+        return response()->json([
+            'data' => [
+                'seasons' => $seasons,
+                'crops' => $riceVarieties,
+                'fields' => $fields,
+            ]
         ]);
     }
 }

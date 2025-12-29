@@ -375,7 +375,16 @@ export const analyticsAPI = {
 // Reports API
 export const reportsAPI = {
   getFinancialReport: (period = '365') => api.get(`/reports/financial?period=${period}`),
-  getCropYieldReport: (period = '365') => api.get(`/reports/crop-yield?period=${period}`),
+  getCropYieldReport: (params = {}) => {
+    const period = params.period || '365';
+    const crop = params.crop || '';
+    const field = params.field || '';
+    let url = `/reports/crop-yield?period=${period}`;
+    if (crop) url += `&crop=${crop}`;
+    if (field) url += `&field=${field}`;
+    return api.get(url);
+  },
+  getCropYieldFilterOptions: () => api.get('/reports/crop-yield/filter-options'),
   getWeatherReport: (period = '365', fieldId = null) => {
     let url = `/reports/weather?period=${period}`;
     if (fieldId) url += `&field_id=${fieldId}`;

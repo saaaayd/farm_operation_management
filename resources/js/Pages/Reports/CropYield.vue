@@ -32,10 +32,11 @@
             <select
               v-model="selectedSeason"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isLoadingFilters"
             >
-              <option value="2024">2024 Season</option>
-              <option value="2023">2023 Season</option>
-              <option value="2022">2022 Season</option>
+              <option v-for="season in seasonOptions" :key="season.value" :value="season.value">
+                {{ season.label }}
+              </option>
             </select>
           </div>
           <div>
@@ -43,12 +44,12 @@
             <select
               v-model="selectedCrop"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isLoadingFilters"
             >
               <option value="">All Crops</option>
-              <option value="corn">Corn</option>
-              <option value="wheat">Wheat</option>
-              <option value="soybeans">Soybeans</option>
-              <option value="rice">Rice</option>
+              <option v-for="crop in cropOptions" :key="crop.value" :value="crop.value">
+                {{ crop.label }}
+              </option>
             </select>
           </div>
           <div>
@@ -56,23 +57,26 @@
             <select
               v-model="selectedField"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isLoadingFilters"
             >
               <option value="">All Fields</option>
-              <option value="north">North Field</option>
-              <option value="south">South Field</option>
-              <option value="east">East Field</option>
+              <option v-for="field in fieldOptions" :key="field.value" :value="field.value">
+                {{ field.label }}
+              </option>
             </select>
           </div>
           <div class="flex items-end">
             <button
               @click="updateReport"
               class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isLoadingFilters"
             >
               Update Report
             </button>
           </div>
         </div>
       </div>
+
 
       <!-- Yield Summary -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -287,9 +291,15 @@ import { formatCurrency } from '@/utils/format'
 import { reportsAPI } from '@/services/api'
 import LineChart from '@/Components/Charts/LineChart.vue'
 
-const selectedSeason = ref('2024')
+const selectedSeason = ref('')
 const selectedCrop = ref('')
 const selectedField = ref('')
+
+// Filter options from API
+const seasonOptions = ref([])
+const cropOptions = ref([])
+const fieldOptions = ref([])
+const isLoadingFilters = ref(false)
 
 const yieldSummary = ref({
   totalYield: 0,
@@ -382,15 +392,70 @@ const yieldChartData = computed(() => {
   }
 })
 
-onMounted(() => {
-  // Load crop yield data from API
-  loadYieldData()
+onMounted(async () => {
+  // Load filter options first, then yield data
+  await loadFilterOptions()
+  await loadYieldData()
 })
+
+const loadFilterOptions = async () => {
+  isLoadingFilters.value = true
+  try {
+    const response = await reportsAPI.getCropYieldFilterOptions()
+    const data = response.data.data || response.data
+    
+    if (data.seasons && data.seasons.length > 0) {
+      seasonOptions.value = data.seasons
+      // Set default to first (most recent) season if not already set
+      if (!selectedSeason.value) {
+        selectedSeason.value = data.seasons[0].value
+      }
+    } else {
+      // Fallback to current year if no data
+      const currentYear = new Date().getFullYear()
+      seasonOptions.value = [
+        { value: String(currentYear), label: `${currentYear} Season` },
+        { value: String(currentYear - 1), label: `${currentYear - 1} Season` },
+        { value: String(currentYear - 2), label: `${currentYear - 2} Season` }
+      ]
+      selectedSeason.value = String(currentYear)
+    }
+    
+    if (data.crops) {
+      cropOptions.value = data.crops
+    }
+    
+    if (data.fields) {
+      fieldOptions.value = data.fields
+    }
+  } catch (error) {
+    console.error('Error loading filter options:', error)
+    // Set fallback options on error
+    const currentYear = new Date().getFullYear()
+    seasonOptions.value = [
+      { value: String(currentYear), label: `${currentYear} Season` },
+      { value: String(currentYear - 1), label: `${currentYear - 1} Season` },
+      { value: String(currentYear - 2), label: `${currentYear - 2} Season` }
+    ]
+    selectedSeason.value = String(currentYear)
+  } finally {
+    isLoadingFilters.value = false
+  }
+}
 
 const loadYieldData = async () => {
   try {
-    const period = selectedSeason.value === '2024' ? 365 : selectedSeason.value === '2023' ? 730 : 1095
-    const response = await reportsAPI.getCropYieldReport(period)
+    // Calculate period based on selected season
+    const currentYear = new Date().getFullYear()
+    const selectedYear = parseInt(selectedSeason.value) || currentYear
+    const yearsAgo = currentYear - selectedYear
+    const period = Math.max(365, (yearsAgo + 1) * 365)
+    
+    const response = await reportsAPI.getCropYieldReport({
+      period,
+      crop: selectedCrop.value,
+      field: selectedField.value
+    })
     const data = response.data.data || response.data
     
     if (data.yield_summary) {
