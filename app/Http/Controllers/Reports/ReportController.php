@@ -143,17 +143,17 @@ class ReportController extends Controller
             case 'valuation':
                 $items = $this->inventoryService->getUserInventory($userId);
                 $totalValue = $items->sum(function ($item) {
-                    return $item->quantity * $item->price;
+                    return ($item->current_stock ?? 0) * ($item->unit_price ?? 0);
                 });
 
                 $report = [
                     'total_inventory_value' => $totalValue,
                     'items_by_value' => $items->sortByDesc(function ($item) {
-                        return $item->quantity * $item->price;
+                        return ($item->current_stock ?? 0) * ($item->unit_price ?? 0);
                     })->values(),
                     'category_values' => $items->groupBy('category')->map(function ($categoryItems) {
                         return $categoryItems->sum(function ($item) {
-                            return $item->quantity * $item->price;
+                            return ($item->current_stock ?? 0) * ($item->unit_price ?? 0);
                         });
                     }),
                 ];

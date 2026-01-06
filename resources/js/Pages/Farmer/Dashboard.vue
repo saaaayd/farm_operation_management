@@ -498,10 +498,12 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
       // Fallback
       if (inventoryStore.items && Array.isArray(inventoryStore.items)) {
         return inventoryStore.items.filter(item => {
+           const currentStock = item.current_stock ?? item.quantity ?? 0;
+           const minStock = item.minimum_stock ?? item.min_stock ?? 0;
            return item && 
-           typeof item.quantity === 'number' && 
-           typeof item.min_stock === 'number' && 
-           item.quantity <= item.min_stock;
+           typeof currentStock === 'number' && 
+           typeof minStock === 'number' && 
+           currentStock <= minStock;
         });
       }
       return [];

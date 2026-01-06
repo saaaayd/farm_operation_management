@@ -83,12 +83,18 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async verifyPhone(phone, code) {
+    async verifyPhone(identifier, code) {
       this.loading = true;
       this.error = null;
 
       try {
-        const response = await axios.post('/api/verify-phone', { phone, code });
+        // Determine if identifier is email or phone
+        const isEmail = identifier && identifier.includes('@');
+        const payload = isEmail
+          ? { email: identifier, code }
+          : { phone: identifier, code };
+
+        const response = await axios.post('/api/verify-phone', payload);
 
         this.token = response.data.token;
         this.user = response.data.user;

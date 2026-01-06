@@ -52,7 +52,9 @@ class DashboardController extends Controller
                 ->where('status', Task::STATUS_PENDING)
                 ->where('due_date', '<', now())
                 ->count(),
-            'low_stock_items' => InventoryItem::where('quantity', '<=', 'min_stock')->count(),
+            'low_stock_items' => InventoryItem::where('user_id', $user->id)
+                ->whereColumn('current_stock', '<=', 'minimum_stock')
+                ->count(),
         ];
 
         // Recent activities

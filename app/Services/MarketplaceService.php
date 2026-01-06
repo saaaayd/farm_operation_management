@@ -19,7 +19,7 @@ class MarketplaceService
     public function getAvailableProducts($filters = [])
     {
         $query = InventoryItem::where('category', 'produce')
-            ->where('quantity', '>', 0)
+            ->where('current_stock', '>', 0)
             ->with(['user:id,name']);
 
         // Apply filters
@@ -32,11 +32,11 @@ class MarketplaceService
         }
 
         if (isset($filters['min_price'])) {
-            $query->where('price', '>=', $filters['min_price']);
+            $query->where('unit_price', '>=', $filters['min_price']);
         }
 
         if (isset($filters['max_price'])) {
-            $query->where('price', '<=', $filters['max_price']);
+            $query->where('unit_price', '<=', $filters['max_price']);
         }
 
         return $query->get()->map(function ($item) {
@@ -44,8 +44,8 @@ class MarketplaceService
                 'id' => $item->id,
                 'name' => $item->name,
                 'description' => $item->description,
-                'price' => $item->price,
-                'quantity' => $item->quantity,
+                'price' => $item->unit_price,
+                'quantity' => $item->current_stock,
                 'unit' => $item->unit,
                 'category' => $item->category,
                 'quality_grade' => $item->quality_grade ?? 'A',
@@ -64,7 +64,7 @@ class MarketplaceService
     public function createOrder($orderData, $buyerId)
     {
         DB::beginTransaction();
-        
+
         try {
             // Create order
             $order = Order::create([
@@ -81,7 +81,7 @@ class MarketplaceService
             // Create order items
             foreach ($orderData['items'] as $itemData) {
                 $inventoryItem = InventoryItem::find($itemData['id']);
-                
+
                 // Check if inventory item exists
                 if (!$inventoryItem) {
                     throw new MarketplaceException(
@@ -89,28 +89,28 @@ class MarketplaceService
                         $order->id ?? null
                     );
                 }
-                
+
                 // Check if sufficient stock is available
-                if ($inventoryItem->quantity < $itemData['quantity']) {
+                if (($inventoryItem->current_stock ?? 0) < $itemData['quantity']) {
                     throw new MarketplaceException(
-                        "Insufficient stock for {$inventoryItem->name}. Available: {$inventoryItem->quantity}, Requested: {$itemData['quantity']}",
+                        "Insufficient stock for {$inventoryItem->name}. Available: {$inventoryItem->current_stock}, Requested: {$itemData['quantity']}",
                         $order->id ?? null
                     );
                 }
 
-                $itemTotal = $inventoryItem->price * $itemData['quantity'];
+                $itemTotal = $inventoryItem->unit_price * $itemData['quantity'];
                 $totalAmount += $itemTotal;
 
                 OrderItem::create([
                     'order_id' => $order->id,
                     'inventory_item_id' => $inventoryItem->id,
                     'quantity' => $itemData['quantity'],
-                    'price' => $inventoryItem->price,
+                    'price' => $inventoryItem->unit_price,
                     'total' => $itemTotal,
                 ]);
 
                 // Update inventory
-                $inventoryItem->decrement('quantity', $itemData['quantity']);
+                $inventoryItem->decrement('current_stock', $itemData['quantity']);
             }
 
             // Update order total
@@ -120,9 +120,9 @@ class MarketplaceService
             event(new NewOrderPlaced($order));
 
             DB::commit();
-            
+
             return $order->load(['orderItems.inventoryItem', 'buyer']);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Order creation failed: ' . $e->getMessage());
@@ -136,14 +136,14 @@ class MarketplaceService
     public function updateOrderStatus($orderId, $status, $userId = null)
     {
         $order = Order::findOrFail($orderId);
-        
+
         // Check if user has permission to update this order
         if ($userId && $order->farmer_id !== $userId && $order->buyer_id !== $userId) {
             throw new \Exception('Unauthorized to update this order');
         }
 
         $order->update(['status' => $status]);
-        
+
         return $order;
     }
 
@@ -172,7 +172,7 @@ class MarketplaceService
     {
         return [
             'total_products' => InventoryItem::where('category', 'produce')->count(),
-            'available_products' => InventoryItem::where('category', 'produce')->where('quantity', '>', 0)->count(),
+            'available_products' => InventoryItem::where('category', 'produce')->where('current_stock', '>', 0)->count(),
             'total_orders' => Order::count(),
             'pending_orders' => Order::where('status', 'pending')->count(),
             'completed_orders' => Order::where('status', 'delivered')->count(),
@@ -186,13 +186,13 @@ class MarketplaceService
     public function getFarmerSales($farmerId, $period = '30')
     {
         $startDate = now()->subDays($period);
-        
+
         $orders = Order::whereHas('orderItems.inventoryItem', function ($q) use ($farmerId) {
             $q->where('user_id', $farmerId);
         })
-        ->where('created_at', '>=', $startDate)
-        ->with(['orderItems.inventoryItem'])
-        ->get();
+            ->where('created_at', '>=', $startDate)
+            ->with(['orderItems.inventoryItem'])
+            ->get();
 
         $totalSales = $orders->sum('total_amount');
         $totalOrders = $orders->count();
@@ -243,20 +243,20 @@ class MarketplaceService
     public function searchProducts($query, $filters = [])
     {
         $searchQuery = InventoryItem::where('category', 'produce')
-            ->where('quantity', '>', 0)
+            ->where('current_stock', '>', 0)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%' . $query . '%')
-                  ->orWhere('description', 'like', '%' . $query . '%');
+                    ->orWhere('description', 'like', '%' . $query . '%');
             })
             ->with(['user:id,name']);
 
         // Apply additional filters
         if (isset($filters['min_price'])) {
-            $searchQuery->where('price', '>=', $filters['min_price']);
+            $searchQuery->where('unit_price', '>=', $filters['min_price']);
         }
 
         if (isset($filters['max_price'])) {
-            $searchQuery->where('price', '<=', $filters['max_price']);
+            $searchQuery->where('unit_price', '<=', $filters['max_price']);
         }
 
         return $searchQuery->get();

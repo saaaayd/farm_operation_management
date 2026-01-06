@@ -3,11 +3,31 @@
     <div class="max-w-md w-full space-y-8">
       <div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Verify your phone number
+          Verify your {{ isEmailVerification ? 'email' : 'phone number' }}
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          We sent a verification code to your phone number.
+          We sent a verification code to your {{ isEmailVerification ? 'email address' : 'phone number' }}.
         </p>
+      </div>
+
+      <!-- Debug info for development -->
+      <div v-if="debugCode" class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">Development Mode</h3>
+            <p class="mt-1 text-sm text-yellow-700">
+              Your verification code is: <strong class="font-mono text-lg">{{ debugCode }}</strong>
+            </p>
+            <p class="mt-1 text-xs text-yellow-600">
+              ({{ isEmailVerification ? 'Check your email inbox' : 'SMS pending Semaphore approval' }})
+            </p>
+          </div>
+        </div>
       </div>
       
       <form class="mt-8 space-y-6" @submit.prevent="handleVerify">
@@ -76,13 +96,19 @@ const code = ref('');
 const loading = ref(false);
 const error = ref('');
 const phone = route.query.phone; // Pass phone via query param
+const email = route.query.email; // Pass email via query param
+const method = route.query.method || 'sms'; // Verification method (sms or email)
+const debugCode = route.query.debug_code; // Debug code for development testing
+const isEmailVerification = method === 'email';
 
 const handleVerify = async () => {
   loading.value = true;
   error.value = '';
   
   try {
-    await authStore.verifyPhone(phone, code.value);
+    // Use email or phone based on verification method
+    const identifier = isEmailVerification ? email : phone;
+    await authStore.verifyPhone(identifier, code.value);
     router.push('/');
   } catch (err) {
     error.value = authStore.error || 'Verification failed';
@@ -93,7 +119,12 @@ const handleVerify = async () => {
 
 const handleResend = async () => {
   try {
-    await axios.post('/api/resend-verification', { phone });
+    const identifier = isEmailVerification ? email : phone;
+    await axios.post('/api/resend-verification', { 
+      phone: isEmailVerification ? null : identifier,
+      email: isEmailVerification ? identifier : null,
+      method: method
+    });
     alert('Verification code resent!');
   } catch (err) {
     alert('Failed to resend code.');

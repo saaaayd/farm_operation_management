@@ -72,7 +72,7 @@ export const useFarmStore = defineStore('farm', {
         return [];
       }
     },
-    lowStockItems: (state) => state.inventory?.filter(item => item.quantity <= item.min_stock) || [],
+    lowStockItems: (state) => state.inventory?.filter(item => (item.current_stock ?? item.quantity ?? 0) <= (item.minimum_stock ?? item.min_stock ?? 0)) || [],
   },
 
   actions: {

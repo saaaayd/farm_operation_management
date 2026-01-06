@@ -224,13 +224,19 @@ const handleRegister = async () => {
   }
   
   try {
-    // Redirect to verification page
+    // Register user first (this sends the verification code)
+    const response = await authStore.register(form.value);
+    
+    // On success, redirect to verification page
+    // In local/dev mode, pass the debug code for testing
     router.push({ 
       path: '/verify-phone', 
       query: { 
         phone: form.value.phone,
         email: form.value.email,
-        method: form.value.verification_method
+        method: form.value.verification_method,
+        // Debug code for development (only available in local environment)
+        debug_code: response?.debug_verification_code || ''
       } 
     });
   } catch (error) {

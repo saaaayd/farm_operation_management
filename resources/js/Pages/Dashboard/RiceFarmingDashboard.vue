@@ -711,7 +711,7 @@ const loadDashboardData = async () => {
 
     // Process inventory data
     const inventoryData = inventoryResponse.data.inventory || [];
-    const lowStockItems = inventoryData.filter(item => item.quantity <= (item.min_stock || 10));
+    const lowStockItems = inventoryData.filter(item => (item.current_stock ?? item.quantity ?? 0) <= (item.minimum_stock ?? item.min_stock ?? 10));
 
     // Process marketplace data
     const ordersData = marketplaceResponse.data.orders || [];

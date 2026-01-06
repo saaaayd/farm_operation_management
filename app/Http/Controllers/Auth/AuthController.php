@@ -67,8 +67,8 @@ class AuthController extends Controller
         // Send Verification Code
         if ($request->verification_method === 'sms') {
             try {
-                $twilio = new \App\Services\TwilioService();
-                $twilio->sendSMS($user->phone, "Your RiceFARM verification code is: {$verificationCode}");
+                $semaphore = new \App\Services\SemaphoreService();
+                $semaphore->sendSMS($user->phone, "Your RiceFARM verification code is: {$verificationCode}");
             } catch (\Exception $e) {
                 \Log::error('Failed to send verification SMS: ' . $e->getMessage());
             }

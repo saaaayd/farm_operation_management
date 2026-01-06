@@ -26,7 +26,7 @@ class Laborer extends Model
     ];
 
     protected $casts = [
-        'hourly_rate' => 'decimal:2',
+        'rate' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -16,24 +16,24 @@ class ExpenseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Expense::where('user_id', $user->id);
-        
+
         // Apply filters
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
-        
+
         if ($request->has('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
-        
+
         if ($request->has('date_to')) {
             $query->where('date', '<=', $request->date_to);
         }
-        
+
         $expenses = $query->orderBy('date', 'desc')->get();
-        
+
         return response()->json([
             'expenses' => $expenses
         ]);
@@ -47,12 +47,12 @@ class ExpenseController extends Controller
         $validator = Validator::make($request->all(), [
             'description' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
-            'category' => 'required|string|in:seeds,fertilizers,pesticides,labor,equipment,utilities,transportation,other',
+            'category' => 'required|string|in:seeds,fertilizer,fertilizers,pesticide,pesticides,labor,equipment,utilities,maintenance,inventory_purchase,transportation,other',
             'date' => 'required|date',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,check,credit_card',
             'receipt_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            'related_entity_type' => 'nullable|string|in:field,planting,harvest,task',
+            'related_entity_type' => 'nullable|string|in:field,planting,harvest,task,laborer,labor_wage,inventory_item',
             'related_entity_id' => 'nullable|integer',
         ]);
 
@@ -88,7 +88,7 @@ class ExpenseController extends Controller
     public function show(Request $request, Expense $expense): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -106,7 +106,7 @@ class ExpenseController extends Controller
     public function update(Request $request, Expense $expense): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -116,12 +116,12 @@ class ExpenseController extends Controller
         $validator = Validator::make($request->all(), [
             'description' => 'sometimes|required|string|max:255',
             'amount' => 'sometimes|required|numeric|min:0',
-            'category' => 'sometimes|required|string|in:seeds,fertilizers,pesticides,labor,equipment,utilities,transportation,other',
+            'category' => 'sometimes|required|string|in:seeds,fertilizer,fertilizers,pesticide,pesticides,labor,equipment,utilities,maintenance,inventory_purchase,transportation,other',
             'date' => 'sometimes|required|date',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,check,credit_card',
             'receipt_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            'related_entity_type' => 'nullable|string|in:field,planting,harvest,task',
+            'related_entity_type' => 'nullable|string|in:field,planting,harvest,task,laborer,labor_wage,inventory_item',
             'related_entity_id' => 'nullable|integer',
         ]);
 
@@ -133,8 +133,15 @@ class ExpenseController extends Controller
         }
 
         $expense->update($request->only([
-            'description', 'amount', 'category', 'date', 'payment_method',
-            'receipt_number', 'notes', 'related_entity_type', 'related_entity_id'
+            'description',
+            'amount',
+            'category',
+            'date',
+            'payment_method',
+            'receipt_number',
+            'notes',
+            'related_entity_type',
+            'related_entity_id'
         ]));
 
         return response()->json([
@@ -149,7 +156,7 @@ class ExpenseController extends Controller
     public function destroy(Request $request, Expense $expense): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($expense->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -169,23 +176,23 @@ class ExpenseController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Expense::where('user_id', $user->id);
-        
+
         if ($request->has('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
-        
+
         if ($request->has('date_to')) {
             $query->where('date', '<=', $request->date_to);
         }
-        
+
         $summary = $query->selectRaw('category, SUM(amount) as total_amount, COUNT(*) as count')
             ->groupBy('category')
             ->get();
-        
+
         $total = $summary->sum('total_amount');
-        
+
         return response()->json([
             'summary' => $summary,
             'total_amount' => $total

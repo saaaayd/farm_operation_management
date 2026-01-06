@@ -246,16 +246,96 @@ class TaskController extends Controller
             ], 403);
         }
 
+        // Optional: hours worked for the task (defaults to 8 for per_day, 1 for per_task)
+        $hoursWorked = $request->input('hours_worked');
+
         $task->update([
             'status' => Task::STATUS_COMPLETED,
         ]);
 
-        $task->load(['planting.field', 'laborer']);
+        $task->load(['planting.field', 'laborer', 'laborerGroup.laborers']);
+
+        // Create labor wage and expense records for assigned laborers
+        $laborExpenses = $this->createLaborExpensesForTask($task, $user, $hoursWorked);
 
         return response()->json([
             'message' => 'Task marked as completed',
             'task' => $task,
+            'labor_expenses' => $laborExpenses,
         ]);
+    }
+
+    /**
+     * Create labor wage and expense records for a completed task
+     */
+    private function createLaborExpensesForTask(Task $task, $user, $hoursWorked = null): array
+    {
+        $laborers = collect();
+        $expenses = [];
+
+        // Get laborers: either individual or from group
+        if ($task->laborer) {
+            $laborers->push($task->laborer);
+        } elseif ($task->laborerGroup && $task->laborerGroup->laborers) {
+            $laborers = $task->laborerGroup->laborers;
+        }
+
+        if ($laborers->isEmpty()) {
+            return $expenses;
+        }
+
+        foreach ($laborers as $laborer) {
+            // Calculate wage based on rate_type
+            $rate = (float) ($laborer->rate ?? 0);
+            $rateType = $laborer->rate_type ?? 'per_day';
+
+            // Determine hours and wage amount based on rate type
+            if ($rateType === 'per_task') {
+                $hours = $hoursWorked ?? 1;
+                $wageAmount = $rate; // Fixed rate per task
+            } else {
+                // per_day (default)
+                $hours = $hoursWorked ?? 8;
+                $wageAmount = $rate; // Daily rate
+            }
+
+            if ($wageAmount <= 0) {
+                continue; // Skip if no rate set
+            }
+
+            // Create LaborWage record
+            $laborWage = \App\Models\LaborWage::create([
+                'laborer_id' => $laborer->id,
+                'task_id' => $task->id,
+                'hours_worked' => $hours,
+                'wage_amount' => $wageAmount,
+                'date' => now(),
+                'user_id' => $user->id,
+            ]);
+
+            // Create Expense record linked to the task
+            $expense = \App\Models\Expense::create([
+                'description' => "Labor: {$laborer->name} - {$task->task_type} task",
+                'amount' => $wageAmount,
+                'category' => \App\Models\Expense::CATEGORY_LABOR,
+                'date' => now(),
+                'user_id' => $user->id,
+                'payment_method' => 'cash',
+                'notes' => "Auto-generated from task completion. Task ID: {$task->id}, Laborer: {$laborer->name}",
+                'related_entity_type' => \App\Models\Expense::ENTITY_TYPE_TASK,
+                'related_entity_id' => $task->id,
+            ]);
+
+            $expenses[] = [
+                'laborer_id' => $laborer->id,
+                'laborer_name' => $laborer->name,
+                'labor_wage_id' => $laborWage->id,
+                'expense_id' => $expense->id,
+                'amount' => $wageAmount,
+            ];
+        }
+
+        return $expenses;
     }
 
     /**

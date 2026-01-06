@@ -526,10 +526,10 @@ class DatabaseSeeder extends Seeder
             ], [
                 'name' => 'Corn Seeds',
                 'category' => 'seeds',
-                'quantity' => 50.0,
-                'price' => 25.00,
+                'current_stock' => 50.0,
+                'unit_price' => 25.00,
                 'unit' => 'kg',
-                'min_stock' => 10.0
+                'minimum_stock' => 10.0
             ]);
 
             InventoryItem::updateOrCreate([
@@ -537,10 +537,10 @@ class DatabaseSeeder extends Seeder
             ], [
                 'name' => 'Nitrogen Fertilizer',
                 'category' => 'fertilizer',
-                'quantity' => 8.0,
-                'price' => 45.00,
+                'current_stock' => 8.0,
+                'unit_price' => 45.00,
                 'unit' => 'bags',
-                'min_stock' => 5.0
+                'minimum_stock' => 5.0
             ]);
 
             InventoryItem::updateOrCreate([
@@ -548,10 +548,10 @@ class DatabaseSeeder extends Seeder
             ], [
                 'name' => 'Pesticide Spray',
                 'category' => 'pesticide',
-                'quantity' => 3.0,
-                'price' => 85.00,
+                'current_stock' => 3.0,
+                'unit_price' => 85.00,
                 'unit' => 'liters',
-                'min_stock' => 2.0
+                'minimum_stock' => 2.0
             ]);
 
             InventoryItem::updateOrCreate([
@@ -559,10 +559,10 @@ class DatabaseSeeder extends Seeder
             ], [
                 'name' => 'Fresh Tomatoes',
                 'category' => 'produce',
-                'quantity' => 150.0,
-                'price' => 4.50,
+                'current_stock' => 150.0,
+                'unit_price' => 4.50,
                 'unit' => 'kg',
-                'min_stock' => 0.0
+                'minimum_stock' => 0.0
             ]);
 
             InventoryItem::updateOrCreate([
@@ -570,10 +570,10 @@ class DatabaseSeeder extends Seeder
             ], [
                 'name' => 'Organic Corn',
                 'category' => 'produce',
-                'quantity' => 200.0,
-                'price' => 3.25,
+                'current_stock' => 200.0,
+                'unit_price' => 3.25,
                 'unit' => 'kg',
-                'min_stock' => 0.0
+                'minimum_stock' => 0.0
             ]);
 
             // Create harvests

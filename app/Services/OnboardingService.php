@@ -60,7 +60,7 @@ class OnboardingService
     public function initializeOnboarding($userId)
     {
         $user = User::findOrFail($userId);
-        
+
         // Initialize onboarding progress
         $onboardingData = [
             'started_at' => now(),
@@ -84,7 +84,7 @@ class OnboardingService
     public function getOnboardingStatus($userId)
     {
         $user = User::findOrFail($userId);
-        
+
         if (!$user->onboarding_data) {
             return [
                 'is_started' => false,
@@ -118,18 +118,18 @@ class OnboardingService
     {
         $user = User::findOrFail($userId);
         $onboardingData = $user->onboarding_data ?? [];
-        
+
         $completedSteps = $onboardingData['completed_steps'] ?? [];
-        
+
         if (!in_array($step, $completedSteps)) {
             $completedSteps[] = $step;
         }
-        
+
         $onboardingData['completed_steps'] = $completedSteps;
         $onboardingData['current_step'] = $this->getNextStep($userId, $completedSteps);
-        
+
         $user->update(['onboarding_data' => $onboardingData]);
-        
+
         return $onboardingData;
     }
 
@@ -140,18 +140,18 @@ class OnboardingService
     {
         $user = User::findOrFail($userId);
         $onboardingData = $user->onboarding_data ?? [];
-        
+
         $skippedSteps = $onboardingData['skipped_steps'] ?? [];
-        
+
         if (!in_array($step, $skippedSteps)) {
             $skippedSteps[] = $step;
         }
-        
+
         $onboardingData['skipped_steps'] = $skippedSteps;
         $onboardingData['current_step'] = $this->getNextStep($userId, $onboardingData['completed_steps'] ?? [], $skippedSteps);
-        
+
         $user->update(['onboarding_data' => $onboardingData]);
-        
+
         return $onboardingData;
     }
 
@@ -168,14 +168,14 @@ class OnboardingService
         }
 
         $processedSteps = array_merge($completedSteps, $skippedSteps);
-        
+
         // Find the next unprocessed step
         foreach ($this->onboardingSteps as $stepKey => $stepConfig) {
             if (!in_array($stepKey, $processedSteps)) {
                 return $stepKey;
             }
         }
-        
+
         return null; // All steps completed or skipped
     }
 
@@ -186,19 +186,19 @@ class OnboardingService
     {
         $user = User::findOrFail($userId);
         $onboardingData = $user->onboarding_data ?? [];
-        
+
         $onboardingData['is_complete'] = true;
         $onboardingData['completed_at'] = now();
         $onboardingData['current_step'] = null;
-        
+
         $user->update([
             'onboarding_data' => $onboardingData,
             'onboarding_completed_at' => now(),
         ]);
-        
+
         // Trigger post-onboarding actions
         $this->triggerPostOnboardingActions($userId);
-        
+
         return $onboardingData;
     }
 
@@ -208,25 +208,29 @@ class OnboardingService
     public function updateUserProfile($userId, $profileData)
     {
         $user = User::findOrFail($userId);
-        
+
         // Update user fields
         $userFields = array_intersect_key($profileData, array_flip([
-            'phone', 'address'
+            'phone',
+            'address'
         ]));
-        
+
         if (!empty($userFields)) {
             $user->update($userFields);
         }
-        
+
         // Update or create user metadata
         $metadata = $user->metadata ?? [];
         $metadataFields = array_intersect_key($profileData, array_flip([
-            'farming_experience_years', 'farm_size_preference', 'primary_crops', 'farming_goals'
+            'farming_experience_years',
+            'farm_size_preference',
+            'primary_crops',
+            'farming_goals'
         ]));
-        
+
         $metadata = array_merge($metadata, $metadataFields);
         $user->update(['metadata' => $metadata]);
-        
+
         return $user;
     }
 
@@ -287,13 +291,12 @@ class OnboardingService
                 'user_id' => $itemData['user_id'],
                 'name' => $itemData['name'],
                 'category' => $itemData['category'],
-                'quantity' => $itemData['quantity'],
+                'current_stock' => $itemData['current_stock'] ?? $itemData['quantity'] ?? 0,
                 'unit' => $itemData['unit'],
-                'price' => $itemData['price'] ?? 0,
-                'min_stock' => $itemData['min_stock'] ?? 0,
+                'unit_price' => $itemData['unit_price'] ?? $itemData['price'] ?? 0,
+                'minimum_stock' => $itemData['minimum_stock'] ?? $itemData['min_stock'] ?? 0,
                 'description' => $itemData['description'] ?? '',
                 'supplier' => $itemData['supplier'] ?? '',
-                'quality_grade' => $itemData['quality_grade'] ?? 'A',
             ]);
 
             return $item;
@@ -309,12 +312,12 @@ class OnboardingService
     public function updateSystemPreferences($userId, $preferences)
     {
         $user = User::findOrFail($userId);
-        
+
         $settings = $user->settings ?? [];
         $settings = array_merge($settings, $preferences);
-        
+
         $user->update(['settings' => $settings]);
-        
+
         return $user;
     }
 
@@ -325,14 +328,14 @@ class OnboardingService
     {
         $user = User::findOrFail($userId);
         $onboardingData = $user->onboarding_data ?? [];
-        
+
         $onboardingData['tutorial_progress'] = [
             'completed_sections' => $completedSections,
             'completed_at' => now(),
         ];
-        
+
         $user->update(['onboarding_data' => $onboardingData]);
-        
+
         return $onboardingData;
     }
 
@@ -342,13 +345,13 @@ class OnboardingService
     public function getOnboardingProgress($userId)
     {
         $status = $this->getOnboardingStatus($userId);
-        
+
         $progress = [];
         foreach ($this->onboardingSteps as $stepKey => $stepConfig) {
             $isCompleted = in_array($stepKey, $status['completed_steps'] ?? []);
             $isSkipped = in_array($stepKey, $status['skipped_steps'] ?? []);
             $isCurrent = $status['current_step'] === $stepKey;
-            
+
             $progress[] = [
                 'step' => $stepKey,
                 'name' => $stepConfig['name'],
@@ -361,12 +364,12 @@ class OnboardingService
                 'status' => $isCompleted ? 'completed' : ($isSkipped ? 'skipped' : ($isCurrent ? 'current' : 'pending')),
             ];
         }
-        
+
         // Sort by order
         usort($progress, function ($a, $b) {
             return $a['order'] <=> $b['order'];
         });
-        
+
         return [
             'steps' => $progress,
             'overall_status' => $status,
@@ -379,12 +382,12 @@ class OnboardingService
     public function resetOnboarding($userId)
     {
         $user = User::findOrFail($userId);
-        
+
         $user->update([
             'onboarding_data' => null,
             'onboarding_completed_at' => null,
         ]);
-        
+
         return true;
     }
 
@@ -396,9 +399,9 @@ class OnboardingService
         $user = User::findOrFail($userId);
         $metadata = $user->metadata ?? [];
         $farms = Farm::where('user_id', $userId)->get();
-        
+
         $recommendations = [];
-        
+
         // Experience-based recommendations
         $experience = $metadata['farming_experience_years'] ?? 0;
         if ($experience < 2) {
@@ -410,7 +413,7 @@ class OnboardingService
                 'priority' => 'high',
             ];
         }
-        
+
         // Farm size recommendations
         $farmSizePreference = $metadata['farm_size_preference'] ?? null;
         if ($farmSizePreference === 'small') {
@@ -422,7 +425,7 @@ class OnboardingService
                 'priority' => 'medium',
             ];
         }
-        
+
         // Crop-specific recommendations
         $primaryCrops = $metadata['primary_crops'] ?? [];
         if (in_array('rice', $primaryCrops)) {
@@ -434,7 +437,7 @@ class OnboardingService
                 'priority' => 'high',
             ];
         }
-        
+
         // System setup recommendations
         if ($farms->isEmpty()) {
             $recommendations[] = [
@@ -445,7 +448,7 @@ class OnboardingService
                 'priority' => 'high',
             ];
         }
-        
+
         return $recommendations;
     }
 
@@ -455,7 +458,7 @@ class OnboardingService
     public function performQuickSetup($userId, $setupData)
     {
         DB::beginTransaction();
-        
+
         try {
             // Create farm
             $farm = $this->createFarm([
@@ -466,7 +469,7 @@ class OnboardingService
                 'farm_type' => 'rice',
                 'ownership_type' => 'owned',
             ]);
-            
+
             // Create a default field
             $field = $this->createField([
                 'farm_id' => $farm->id,
@@ -475,28 +478,28 @@ class OnboardingService
                 'soil_type' => 'loam',
                 'irrigation_type' => 'irrigated',
             ]);
-            
+
             // Update user profile
             $this->updateUserProfile($userId, [
                 'farming_experience_years' => $this->mapExperienceToYears($setupData['farming_experience']),
                 'primary_crops' => [$setupData['primary_crop']],
             ]);
-            
+
             // Mark all steps as completed
             foreach (array_keys($this->onboardingSteps) as $step) {
                 $this->markStepComplete($userId, $step);
             }
-            
+
             // Complete onboarding
             $this->completeOnboarding($userId);
-            
+
             DB::commit();
-            
+
             return [
                 'farm' => $farm,
                 'field' => $field,
             ];
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -587,28 +590,28 @@ class OnboardingService
     public function applySetupTemplate($userId, $templateId, $customizations = [])
     {
         $templates = $this->getSetupTemplates();
-        
+
         if (!isset($templates[$templateId])) {
             throw new \Exception('Invalid template ID');
         }
-        
+
         $template = $templates[$templateId];
         $settings = array_merge($template['default_settings'], $customizations);
-        
+
         DB::beginTransaction();
-        
+
         try {
             // Apply template-specific setup logic
             $result = $this->executeTemplateSetup($userId, $templateId, $settings);
-            
+
             // Mark relevant onboarding steps as completed
             $this->markStepComplete($userId, 'profile_setup');
             $this->markStepComplete($userId, 'system_preferences');
-            
+
             DB::commit();
-            
+
             return $result;
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -622,7 +625,7 @@ class OnboardingService
     {
         // This would contain template-specific logic
         // For now, returning a basic structure
-        
+
         return [
             'template_applied' => $templateId,
             'settings_applied' => $settings,
@@ -635,7 +638,7 @@ class OnboardingService
      */
     private function mapExperienceToYears($experienceLevel)
     {
-        return match($experienceLevel) {
+        return match ($experienceLevel) {
             'beginner' => 1,
             'intermediate' => 5,
             'advanced' => 10,
@@ -652,7 +655,7 @@ class OnboardingService
         // Create initial recommendations
         // Set up default notifications
         // Schedule first weather update
-        
+
         Log::info("Onboarding completed for user {$userId}");
     }
 }

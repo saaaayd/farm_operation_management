@@ -313,35 +313,84 @@ class InventoryItemController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'quantity' => 'required|numeric|min:0.01'
+            'quantity' => 'required|numeric|min:0.01',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'create_expense' => 'nullable|boolean',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $item->current_stock = ($item->current_stock ?? 0) + (float) $request->quantity;
+        $quantity = (float) $request->quantity;
+        $unitCost = $request->input('unit_cost', $item->unit_price ?? 0);
+        $createExpense = $request->input('create_expense', true);
+        $notes = $request->input('notes', 'Manual stock addition via API');
+
+        $item->current_stock = ($item->current_stock ?? 0) + $quantity;
         $item->save();
+
+        $totalCost = $quantity * $unitCost;
 
         // Log transaction
         \App\Models\InventoryTransaction::create([
             'inventory_item_id' => $item->id,
             'user_id' => $user->id,
             'transaction_type' => 'in',
-            'quantity' => $request->quantity,
-            'unit_cost' => $item->unit_price ?? 0,
-            'total_cost' => $request->quantity * ($item->unit_price ?? 0),
-            'reference_type' => 'Manual',
-            'notes' => 'Manual stock addition via API',
+            'quantity' => $quantity,
+            'unit_cost' => $unitCost,
+            'total_cost' => $totalCost,
+            'reference_type' => 'Restock',
+            'notes' => $notes,
             'transaction_date' => now(),
         ]);
 
+        $expense = null;
+
+        // Create expense record if requested and cost > 0
+        if ($createExpense && $totalCost > 0) {
+            $expenseCategory = $this->mapInventoryCategoryToExpenseCategory($item->category);
+
+            $expense = \App\Models\Expense::create([
+                'description' => "Restock: {$item->name} ({$quantity} {$item->unit})",
+                'amount' => $totalCost,
+                'category' => $expenseCategory,
+                'date' => now(),
+                'user_id' => $user->id,
+                'payment_method' => 'cash',
+                'notes' => "Auto-generated from inventory restock. {$notes}",
+                'related_entity_type' => \App\Models\Expense::ENTITY_TYPE_INVENTORY_ITEM,
+                'related_entity_id' => $item->id,
+            ]);
+        }
+
         return response()->json([
             'message' => 'Stock added successfully',
-            'inventory_item' => $item
+            'inventory_item' => $item,
+            'expense' => $expense,
         ]);
     }
 
+    /**
+     * Map inventory category to expense category
+     */
+    private function mapInventoryCategoryToExpenseCategory(?string $inventoryCategory): string
+    {
+        $mapping = [
+            InventoryItem::CATEGORY_SEEDS => \App\Models\Expense::CATEGORY_SEEDS,
+            InventoryItem::CATEGORY_FERTILIZER => \App\Models\Expense::CATEGORY_FERTILIZER,
+            InventoryItem::CATEGORY_PESTICIDE => \App\Models\Expense::CATEGORY_PESTICIDE,
+            InventoryItem::CATEGORY_EQUIPMENT => \App\Models\Expense::CATEGORY_EQUIPMENT,
+            InventoryItem::CATEGORY_PRODUCE => \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE,
+            // String fallbacks for categories that may exist in database but not as constants
+            'feed' => \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE,
+            'fuel' => \App\Models\Expense::CATEGORY_UTILITIES,
+            'other' => \App\Models\Expense::CATEGORY_OTHER,
+        ];
+
+        return $mapping[$inventoryCategory] ?? \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE;
+    }
     /**
      * Remove stock (POST /inventory/{item}/remove-stock)
      */

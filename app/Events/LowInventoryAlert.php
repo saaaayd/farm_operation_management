@@ -25,8 +25,8 @@ class LowInventoryAlert implements ShouldBroadcast
     public function __construct(InventoryItem $inventoryItem)
     {
         $this->inventoryItem = $inventoryItem;
-        $this->currentStock = $inventoryItem->quantity;
-        $this->minStockLevel = $inventoryItem->min_stock;
+        $this->currentStock = $inventoryItem->current_stock;
+        $this->minStockLevel = $inventoryItem->minimum_stock;
     }
 
     /**
