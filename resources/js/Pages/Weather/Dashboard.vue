@@ -242,50 +242,30 @@
           <!-- Growing Degree Days -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Growing Degree Days</h3>
-            <div class="space-y-3">
+            <div v-if="forecast.length === 0" class="text-center py-4 text-gray-500">
+              <p class="text-sm">Loading weather data...</p>
+            </div>
+            <div v-else class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-gray-600">Today:</span>
-                <span class="font-medium">{{ gdd.today }}</span>
+                <span class="font-medium">{{ gdd.today }}°</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Week:</span>
-                <span class="font-medium">{{ gdd.week }}</span>
+                <span class="font-medium">{{ gdd.week }}°</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Month:</span>
-                <span class="font-medium">{{ gdd.month }}</span>
+                <span class="font-medium text-gray-500">~{{ gdd.month }}°</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">This Season:</span>
-                <span class="font-medium">{{ gdd.season }}</span>
+                <span class="font-medium text-gray-500">~{{ gdd.season }}°</span>
               </div>
+              <p class="text-xs text-gray-400 mt-2">Base: 10°C (rice). Month/season are estimates.</p>
             </div>
           </div>
 
-          <!-- Weather Station Status -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold mb-4">Weather Station Status</h3>
-            <div class="space-y-3">
-              <div
-                v-for="station in weatherStations"
-                :key="station.id"
-                class="flex items-center justify-between"
-              >
-                <div>
-                  <div class="font-medium text-gray-900">{{ station.name }}</div>
-                  <div class="text-sm text-gray-600">{{ station.location }}</div>
-                </div>
-                <div class="flex items-center">
-                  <div
-                    :class="station.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                    class="px-2 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ station.status }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Quick Actions -->
           <div class="bg-white rounded-lg shadow-md p-6">
@@ -488,33 +468,44 @@ const fieldWeather = computed(() => {
   })
 })
 
-const gdd = ref({
-  today: 15,
-  week: 95,
-  month: 420,
-  season: 1250
-})
+// Growing Degree Days calculation (base temperature 10°C for rice)
+const GDD_BASE_TEMP = 10
 
-const weatherStations = ref([
-  {
-    id: 1,
-    name: 'Main Station',
-    location: 'Farm Center',
-    status: 'online'
-  },
-  {
-    id: 2,
-    name: 'North Station',
-    location: 'North Field',
-    status: 'online'
-  },
-  {
-    id: 3,
-    name: 'South Station',
-    location: 'South Field',
-    status: 'offline'
+// Calculate GDD for a single day: ((high + low) / 2) - base, minimum 0
+const calculateDailyGDD = (high, low) => {
+  if (high === null || low === null || isNaN(high) || isNaN(low)) return 0
+  const avgTemp = (high + low) / 2
+  return Math.max(0, avgTemp - GDD_BASE_TEMP)
+}
+
+// Growing Degree Days computed from forecast data
+const gdd = computed(() => {
+  const forecastData = forecast.value || []
+  
+  // Calculate today's GDD
+  const todayGDD = forecastData.length > 0 
+    ? Math.round(calculateDailyGDD(forecastData[0].high, forecastData[0].low))
+    : 0
+  
+  // Calculate this week's GDD (sum of available forecast days, up to 7)
+  const weekDays = forecastData.slice(0, 7)
+  const weekGDD = Math.round(weekDays.reduce((sum, day) => 
+    sum + calculateDailyGDD(day.high, day.low), 0))
+  
+  // Estimate month GDD (weekly average * 4.3 weeks)
+  const avgWeeklyGDD = weekGDD / Math.max(1, weekDays.length) * 7
+  const monthGDD = Math.round(avgWeeklyGDD * 4.3)
+  
+  // Estimate season GDD (roughly 4 months for rice growing season)
+  const seasonGDD = Math.round(monthGDD * 4)
+  
+  return {
+    today: todayGDD,
+    week: weekGDD,
+    month: monthGDD,
+    season: seasonGDD
   }
-])
+})
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', { 
