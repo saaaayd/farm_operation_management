@@ -77,7 +77,7 @@ class VerificationController extends Controller
         $user->save();
 
         // Send via SMS or Email based on method
-        $method = $request->method ?? ($request->phone ? 'sms' : 'email');
+        $method = $request->input('method') ?? ($request->phone ? 'sms' : 'email');
 
         if ($method === 'sms' && $user->phone) {
             try {
