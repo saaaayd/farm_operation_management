@@ -205,17 +205,25 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/products/images/delete', [\App\Http\Controllers\MarketPlace\ProductImageController::class, 'delete']);
         });
 
-        // Order management
-        Route::get('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrders']);
-        Route::get('/orders/{order}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getOrder']);
+        // Order management - General
+        Route::get('/orders/{order}', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'show']);
 
+        // Buyer order routes
         Route::middleware('buyer')->group(function () {
-            Route::post('/orders', [\App\Http\Controllers\RiceMarketplaceController::class, 'createOrder']);
+            Route::get('/buyer/orders', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'buyerOrders']);
+            Route::post('/orders', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'store']);
+            Route::post('/orders/{order}/deliver', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'confirmDelivery']);
+            Route::post('/orders/{order}/dispute', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'dispute']);
+            Route::post('/orders/{order}/cancel', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'cancel']);
         });
 
+        // Farmer order routes
         Route::middleware('farmer')->group(function () {
-            Route::post('/orders/{order}/confirm', [\App\Http\Controllers\RiceMarketplaceController::class, 'confirmOrder']);
-            Route::post('/orders/{order}/cancel', [\App\Http\Controllers\RiceMarketplaceController::class, 'cancelOrder']);
+            Route::get('/farmer/orders', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'farmerOrders']);
+            Route::post('/orders/{order}/accept', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'accept']);
+            Route::post('/orders/{order}/reject', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'reject']);
+            Route::post('/orders/{order}/ship', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'ship']);
+            Route::post('/orders/{order}/resolve', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'resolveDispute']);
         });
 
         // Order messaging

@@ -31,6 +31,9 @@ class RiceOrder extends Model
         'tracking_number',
         'farmer_notes',
         'buyer_notes',
+        'shipped_at',
+        'auto_confirm_at',
+        'dispute_reason',
     ];
 
     protected $casts = [
@@ -47,6 +50,8 @@ class RiceOrder extends Model
         'notification_sent_day_before' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'shipped_at' => 'datetime',
+        'auto_confirm_at' => 'datetime',
     ];
 
     /**
@@ -59,6 +64,7 @@ class RiceOrder extends Model
     const STATUS_DELIVERED = 'delivered';
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_REFUNDED = 'refunded';
+    const STATUS_DISPUTED = 'disputed';
 
     /**
      * Payment status constants
@@ -278,7 +284,7 @@ class RiceOrder extends Model
         }
 
         // Calculate based on delivery method
-        $daysToAdd = match($this->delivery_method) {
+        $daysToAdd = match ($this->delivery_method) {
             self::DELIVERY_PICKUP => 1,
             self::DELIVERY_COURIER => 3,
             self::DELIVERY_POSTAL => 7,

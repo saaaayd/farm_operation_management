@@ -313,6 +313,20 @@ const routes = [
     component: () => import('@/Pages/Buyer/ProductDetail.vue'),
     meta: { requiresAuth: true, roles: ['buyer'] }
   },
+  {
+    path: '/buyer/orders',
+    name: 'buyer-orders',
+    component: () => import('@/Pages/Buyer/Orders/Index.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+
+  // Farmer Order Routes
+  {
+    path: '/farmer/orders',
+    name: 'farmer-orders',
+    component: () => import('@/Pages/Farmer/Orders/Index.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
 
   // Marketplace Routes
   {

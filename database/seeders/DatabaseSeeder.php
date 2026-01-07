@@ -13,6 +13,8 @@ use App\Models\WeatherLog;
 use App\Models\Harvest;
 use App\Models\Expense;
 use App\Models\RiceVariety;
+use App\Models\RiceProduct;
+use App\Models\RiceOrder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -373,26 +375,35 @@ class DatabaseSeeder extends Seeder
             // Create laborers
             $laborer1 = Laborer::updateOrCreate([
                 'name' => 'Tom Worker',
+                'user_id' => $farmer1->id,
             ], [
                 'name' => 'Tom Worker',
-                'contact' => '+1-555-0301',
-                'hourly_rate' => 15.50
+                'phone' => '+1-555-0301',
+                'rate' => 15.50,
+                'rate_type' => 'daily',
+                'user_id' => $farmer1->id,
             ]);
 
             $laborer2 = Laborer::updateOrCreate([
                 'name' => 'Sarah Helper',
+                'user_id' => $farmer1->id,
             ], [
                 'name' => 'Sarah Helper',
-                'contact' => '+1-555-0302',
-                'hourly_rate' => 17.00
+                'phone' => '+1-555-0302',
+                'rate' => 17.00,
+                'rate_type' => 'daily',
+                'user_id' => $farmer1->id,
             ]);
 
             $laborer3 = Laborer::updateOrCreate([
                 'name' => 'Mike Laborer',
+                'user_id' => $farmer1->id,
             ], [
                 'name' => 'Mike Laborer',
-                'contact' => '+1-555-0303',
-                'hourly_rate' => 16.25
+                'phone' => '+1-555-0303',
+                'rate' => 16.25,
+                'rate_type' => 'daily',
+                'user_id' => $farmer1->id,
             ]);
 
             // Create plantings
@@ -639,6 +650,154 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
+            // Create Rice Products for marketplace
+            $riceProduct1 = RiceProduct::updateOrCreate(
+                [
+                    'farmer_id' => $farmer1->id,
+                    'name' => 'Premium IR64 Rice',
+                ],
+                [
+                    'farmer_id' => $farmer1->id,
+                    'rice_variety_id' => $varietyIR64->id,
+                    'name' => 'Premium IR64 Rice',
+                    'description' => 'High-quality IR64 rice, freshly harvested from organic farms.',
+                    'quantity_available' => 500,
+                    'price_per_kg' => 45.00,
+                    'minimum_order' => 5,
+                    'quality_grade' => 'premium',
+                    'processing_method' => 'milled',
+                    'moisture_content' => 14.0,
+                    'is_organic' => true,
+                    'production_status' => 'available',
+                ]
+            );
+
+            $riceProduct2 = RiceProduct::updateOrCreate(
+                [
+                    'farmer_id' => $farmer1->id,
+                    'name' => 'Thai Jasmine Aromatic Rice',
+                ],
+                [
+                    'farmer_id' => $farmer1->id,
+                    'rice_variety_id' => $varietyJasmine->id,
+                    'name' => 'Thai Jasmine Aromatic Rice',
+                    'description' => 'Fragrant jasmine rice with soft texture, perfect for everyday meals.',
+                    'quantity_available' => 300,
+                    'price_per_kg' => 55.00,
+                    'minimum_order' => 2,
+                    'quality_grade' => 'premium',
+                    'processing_method' => 'milled',
+                    'moisture_content' => 13.5,
+                    'is_organic' => false,
+                    'production_status' => 'available',
+                ]
+            );
+
+            $riceProduct3 = RiceProduct::updateOrCreate(
+                [
+                    'farmer_id' => $farmer1->id,
+                    'name' => 'Brown Rice - Healthy Choice',
+                ],
+                [
+                    'farmer_id' => $farmer1->id,
+                    'rice_variety_id' => $varietyBrown->id,
+                    'name' => 'Brown Rice - Healthy Choice',
+                    'description' => 'Nutritious whole grain brown rice, rich in fiber and nutrients.',
+                    'quantity_available' => 200,
+                    'price_per_kg' => 52.00,
+                    'minimum_order' => 3,
+                    'quality_grade' => 'standard',
+                    'processing_method' => 'natural',
+                    'moisture_content' => 14.2,
+                    'is_organic' => true,
+                    'production_status' => 'available',
+                ]
+            );
+
+            // Create sample orders from buyers
+            RiceOrder::updateOrCreate(
+                [
+                    'buyer_id' => $buyer1->id,
+                    'rice_product_id' => $riceProduct1->id,
+                    'order_date' => now()->subDays(1),
+                ],
+                [
+                    'buyer_id' => $buyer1->id,
+                    'rice_product_id' => $riceProduct1->id,
+                    'quantity' => 25,
+                    'unit_price' => 45.00,
+                    'total_amount' => 1125.00,
+                    'status' => 'pending',
+                    'payment_status' => 'pending',
+                    'delivery_method' => 'courier',
+                    'delivery_address' => [
+                        'street' => '321 Market Street',
+                        'city' => 'Commerce City',
+                        'state' => 'CC',
+                        'postal_code' => '13579'
+                    ],
+                    'order_date' => now()->subDays(1),
+                    'buyer_notes' => 'Please pack carefully',
+                ]
+            );
+
+            RiceOrder::updateOrCreate(
+                [
+                    'buyer_id' => $buyer2->id,
+                    'rice_product_id' => $riceProduct2->id,
+                    'order_date' => now()->subDays(3),
+                ],
+                [
+                    'buyer_id' => $buyer2->id,
+                    'rice_product_id' => $riceProduct2->id,
+                    'quantity' => 50,
+                    'unit_price' => 55.00,
+                    'total_amount' => 2750.00,
+                    'status' => 'confirmed',
+                    'payment_status' => 'pending',
+                    'delivery_method' => 'pickup',
+                    'delivery_address' => [
+                        'street' => '654 Trade Boulevard',
+                        'city' => 'Business Town',
+                        'state' => 'BT',
+                        'postal_code' => '24680'
+                    ],
+                    'order_date' => now()->subDays(3),
+                    'expected_delivery_date' => now()->addDays(2),
+                    'farmer_notes' => 'Ready for pickup tomorrow',
+                ]
+            );
+
+            RiceOrder::updateOrCreate(
+                [
+                    'buyer_id' => $buyer1->id,
+                    'rice_product_id' => $riceProduct3->id,
+                    'order_date' => now()->subDays(5),
+                ],
+                [
+                    'buyer_id' => $buyer1->id,
+                    'rice_product_id' => $riceProduct3->id,
+                    'quantity' => 15,
+                    'unit_price' => 52.00,
+                    'total_amount' => 780.00,
+                    'status' => 'shipped',
+                    'payment_status' => 'paid',
+                    'delivery_method' => 'courier',
+                    'delivery_address' => [
+                        'street' => '321 Market Street',
+                        'city' => 'Commerce City',
+                        'state' => 'CC',
+                        'postal_code' => '13579'
+                    ],
+                    'order_date' => now()->subDays(5),
+                    'expected_delivery_date' => now()->addDays(1),
+                    'shipped_at' => now()->subDays(1),
+                    'auto_confirm_at' => now()->addDays(6),
+                    'tracking_number' => 'TRK-2026-001234',
+                ]
+            );
+
+            echo "Marketplace products and orders seeded!\n";
             echo "Database seeded successfully!\n";
         } else {
             echo "Data already exists. Users updated/verified.\n";

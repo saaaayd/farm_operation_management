@@ -373,5 +373,85 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.loading = false;
       }
     },
+
+    // Buyer order actions
+    async fetchBuyerOrders() {
+      this.loading = true;
+      try {
+        const response = await axios.get('/api/rice-marketplace/buyer/orders');
+        this.orders = response.data.orders || [];
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to fetch orders';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async confirmOrderDelivery(orderId) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/deliver`);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    async disputeOrder(orderId, reason) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/dispute`, { reason });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    // Farmer order actions
+    async fetchFarmerOrders() {
+      this.loading = true;
+      try {
+        const response = await axios.get('/api/rice-marketplace/farmer/orders');
+        this.orders = response.data.orders || [];
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to fetch orders';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async acceptOrder(orderId, expectedDeliveryDate = null, notes = null) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/accept`, {
+          expected_delivery_date: expectedDeliveryDate,
+          farmer_notes: notes
+        });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    async rejectOrder(orderId, reason = null) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/reject`, { reason });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    async shipOrder(orderId, trackingNumber = null) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/ship`, {
+          tracking_number: trackingNumber
+        });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
   },
 });
