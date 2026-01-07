@@ -254,6 +254,13 @@
         </div>
       </div>
     </div>
+    <!-- Stock Adjustment Modal -->
+    <StockAdjustmentModal
+      :show="showStockModal"
+      :item="item"
+      @close="showStockModal = false"
+      @updated="handleStockUpdated"
+    />
   </div>
 </template>
 
@@ -353,10 +360,11 @@ const editItem = () => {
 }
 
 const adjustStock = () => {
-  // Show stock adjustment modal
-  console.log('Adjust stock')
-  // Note: Ideally this would also be extracted to a clearer flow, but keeping prompt-based for now to minimize scope creep
-  // or it might use a separate StockAdjustment component. For now, retaining placeholder.
+  showStockModal.value = true
+}
+
+const handleStockUpdated = async () => {
+  await reloadFromStore()
 }
 
 const addStock = async () => {

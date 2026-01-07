@@ -679,23 +679,39 @@ class ReportController extends Controller
     }
 
     /**
-     * Schedule automated report
+     * Schedule a report
      */
     public function scheduleReport(Request $request)
     {
         $request->validate([
-            'report_type' => 'required|string',
             'farm_id' => 'required|exists:farms,id',
-            'frequency' => 'required|in:daily,weekly,monthly',
-            'email' => 'required|email',
+            'report_type' => 'required|string|in:financial,inventory,labor,weather,production',
+            'frequency' => 'required|string|in:daily,weekly,monthly',
+            'email' => 'nullable|email',
+            'parameters' => 'nullable|array',
         ]);
 
-        // This would integrate with Laravel's job scheduling system
-        return response()->json([
-            'message' => 'Report scheduling functionality would be implemented here',
-            'status' => 'not_implemented',
-            'scheduled_report' => $request->all()
-        ]);
+        try {
+            $scheduledReport = \App\Models\ScheduledReport::create([
+                'user_id' => Auth::id(),
+                'farm_id' => $request->farm_id,
+                'report_type' => $request->report_type,
+                'frequency' => $request->frequency,
+                'email' => $request->email ?? Auth::user()->email,
+                'parameters' => $request->parameters,
+                'is_active' => true,
+            ]);
+
+            return response()->json([
+                'message' => 'Report scheduled successfully',
+                'scheduled_report' => $scheduledReport
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to schedule report',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

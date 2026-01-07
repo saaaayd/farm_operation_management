@@ -419,15 +419,11 @@ export const setupRouterGuards = (router) => {
     try {
       const authStore = useAuthStore();
 
-      console.log(`Router: Navigating from ${from.path} to ${to.path}`);
-
       // Handle root path redirect
       if (to.path === '/') {
         if (authStore.isAuthenticated) {
-          console.log('Router: Redirecting authenticated user to dashboard');
           next('/dashboard');
         } else {
-          console.log('Router: Redirecting unauthenticated user to login');
           next('/login');
         }
         return;
@@ -435,16 +431,15 @@ export const setupRouterGuards = (router) => {
 
       // Check if route requires authentication
       if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        console.log('Router: Route requires auth, redirecting to login');
-        next('/login');
-        return;
+        return next({
+          path: '/login',
+          query: { redirect: to.fullPath }
+        });
       }
 
       // Check if route requires guest (not authenticated)
       if (to.meta.requiresGuest && authStore.isAuthenticated) {
-        console.log('Router: Guest route accessed by authenticated user, redirecting to dashboard');
-        next('/dashboard');
-        return;
+        return next('/dashboard');
       }
 
       // --- START OF THE FIX ---
@@ -452,7 +447,6 @@ export const setupRouterGuards = (router) => {
       // If user is authenticated but user data is not loaded yet, wait for it
       // This is important for page reloads where the guard runs before user data is fetched
       if (authStore.isAuthenticated && !authStore.user && !authStore.loading) {
-        console.log('Router: User authenticated but data not loaded, fetching user data...');
         try {
           await authStore.fetchUser();
         } catch (error) {
@@ -463,7 +457,6 @@ export const setupRouterGuards = (router) => {
 
       // Wait for user data to finish loading if it's currently loading
       if (authStore.isAuthenticated && authStore.loading) {
-        console.log('Router: Waiting for user data to load...');
         // Wait up to 3 seconds for user data to load
         let attempts = 0;
         while (authStore.loading && attempts < 30) {
@@ -483,7 +476,6 @@ export const setupRouterGuards = (router) => {
 
       // Check if user needs onboarding but is trying to go to a normal page
       if (userHasNoFarm && !to.meta.requiresOnboarding && to.path !== '/onboarding') {
-        console.log('Router: User is a farmer with no farm, redirecting to onboarding');
         next('/onboarding');
         return;
       }
@@ -491,7 +483,6 @@ export const setupRouterGuards = (router) => {
       // Check if user is ALREADY onboarded but tries to go back to /onboarding
       // Only redirect if we have user data (to avoid redirecting when user is null on reload)
       if (to.meta.requiresOnboarding && user && !userHasNoFarm) {
-        console.log('Router: User is already onboarded, redirecting from /onboarding');
         next('/dashboard');
         return;
       }
@@ -499,7 +490,6 @@ export const setupRouterGuards = (router) => {
       // If we're on onboarding page and user data is still loading, allow navigation
       // (don't redirect away from onboarding while user data is being fetched)
       if (to.meta.requiresOnboarding && !user && authStore.isAuthenticated) {
-        console.log('Router: On onboarding page, user data still loading, allowing navigation');
         next();
         return;
       }
@@ -509,13 +499,11 @@ export const setupRouterGuards = (router) => {
       // Check role-based access
       if (to.meta.roles && authStore.user) {
         if (!to.meta.roles.includes(authStore.user.role)) {
-          console.log(`Router: User role ${authStore.user.role} not allowed for route, redirecting to dashboard`);
           next('/dashboard');
           return;
         }
       }
 
-      console.log(`Router: Navigation to ${to.path} allowed`);
       next();
     } catch (error) {
       console.error('Router guard error:', error);

@@ -346,18 +346,6 @@ const harvestablePlantings = computed(() => {
   })
   
   // Debug logging when modal is open
-  if (props.show) {
-    console.log('=== Harvest Modal Debug ===')
-    console.log('All plantings in store:', allPlantings.length)
-    console.log('Harvestable plantings (filtered):', plantings.length)
-    if (allPlantings.length > 0) {
-      console.log('Planting statuses:', allPlantings.map(p => ({ 
-        id: p?.id, 
-        status: p?.status,
-        included: validStatuses.includes(String(p?.status || '').toLowerCase())
-      })))
-    }
-  }
   
   return plantings
 })
@@ -398,13 +386,8 @@ watch(() => props.show, async (newVal) => {
     form.value.processing = false
     // Always fetch plantings and fields when modal opens to ensure we have latest data
     try {
-      console.log('Modal opened, fetching plantings and fields...')
-      console.log('Current plantings count:', farmStore.plantings.length)
-      
       // Always fetch to get latest data
       await farmStore.fetchPlantings()
-      console.log('After fetch, plantings count:', farmStore.plantings.length)
-      console.log('Plantings data:', farmStore.plantings)
       
       // Also fetch fields if not loaded (needed for field name display)
       if (farmStore.fields.length === 0) {

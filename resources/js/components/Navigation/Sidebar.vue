@@ -342,7 +342,6 @@ const logout = async () => {
   isNavigating.value = true;
   try {
     await authStore.logout();
-    console.log('✓ Logout successful');
     router.push('/login');
   } catch (error) {
     console.error('Logout error:', error);

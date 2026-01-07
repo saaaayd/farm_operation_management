@@ -34,7 +34,6 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('token', this.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
 
-        console.log('✓ Login successful for user:', this.user.name);
         return response.data;
       } catch (error) {
         console.error('Login error:', error);
@@ -147,8 +146,6 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid user data received');
         }
 
-        this.user = response.data.user;
-        console.log('✓ User data fetched successfully');
       } catch (error) {
         console.error('Fetch user error:', error);
 
