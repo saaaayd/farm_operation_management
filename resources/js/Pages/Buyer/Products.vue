@@ -81,9 +81,17 @@
           @click="viewProduct(product.id)"
         >
           <div class="p-6">
-            <!-- Product Image/Icon -->
-            <div class="h-48 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-4 flex items-center justify-center">
-              <span class="text-6xl">🌾</span>
+            <!-- Product Image -->
+            <div class="h-48 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-4 overflow-hidden">
+              <img
+                v-if="product.images && product.images.length > 0"
+                :src="product.images[0]"
+                :alt="product.name"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <span class="text-6xl">🌾</span>
+              </div>
             </div>
 
             <!-- Product Info -->

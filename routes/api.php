@@ -402,6 +402,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
             Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
             Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
+
+            // Product image management
+            Route::post('/products/images/upload', [\App\Http\Controllers\MarketPlace\ProductImageController::class, 'upload']);
+            Route::post('/products/images/delete', [\App\Http\Controllers\MarketPlace\ProductImageController::class, 'delete']);
         });
 
         // Order management

@@ -176,6 +176,74 @@
             </div>
           </div>
 
+          <!-- Product Images Section -->
+          <div class="p-6 bg-amber-50/50">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-amber-200">
+              Product Images
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">Upload photos of your rice to showcase quality to buyers. (Maximum 5 images, 2MB each)</p>
+            
+            <!-- Upload Area -->
+            <div
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleDrop"
+              :class="[
+                'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
+                isDragging ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'
+              ]"
+              @click="$refs.fileInput.click()"
+            >
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                class="hidden"
+                @change="handleFileSelect"
+              />
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="mt-2 text-sm text-gray-600">
+                <span class="font-semibold text-green-600">Click to upload</span> or drag and drop
+              </p>
+              <p class="text-xs text-gray-500 mt-1">JPG, JPEG, PNG, WebP up to 2MB each</p>
+            </div>
+
+            <!-- Upload Progress -->
+            <div v-if="uploadingImages" class="mt-4 flex items-center justify-center gap-2">
+              <svg class="animate-spin h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="text-sm text-gray-600">Uploading images...</span>
+            </div>
+
+            <!-- Image Previews -->
+            <div v-if="uploadedImages.length > 0" class="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div
+                v-for="(image, index) in uploadedImages"
+                :key="index"
+                class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200"
+              >
+                <img :src="image" alt="Product image" class="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  @click="removeImage(index)"
+                  class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Image Upload Error -->
+            <p v-if="imageError" class="mt-2 text-sm text-red-600">{{ imageError }}</p>
+          </div>
+
           <!-- Pricing & Quantity Section -->
           <div class="p-6 bg-green-50/50">
             <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-green-200">
@@ -467,6 +535,7 @@ import { useMarketplaceStore } from '@/stores/marketplace'
 import { useFarmStore } from '@/stores/farm'
 import FormAlert from '@/Components/UI/FormAlert.vue'
 import { extractFormErrors, resetFormErrors } from '@/utils/form'
+import axios from 'axios'
 
 const router = useRouter()
 const marketplaceStore = useMarketplaceStore()
@@ -478,6 +547,13 @@ const formError = reactive({
   message: '',
   fieldErrors: {},
 })
+
+// Image upload state
+const fileInput = ref(null)
+const uploadedImages = ref([])
+const uploadingImages = ref(false)
+const isDragging = ref(false)
+const imageError = ref('')
 
 const form = reactive({
   rice_variety_id: '',
@@ -523,6 +599,68 @@ const formatHarvestOption = (harvest) => {
   return `${crop} • ${date}${yieldKg ? ` • ${yieldKg}` : ''}`
 }
 
+// Image upload handlers
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  uploadImages(files)
+  event.target.value = '' // Reset input
+}
+
+const handleDrop = (event) => {
+  isDragging.value = false
+  const files = Array.from(event.dataTransfer.files).filter(file => file.type.startsWith('image/'))
+  uploadImages(files)
+}
+
+const uploadImages = async (files) => {
+  imageError.value = ''
+  
+  // Check total count
+  if (uploadedImages.value.length + files.length > 5) {
+    imageError.value = 'You can upload a maximum of 5 images.'
+    return
+  }
+  
+  // Validate file sizes
+  const oversizedFiles = files.filter(f => f.size > 2 * 1024 * 1024)
+  if (oversizedFiles.length > 0) {
+    imageError.value = 'Some files are larger than 2MB and were not uploaded.'
+    files = files.filter(f => f.size <= 2 * 1024 * 1024)
+  }
+  
+  if (files.length === 0) return
+  
+  uploadingImages.value = true
+  
+  try {
+    const formData = new FormData()
+    files.forEach(file => formData.append('images[]', file))
+    
+    const response = await axios.post('/api/rice-marketplace/products/images/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    uploadedImages.value.push(...response.data.urls)
+  } catch (error) {
+    console.error('Upload error:', error)
+    imageError.value = error.response?.data?.message || 'Failed to upload images. Please try again.'
+  } finally {
+    uploadingImages.value = false
+  }
+}
+
+const removeImage = async (index) => {
+  const url = uploadedImages.value[index]
+  
+  try {
+    await axios.post('/api/rice-marketplace/products/images/delete', { url })
+  } catch (error) {
+    console.warn('Failed to delete image from server:', error)
+  }
+  
+  uploadedImages.value.splice(index, 1)
+}
+
 const submit = async () => {
   if (submitting.value) return
   
@@ -551,6 +689,11 @@ const submit = async () => {
     if (!payload.storage_conditions) delete payload.storage_conditions
     if (!payload.certification) delete payload.certification
     if (!payload.notes) delete payload.notes
+    
+    // Add uploaded images
+    if (uploadedImages.value.length > 0) {
+      payload.images = uploadedImages.value
+    }
 
     const result = await marketplaceStore.createRiceProduct(payload)
     console.log('Product created, result:', result)

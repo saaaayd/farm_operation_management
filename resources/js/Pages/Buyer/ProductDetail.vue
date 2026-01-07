@@ -23,8 +23,32 @@
         <div class="lg:col-span-2 space-y-6">
           <!-- Product Image -->
           <div class="bg-white rounded-lg shadow p-6">
-            <div class="aspect-w-16 aspect-h-9 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center h-96">
-              <span class="text-9xl">🌾</span>
+            <!-- Main Image -->
+            <div class="aspect-w-16 aspect-h-9 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden h-96">
+              <img
+                v-if="product.images && product.images.length > 0"
+                :src="product.images[selectedImageIndex]"
+                :alt="product.name"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <span class="text-9xl">🌾</span>
+              </div>
+            </div>
+            
+            <!-- Thumbnail Gallery -->
+            <div v-if="product.images && product.images.length > 1" class="flex gap-2 mt-4 overflow-x-auto py-2">
+              <button
+                v-for="(image, index) in product.images"
+                :key="index"
+                @click="selectedImageIndex = index"
+                :class="[
+                  'flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all',
+                  selectedImageIndex === index ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
+                ]"
+              >
+                <img :src="image" :alt="`Product image ${index + 1}`" class="w-full h-full object-cover" />
+              </button>
             </div>
           </div>
 
@@ -370,6 +394,7 @@ const router = useRouter()
 const loading = ref(true)
 const product = ref({})
 const quantity = ref(1)
+const selectedImageIndex = ref(0)
 const showPreOrderModal = ref(false)
 const showOrderModal = ref(false)
 const submitting = ref(false)
