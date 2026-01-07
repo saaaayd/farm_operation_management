@@ -600,31 +600,37 @@ class DatabaseSeeder extends Seeder
             Expense::updateOrCreate([
                 'description' => 'Corn seeds purchase',
                 'planting_id' => $planting1->id,
+                'user_id' => $farmer1->id,
             ], [
                 'amount' => 125.00,
                 'category' => 'seeds',
                 'date' => now()->subDays(50),
-                'planting_id' => $planting1->id
+                'planting_id' => $planting1->id,
+                'user_id' => $farmer1->id,
             ]);
 
             Expense::updateOrCreate([
                 'description' => 'Fertilizer application',
                 'planting_id' => $planting1->id,
+                'user_id' => $farmer1->id,
             ], [
                 'amount' => 85.00,
                 'category' => 'fertilizer',
                 'date' => now()->subDays(35),
-                'planting_id' => $planting1->id
+                'planting_id' => $planting1->id,
+                'user_id' => $farmer1->id,
             ]);
 
             Expense::updateOrCreate([
                 'description' => 'Labor costs - weeding',
                 'planting_id' => $planting2->id,
+                'user_id' => $farmer1->id,
             ], [
                 'amount' => 120.00,
                 'category' => 'labor',
                 'date' => now()->subDays(20),
-                'planting_id' => $planting2->id
+                'planting_id' => $planting2->id,
+                'user_id' => $farmer1->id,
             ]);
 
             // Create weather logs
@@ -662,13 +668,14 @@ class DatabaseSeeder extends Seeder
                     'name' => 'Premium IR64 Rice',
                     'description' => 'High-quality IR64 rice, freshly harvested from organic farms.',
                     'quantity_available' => 500,
-                    'price_per_kg' => 45.00,
-                    'minimum_order' => 5,
+                    'price_per_unit' => 45.00,
+                    'minimum_order_quantity' => 5,
                     'quality_grade' => 'premium',
                     'processing_method' => 'milled',
                     'moisture_content' => 14.0,
                     'is_organic' => true,
                     'production_status' => 'available',
+                    'unit' => 'kg',
                 ]
             );
 
@@ -683,13 +690,14 @@ class DatabaseSeeder extends Seeder
                     'name' => 'Thai Jasmine Aromatic Rice',
                     'description' => 'Fragrant jasmine rice with soft texture, perfect for everyday meals.',
                     'quantity_available' => 300,
-                    'price_per_kg' => 55.00,
-                    'minimum_order' => 2,
-                    'quality_grade' => 'premium',
+                    'price_per_unit' => 55.00,
+                    'minimum_order_quantity' => 2,
+                    'quality_grade' => 'grade_a',
                     'processing_method' => 'milled',
                     'moisture_content' => 13.5,
                     'is_organic' => false,
                     'production_status' => 'available',
+                    'unit' => 'kg',
                 ]
             );
 
@@ -704,13 +712,14 @@ class DatabaseSeeder extends Seeder
                     'name' => 'Brown Rice - Healthy Choice',
                     'description' => 'Nutritious whole grain brown rice, rich in fiber and nutrients.',
                     'quantity_available' => 200,
-                    'price_per_kg' => 52.00,
-                    'minimum_order' => 3,
-                    'quality_grade' => 'standard',
-                    'processing_method' => 'natural',
+                    'price_per_unit' => 52.00,
+                    'minimum_order_quantity' => 3,
+                    'quality_grade' => 'commercial',
+                    'processing_method' => 'milled',
                     'moisture_content' => 14.2,
                     'is_organic' => true,
                     'production_status' => 'available',
+                    'unit' => 'kg',
                 ]
             );
 
@@ -729,6 +738,7 @@ class DatabaseSeeder extends Seeder
                     'total_amount' => 1125.00,
                     'status' => 'pending',
                     'payment_status' => 'pending',
+                    'payment_method' => 'cod',
                     'delivery_method' => 'courier',
                     'delivery_address' => [
                         'street' => '321 Market Street',
@@ -755,6 +765,7 @@ class DatabaseSeeder extends Seeder
                     'total_amount' => 2750.00,
                     'status' => 'confirmed',
                     'payment_status' => 'pending',
+                    'payment_method' => 'bank_transfer',
                     'delivery_method' => 'pickup',
                     'delivery_address' => [
                         'street' => '654 Trade Boulevard',
@@ -782,6 +793,7 @@ class DatabaseSeeder extends Seeder
                     'total_amount' => 780.00,
                     'status' => 'shipped',
                     'payment_status' => 'paid',
+                    'payment_method' => 'cod',
                     'delivery_method' => 'courier',
                     'delivery_address' => [
                         'street' => '321 Market Street',

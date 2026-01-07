@@ -146,6 +146,7 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid user data received');
         }
 
+        this.user = response.data.user;
       } catch (error) {
         console.error('Fetch user error:', error);
 
