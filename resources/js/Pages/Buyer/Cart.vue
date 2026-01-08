@@ -1,7 +1,13 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <div class="max-w-4xl mx-auto py-8 px-4">
-      <h1 class="text-2xl font-bold text-gray-900 mb-6">Shopping Cart</h1>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Shopping Cart</h1>
+          <p class="text-gray-500 mt-1">Review and manage your cart items</p>
+        </div>
+      </div>
 
       <!-- Loading -->
       <div v-if="loading" class="text-center py-12">

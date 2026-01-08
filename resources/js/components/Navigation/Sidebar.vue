@@ -188,27 +188,27 @@
             </router-link>
 
             <router-link
-              to="/marketplace/cart"
+              to="/cart"
               class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/marketplace/cart') }"
+              :class="{ 'nav-item-active': $route.path === '/cart' }"
             >
               <ShoppingBagIcon class="nav-icon" />
               Shopping Cart
             </router-link>
 
             <router-link
-              to="/marketplace/orders"
+              to="/buyer/orders"
               class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/marketplace/orders') }"
+              :class="{ 'nav-item-active': $route.path.startsWith('/buyer/orders') }"
             >
               <DocumentTextIcon class="nav-icon" />
               My Orders
             </router-link>
 
             <router-link
-              to="/marketplace/favorites"
+              to="/favorites"
               class="nav-item"
-              :class="{ 'nav-item-active': $route.path.startsWith('/marketplace/favorites') }"
+              :class="{ 'nav-item-active': $route.path === '/favorites' }"
             >
               <HeartIcon class="nav-icon" />
               Favorites

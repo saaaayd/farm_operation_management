@@ -71,7 +71,8 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/Pages/Auth/Login.vue'), // Temporary, will be handled by router guard
+    component: () => import('@/Pages/Landing.vue'),
+    meta: { requiresGuest: true }
   },
   {
     path: '/verify-phone',
@@ -203,6 +204,12 @@ const routes = [
     component: HarvestsCreate,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
+  {
+    path: '/harvests/:id',
+    name: 'harvests-show',
+    component: () => import('@/Pages/Farmer/Harvests/Show.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
 
   // Laborer Routes
   // Groups first to avoid catching by :id
@@ -317,6 +324,18 @@ const routes = [
     path: '/buyer/orders',
     name: 'buyer-orders',
     component: () => import('@/Pages/Buyer/Orders/Index.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
+    path: '/favorites',
+    name: 'favorites',
+    component: () => import('@/Pages/Buyer/Favorites.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
+    path: '/buyer/orders/:id',
+    name: 'buyer-order-detail',
+    component: () => import('@/Pages/Marketplace/Orders/Show.vue'),
     meta: { requiresAuth: true, roles: ['buyer'] }
   },
 

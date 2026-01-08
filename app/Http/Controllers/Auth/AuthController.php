@@ -222,4 +222,75 @@ class AuthController extends Controller
             'message' => 'Password changed successfully'
         ]);
     }
+
+    /**
+     * Upload profile picture
+     */
+    public function uploadProfilePicture(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        // Delete old profile picture if exists
+        if ($user->profile_picture) {
+            $oldPath = public_path('storage/' . $user->profile_picture);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        // Store new profile picture
+        $file = $request->file('profile_picture');
+        $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('profile-pictures', $filename, 'public');
+
+        $user->update([
+            'profile_picture' => $path
+        ]);
+
+        return response()->json([
+            'message' => 'Profile picture uploaded successfully',
+            'profile_picture_url' => asset('storage/' . $path),
+            'user' => $user
+        ]);
+    }
+
+    /**
+     * Delete profile picture
+     */
+    public function deleteProfilePicture(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->profile_picture) {
+            return response()->json([
+                'message' => 'No profile picture to delete'
+            ], 400);
+        }
+
+        // Delete file from storage
+        $filePath = public_path('storage/' . $user->profile_picture);
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $user->update([
+            'profile_picture' => null
+        ]);
+
+        return response()->json([
+            'message' => 'Profile picture deleted successfully',
+            'user' => $user
+        ]);
+    }
 }

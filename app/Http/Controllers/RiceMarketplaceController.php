@@ -733,4 +733,90 @@ class RiceMarketplaceController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get farmer-specific order statistics with revenue trend
+     */
+    public function getFarmerOrderStats(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->isFarmer()) {
+                return response()->json(['message' => 'Only farmers can access order stats'], 403);
+            }
+
+            // Base query for farmer's orders
+            $baseQuery = RiceOrder::forFarmer($user->id);
+
+            // Total revenue (from all active/completed orders - not cancelled/pending)
+            $totalRevenue = (clone $baseQuery)
+                ->whereIn('status', [
+                    RiceOrder::STATUS_CONFIRMED,
+                    RiceOrder::STATUS_PROCESSING,
+                    RiceOrder::STATUS_SHIPPED,
+                    RiceOrder::STATUS_DELIVERED
+                ])
+                ->sum('total_amount');
+
+            // Total orders count
+            $totalOrders = (clone $baseQuery)->count();
+
+            // Orders by status
+            $ordersByStatus = (clone $baseQuery)
+                ->select('status', DB::raw('count(*) as count'))
+                ->groupBy('status')
+                ->pluck('count', 'status');
+
+            // Revenue trend for last 7 days
+            $revenueTrend = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i)->format('Y-m-d');
+                $dayRevenue = RiceOrder::forFarmer($user->id)
+                    ->whereDate('order_date', $date)
+                    ->whereIn('status', [
+                        RiceOrder::STATUS_CONFIRMED,
+                        RiceOrder::STATUS_PROCESSING,
+                        RiceOrder::STATUS_SHIPPED,
+                        RiceOrder::STATUS_DELIVERED
+                    ])
+                    ->sum('total_amount');
+
+                $revenueTrend[] = [
+                    'date' => $date,
+                    'day' => now()->subDays($i)->format('D'),
+                    'revenue' => (float) $dayRevenue,
+                ];
+            }
+
+            // Active orders (pending + confirmed + processing + shipped)
+            $pendingCount = $ordersByStatus[RiceOrder::STATUS_PENDING] ?? 0;
+            $confirmedCount = $ordersByStatus[RiceOrder::STATUS_CONFIRMED] ?? 0;
+            $processingCount = $ordersByStatus[RiceOrder::STATUS_PROCESSING] ?? 0;
+            $shippedCount = $ordersByStatus[RiceOrder::STATUS_SHIPPED] ?? 0;
+            $deliveredCount = $ordersByStatus[RiceOrder::STATUS_DELIVERED] ?? 0;
+            $cancelledCount = $ordersByStatus[RiceOrder::STATUS_CANCELLED] ?? 0;
+
+            return response()->json([
+                'stats' => [
+                    'total_revenue' => (float) $totalRevenue,
+                    'total_orders' => $totalOrders,
+                    'pending' => $pendingCount,
+                    'confirmed' => $confirmedCount,
+                    'processing' => $processingCount,
+                    'shipped' => $shippedCount,
+                    'delivered' => $deliveredCount,
+                    'cancelled' => $cancelledCount,
+                    'active_orders' => $pendingCount + $confirmedCount + $processingCount + $shippedCount,
+                    'revenue_trend' => $revenueTrend,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch order statistics',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

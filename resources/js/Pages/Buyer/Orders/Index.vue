@@ -1,10 +1,12 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <div class="max-w-6xl mx-auto py-8 px-4">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">My Orders</h1>
-        <p class="text-gray-600 mt-1">Track your rice product orders</p>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">My Orders</h1>
+          <p class="text-gray-500 mt-1">Track your rice product orders</p>
+        </div>
       </div>
 
       <!-- Status Tabs -->

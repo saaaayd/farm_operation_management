@@ -9,6 +9,15 @@
         </div>
         <div class="flex space-x-3">
           <button
+            @click="printReport"
+            class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Report
+          </button>
+          <button
             @click="exportReport"
             class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
@@ -349,11 +358,70 @@ const loadFinancialData = async () => {
     alert('Failed to load financial data')
   }
 }
+
+const printReport = () => {
+  window.print()
+}
 </script>
 
 <style scoped>
 .financial-reports-page {
   min-height: 100vh;
   background-color: #f8fafc;
+}
+
+/* Print-friendly styles */
+@media print {
+  .financial-reports-page {
+    background-color: white !important;
+    padding: 0 !important;
+  }
+  
+  /* Hide buttons and form controls */
+  button,
+  select,
+  input[type="date"],
+  .flex.space-x-3 {
+    display: none !important;
+  }
+  
+  /* Ensure content fits on page */
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  
+  /* Make cards print without shadows */
+  .shadow-md,
+  .shadow-lg,
+  .shadow {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+  
+  /* Ensure text is readable */
+  .bg-green-100,
+  .bg-red-100,
+  .bg-blue-100,
+  .bg-yellow-100 {
+    background-color: #f9fafb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Page break handling */
+  .bg-white {
+    page-break-inside: avoid;
+  }
+  
+  /* Add report title for printing */
+  .financial-reports-page::before {
+    content: "Financial Report - " attr(data-date-range);
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+  }
 }
 </style>

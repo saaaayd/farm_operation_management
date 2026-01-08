@@ -340,7 +340,7 @@ const contactSeller = () => {
 }
 
 const viewProduct = (id) => {
-  router.push(`/marketplace/product/${id}`)
+  router.push(`/marketplace/products/${id}`)
 }
 
 onMounted(() => {
@@ -356,7 +356,7 @@ const loadProductData = async (id) => {
     
     // Load product data from API
     const response = await riceMarketplaceAPI.getProductById(id)
-    const data = response.data.data || response.data
+    const data = response.data.product || response.data.data || response.data
     
     // Map API response to component data
     product.value = {

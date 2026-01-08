@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::put('/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/profile/picture', [AuthController::class, 'uploadProfilePicture']);
+    Route::delete('/profile/picture', [AuthController::class, 'deleteProfilePicture']);
 
     // Dashboard routes
     Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -224,6 +226,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'updateProduct']);
             Route::delete('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'deleteProduct']);
 
+            // Farmer order statistics
+            Route::get('/farmer/order-stats', [\App\Http\Controllers\RiceMarketplaceController::class, 'getFarmerOrderStats']);
+
             // Product image management
             Route::post('/products/images/upload', [\App\Http\Controllers\MarketPlace\ProductImageController::class, 'upload']);
             Route::post('/products/images/delete', [\App\Http\Controllers\MarketPlace\ProductImageController::class, 'delete']);
@@ -253,6 +258,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/cart/{cartItem}', [\App\Http\Controllers\MarketPlace\CartController::class, 'removeItem']);
             Route::delete('/cart', [\App\Http\Controllers\MarketPlace\CartController::class, 'clear']);
             Route::post('/cart/checkout', [\App\Http\Controllers\MarketPlace\CartController::class, 'checkout']);
+
+            // Favorites routes
+            Route::get('/favorites', [\App\Http\Controllers\MarketPlace\FavoriteController::class, 'index']);
+            Route::post('/favorites', [\App\Http\Controllers\MarketPlace\FavoriteController::class, 'store']);
+            Route::post('/favorites/toggle', [\App\Http\Controllers\MarketPlace\FavoriteController::class, 'toggle']);
+            Route::get('/favorites/check/{productId}', [\App\Http\Controllers\MarketPlace\FavoriteController::class, 'check']);
+            Route::delete('/favorites/{favorite}', [\App\Http\Controllers\MarketPlace\FavoriteController::class, 'destroy']);
         });
 
 

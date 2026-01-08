@@ -62,9 +62,31 @@
             </div>
             <div class="ml-4">
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Planted Area</p>
-              <p class="text-2xl font-bold text-gray-900 mt-1">{{ totalPlantedArea }} <span class="text-sm font-normal text-gray-600">ha</span></p>
+              <div class="flex items-baseline gap-2">
+                <p class="text-2xl font-bold text-gray-900">{{ totalPlantedArea }} <span class="text-sm font-normal text-gray-600">ha</span></p>
+                <span 
+                  v-if="plantedAreaTrend !== 0" 
+                  :class="plantedAreaTrend > 0 ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'"
+                  class="text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center"
+                >
+                  <svg v-if="plantedAreaTrend > 0" class="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  <svg v-else class="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  {{ Math.abs(plantedAreaTrend) }}%
+                </span>
+              </div>
             </div>
           </div>
+        </div>
+        <!-- Mini Trend Chart -->
+        <div class="mt-3 h-8 flex items-end gap-0.5">
+          <div v-for="(val, idx) in plantedAreaHistory" :key="idx" 
+            class="flex-1 bg-green-200 rounded-t transition-all duration-300"
+            :style="{ height: `${Math.max(10, (val / Math.max(...plantedAreaHistory)) * 100)}%` }"
+          ></div>
         </div>
       </div>
       
@@ -255,6 +277,45 @@
             </div>
           </div>
 
+          <!-- Weather Farming Alerts -->
+          <div v-if="weatherAlerts.length > 0" class="bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200 rounded-lg shadow-sm p-4 animate-fade-in-down">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-md font-bold text-blue-800 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                </svg>
+                Weather Farming Suggestions
+              </h3>
+              <button 
+                @click="navigateTo('/weather')" 
+                class="text-xs font-semibold text-blue-700 hover:text-blue-900 underline"
+              >
+                View Forecast
+              </button>
+            </div>
+            <div class="space-y-2">
+              <div 
+                v-for="(alert, index) in weatherAlerts.slice(0, 3)" 
+                :key="index" 
+                :class="[
+                  'flex items-start p-3 rounded-md border',
+                  alert.type === 'warning' ? 'bg-yellow-50 border-yellow-200' : 
+                  alert.type === 'danger' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-100'
+                ]"
+              >
+                <div class="flex-shrink-0 mr-3">
+                  <span class="text-xl">{{ alert.icon }}</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium" :class="alert.type === 'danger' ? 'text-red-800' : alert.type === 'warning' ? 'text-yellow-800' : 'text-blue-800'">
+                    {{ alert.title }}
+                  </p>
+                  <p class="text-xs text-gray-600 mt-0.5">{{ alert.message }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Upcoming Tasks -->
           <div class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
     <div class="flex items-center justify-between mb-4">
@@ -429,6 +490,54 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
       return '0.00';
     }
   });
+
+  // Trend calculation - simulated based on planting dates for demo
+  const plantedAreaTrend = computed(() => {
+    try {
+      if (!farmStore || !farmStore.plantings || farmStore.plantings.length < 2) return 0;
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      
+      const currentPeriod = farmStore.plantings.filter(p => {
+        const plantDate = new Date(p.created_at || p.planting_date);
+        return plantDate >= thirtyDaysAgo && p.status !== 'harvested';
+      }).reduce((sum, p) => sum + (parseFloat(p.area_planted) || 0), 0);
+      
+      const previousPeriod = farmStore.plantings.filter(p => {
+        const plantDate = new Date(p.created_at || p.planting_date);
+        return plantDate >= sixtyDaysAgo && plantDate < thirtyDaysAgo;
+      }).reduce((sum, p) => sum + (parseFloat(p.area_planted) || 0), 0);
+      
+      if (previousPeriod === 0) return currentPeriod > 0 ? 100 : 0;
+      return Math.round(((currentPeriod - previousPeriod) / previousPeriod) * 100);
+    } catch (e) {
+      return 0;
+    }
+  });
+
+  // Mini chart data - last 6 months of planting activity
+  const plantedAreaHistory = computed(() => {
+    try {
+      if (!farmStore || !farmStore.plantings || farmStore.plantings.length === 0) {
+        return [1, 1, 1, 1, 1, 1]; // Default flat line
+      }
+      const now = new Date();
+      const monthlyData = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        const monthTotal = farmStore.plantings.filter(p => {
+          const plantDate = new Date(p.created_at || p.planting_date);
+          return plantDate >= monthStart && plantDate <= monthEnd;
+        }).reduce((sum, p) => sum + (parseFloat(p.area_planted) || 0), 0);
+        monthlyData.push(monthTotal || 0.1); // Min value to show bar
+      }
+      return monthlyData;
+    } catch (e) {
+      return [1, 1, 1, 1, 1, 1];
+    }
+  });
   
   const tasksDueToday = computed(() => {
     try {
@@ -555,6 +664,92 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
     } catch (error) {
       console.warn('Error calculating ready for transplant:', error);
       return 0;
+    }
+  });
+  
+  // Weather-based farming alerts and suggestions
+  const weatherAlerts = computed(() => {
+    try {
+      const alerts = [];
+      const weather = weatherStore.currentWeather;
+      const forecast = weatherStore.forecast || [];
+      
+      if (!weather) return alerts;
+      
+      const temp = weather.temperature || weather.temp;
+      const humidity = weather.humidity;
+      const description = (weather.description || weather.weather || '').toLowerCase();
+      const windSpeed = weather.wind_speed || weather.windSpeed || 0;
+      
+      // Heavy rain warning
+      if (description.includes('rain') || description.includes('storm') || description.includes('shower')) {
+        alerts.push({
+          type: 'warning',
+          icon: '🌧️',
+          title: 'Rain Expected Today',
+          message: 'Delay pesticide application and fertilizer spreading. Check drainage systems.'
+        });
+      }
+      
+      // Extreme heat warning
+      if (temp && temp > 35) {
+        alerts.push({
+          type: 'danger',
+          icon: '🌡️',
+          title: 'Extreme Heat Alert',
+          message: 'Water crops early morning or evening. Avoid planting during peak heat hours.'
+        });
+      }
+      
+      // Good planting conditions
+      if (temp >= 25 && temp <= 32 && humidity >= 60 && humidity <= 85 && !description.includes('rain')) {
+        alerts.push({
+          type: 'info',
+          icon: '🌱',
+          title: 'Ideal Planting Conditions',
+          message: 'Temperature and humidity are optimal for transplanting rice seedlings.'
+        });
+      }
+      
+      // High winds
+      if (windSpeed > 20) {
+        alerts.push({
+          type: 'warning',
+          icon: '💨',
+          title: 'High Wind Advisory',
+          message: 'Delay spraying activities. Check plant supports and field structures.'
+        });
+      }
+      
+      // Drought conditions
+      if (temp > 30 && humidity < 40) {
+        alerts.push({
+          type: 'warning',
+          icon: '☀️',
+          title: 'Dry Conditions',
+          message: 'Increase irrigation frequency. Monitor soil moisture levels closely.'
+        });
+      }
+      
+      // Check forecast for upcoming rain
+      const upcomingRain = forecast.slice(0, 3).find(f => {
+        const desc = (f.description || f.weather || '').toLowerCase();
+        return desc.includes('rain') || desc.includes('storm');
+      });
+      
+      if (upcomingRain && !description.includes('rain')) {
+        alerts.push({
+          type: 'info',
+          icon: '📅',
+          title: 'Rain Expected Soon',
+          message: 'Complete urgent field work today. Harvesting should be prioritized if crops are ready.'
+        });
+      }
+      
+      return alerts;
+    } catch (error) {
+      console.warn('Error generating weather alerts:', error);
+      return [];
     }
   });
   

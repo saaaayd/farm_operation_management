@@ -1,24 +1,30 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <button
-          @click="goBack"
-          class="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Products
-        </button>
-        <h1 class="text-2xl font-bold text-gray-900">{{ product.name || 'Loading...' }}</h1>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <nav class="flex items-center text-sm text-gray-500 mb-2">
+            <router-link to="/marketplace" class="hover:text-gray-700">Products</router-link>
+            <span class="mx-2">/</span>
+            <span class="text-gray-900">{{ product.name || 'Product Details' }}</span>
+          </nav>
+          <h1 class="text-3xl font-bold text-gray-800">{{ product.name || 'Loading...' }}</h1>
+          <p class="text-gray-500 mt-1">View product details and place orders</p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            @click="goBack"
+            class="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            ← Back to Products
+          </button>
+        </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="!loading && product.id">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Main Content -->
+      <div v-if="!loading && product.id">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Product Image -->
@@ -127,6 +133,38 @@
 
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
+          <!-- Favorite Button -->
+          <div class="bg-white rounded-lg shadow p-4">
+            <button
+              @click="toggleFavorite"
+              :disabled="togglingFavorite"
+              class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors font-medium"
+              :class="isFavorited 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' 
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'"
+            >
+              <svg 
+                v-if="togglingFavorite" 
+                class="w-5 h-5 animate-spin" 
+                fill="none" 
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg 
+                v-else
+                class="w-5 h-5" 
+                :fill="isFavorited ? 'currentColor' : 'none'" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              {{ isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
+            </button>
+          </div>
+
           <!-- Order Card -->
           <div class="bg-white rounded-lg shadow p-6 sticky top-4">
             <!-- Production Status -->
@@ -456,6 +494,34 @@ const orderForm = ref({
   phone: ''
 })
 
+// Favorites state
+const isFavorited = ref(false)
+const togglingFavorite = ref(false)
+
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await axios.get(`/api/rice-marketplace/favorites/check/${route.params.id}`)
+    isFavorited.value = response.data.is_favorited
+  } catch (error) {
+    console.warn('Could not check favorite status:', error)
+  }
+}
+
+const toggleFavorite = async () => {
+  togglingFavorite.value = true
+  try {
+    const response = await axios.post('/api/rice-marketplace/favorites/toggle', {
+      rice_product_id: Number(route.params.id)
+    })
+    isFavorited.value = response.data.is_favorited
+  } catch (error) {
+    console.error('Failed to toggle favorite:', error)
+    alert('Failed to update favorites')
+  } finally {
+    togglingFavorite.value = false
+  }
+}
+
 const loadProduct = async () => {
   loading.value = true
   try {
@@ -575,6 +641,7 @@ const formatDate = (date) => {
 
 onMounted(() => {
   loadProduct()
+  checkFavoriteStatus()
 })
 </script>
 

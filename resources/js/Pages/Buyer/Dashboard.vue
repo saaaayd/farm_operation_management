@@ -1,55 +1,41 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
-                <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-            </div>
-            <div class="ml-3">
-              <h1 class="text-xl font-semibold text-gray-900">RiceFARM Marketplace</h1>
-              <p class="text-sm text-gray-500">Welcome back, {{ authStore.user?.name }}</p>
-            </div>
-          </div>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Buyer Dashboard</h1>
+          <p class="text-gray-500 mt-1">Welcome back, {{ authStore.user?.name }}</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <router-link 
+            to="/cart"
+            class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+            </svg>
+            <span 
+              v-if="marketplaceStore.cartItemsCount > 0"
+              class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
+            >
+              {{ marketplaceStore.cartItemsCount }}
+            </span>
+          </router-link>
           
-          <div class="flex items-center space-x-4">
-            <router-link 
-              to="/cart"
-              class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-              </svg>
-              <span 
-                v-if="marketplaceStore.cartItemsCount > 0"
-                class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
-              >
-                {{ marketplaceStore.cartItemsCount }}
-              </span>
-            </router-link>
-            
-            <button
-              @click="logout"
-              class="text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
+          <button
+            @click="logout"
+            class="p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content -->
       <!-- Quick Actions -->
       <section class="mb-8">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -205,7 +191,7 @@
                     Order #{{ order.id.toString().slice(-6) }}
                   </h4>
                   <p class="text-sm text-gray-500">
-                    {{ order.order_items?.length || 0 }} items
+                    {{ order.quantity || 1 }} {{ order.rice_product?.unit || 'kg' }} - {{ order.rice_product?.name || 'Product' }}
                   </p>
                   <p class="text-xs text-gray-400">
                     {{ formatDate(order.created_at) }}
@@ -241,7 +227,7 @@
         </div>
       </div>
 
-    </main>
+    </div>
   </div>
 </template>
 
@@ -286,7 +272,7 @@ const addToCart = (product) => {
 };
 
 const viewProduct = (product) => {
-  router.push(`/marketplace/product/${product.id}`);
+  router.push(`/marketplace/products/${product.id}`);
 };
 
 const getOrderStatusClass = (status) => {

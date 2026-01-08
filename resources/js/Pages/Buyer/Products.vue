@@ -1,19 +1,15 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Rice Products</h1>
-            <p class="text-sm text-gray-600 mt-1">Browse available rice products and pre-order options</p>
-          </div>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Rice Products</h1>
+          <p class="text-gray-500 mt-1">Browse available rice products and pre-order options</p>
         </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content -->
       <!-- Filters -->
       <div class="mb-6 bg-white rounded-lg shadow p-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">

@@ -1,39 +1,27 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <router-link to="/marketplace" class="text-gray-500 hover:text-gray-700 mr-4">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </router-link>
-            <div>
-              <h1 class="text-xl font-semibold text-gray-900">Shopping Cart</h1>
-              <p class="text-sm text-gray-500">Review your rice products before checkout</p>
-            </div>
-          </div>
-          
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">
-              {{ marketplaceStore.cartItemsCount }} items
-            </span>
-            <button 
-              v-if="marketplaceStore.cartItemsCount > 0"
-              @click="clearCart"
-              class="text-red-600 hover:text-red-700 text-sm font-medium"
-            >
-              Clear Cart
-            </button>
-          </div>
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Shopping Cart</h1>
+          <p class="text-gray-500 mt-1">Review your rice products before checkout</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-gray-600">
+            {{ marketplaceStore.cartItemsCount }} items
+          </span>
+          <button 
+            v-if="marketplaceStore.cartItemsCount > 0"
+            @click="clearCart"
+            class="text-red-600 hover:text-red-700 text-sm font-medium"
+          >
+            Clear Cart
+          </button>
         </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content -->
       <div v-if="marketplaceStore.cartItemsCount === 0" class="text-center py-12">
         <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -190,7 +178,7 @@
           </div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

@@ -4,19 +4,32 @@ import api, { riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
 import { useAuthStore } from './auth';
 
 export const useMarketplaceStore = defineStore('marketplace', {
-  state: () => ({
-    products: [],
-    productsPagination: null,
-    categories: [],
-    cart: [],
-    orders: [],
-    ordersPagination: null,
-    sales: [],
-    farmerProducts: [],
-    riceVarieties: [],
-    loading: false,
-    error: null,
-  }),
+  state: () => {
+    // Auto-load cart from localStorage on store initialization
+    let savedCart = [];
+    try {
+      const storedCart = localStorage.getItem('marketplace_cart');
+      if (storedCart) {
+        savedCart = JSON.parse(storedCart);
+      }
+    } catch (e) {
+      console.warn('Failed to load cart from localStorage:', e);
+    }
+
+    return {
+      products: [],
+      productsPagination: null,
+      categories: [],
+      cart: savedCart,
+      orders: [],
+      ordersPagination: null,
+      sales: [],
+      farmerProducts: [],
+      riceVarieties: [],
+      loading: false,
+      error: null,
+    };
+  },
 
   getters: {
     cartItemsCount: (state) => {
@@ -47,9 +60,8 @@ export const useMarketplaceStore = defineStore('marketplace', {
     riceProducts: (state) => {
       try {
         if (!Array.isArray(state.products)) return [];
-        return state.products.filter(product => {
-          return product && product.category === 'Harvested Rice';
-        });
+        // Return all products - rice marketplace products don't use category filtering
+        return state.products;
       } catch (error) {
         console.warn('Error in riceProducts getter:', error);
         return [];
@@ -326,9 +338,10 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.cart.push({
           id: product.id,
           name: product.name,
-          price: Number(product.price), // Ensure price is a number
+          price: Number(product.price_per_unit || product.price), // Support both field names
+          unit: product.unit || 'kg',
           quantity: quantity,
-          image: product.image,
+          image: product.images?.[0] || product.image,
           farmer: product.farmer,
         });
       }
