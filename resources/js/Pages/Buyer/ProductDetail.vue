@@ -80,7 +80,50 @@
               </div>
             </div>
           </div>
-        </div>
+
+          <!-- Customer Reviews -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold">Customer Reviews</h2>
+              <div v-if="reviewStats.total_reviews > 0" class="flex items-center gap-2">
+                <span class="text-2xl font-bold text-yellow-500">{{ reviewStats.average_rating }}</span>
+                <div class="flex">
+                  <span v-for="n in 5" :key="n" :class="n <= Math.round(reviewStats.average_rating) ? 'text-yellow-400' : 'text-gray-300'">★</span>
+                </div>
+                <span class="text-gray-500">({{ reviewStats.total_reviews }} reviews)</span>
+              </div>
+            </div>
+
+            <div v-if="loadingReviews" class="text-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+            </div>
+
+            <div v-else-if="reviews.length === 0" class="text-center py-8 text-gray-500">
+              <p>No reviews yet. Be the first to review this product!</p>
+            </div>
+
+            <div v-else class="space-y-4">
+              <div v-for="review in reviews" :key="review.id" class="border-b border-gray-100 pb-4 last:border-0">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold text-sm">
+                      {{ review.buyer?.name?.charAt(0) || 'U' }}
+                    </div>
+                    <span class="font-medium">{{ review.buyer?.name || 'Anonymous' }}</span>
+                    <span v-if="review.verified_purchase" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Verified</span>
+                  </div>
+                  <span class="text-sm text-gray-500">{{ formatDate(review.created_at) }}</span>
+                </div>
+                <div class="flex items-center gap-1 mb-2">
+                  <span v-for="n in 5" :key="n" :class="n <= review.rating ? 'text-yellow-400' : 'text-gray-300'" class="text-sm">★</span>
+                  <span v-if="review.title" class="ml-2 font-medium text-gray-900">{{ review.title }}</span>
+                </div>
+                <p class="text-gray-700 text-sm">{{ review.review_text }}</p>
+                <div v-if="review.would_recommend" class="mt-2 text-xs text-green-600">✓ Would recommend</div>
+              </div>
+            </div>
+          </div>
+
 
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
@@ -387,6 +430,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { riceMarketplaceAPI, authAPI } from '@/services/api'
 import { formatCurrency } from '@/utils/format'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
@@ -398,6 +442,11 @@ const selectedImageIndex = ref(0)
 const showPreOrderModal = ref(false)
 const showOrderModal = ref(false)
 const submitting = ref(false)
+
+// Reviews state
+const reviews = ref([])
+const reviewStats = ref({ average_rating: 0, total_reviews: 0 })
+const loadingReviews = ref(false)
 
 const orderForm = ref({
   delivery_address: '',
@@ -413,6 +462,8 @@ const loadProduct = async () => {
     const response = await riceMarketplaceAPI.getProductById(route.params.id)
     product.value = response.data.product
     quantity.value = 1
+    // Load reviews after product loads
+    loadReviews()
   } catch (error) {
     console.error('Error loading product:', error)
     alert('Failed to load product')
@@ -420,6 +471,23 @@ const loadProduct = async () => {
     loading.value = false
   }
 }
+
+const loadReviews = async () => {
+  loadingReviews.value = true
+  try {
+    const response = await axios.get(`/api/rice-marketplace/products/${route.params.id}/reviews`)
+    reviews.value = response.data.reviews?.data || response.data.reviews || []
+    reviewStats.value = {
+      average_rating: response.data.average_rating || 0,
+      total_reviews: response.data.total_reviews || 0
+    }
+  } catch (error) {
+    console.error('Failed to load reviews:', error)
+  } finally {
+    loadingReviews.value = false
+  }
+}
+
 
 const increaseQuantity = () => {
   if (product.value.production_status === 'available') {

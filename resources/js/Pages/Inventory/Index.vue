@@ -7,12 +7,23 @@
           <h1 class="text-3xl font-bold text-gray-800">Inventory</h1>
           <p class="text-gray-500 mt-1">Track your farm supplies, seeds, and equipment.</p>
         </div>
-        <button
-          @click="router.push('/inventory/create')"
-          class="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm font-medium"
-        >
-          <span class="text-xl leading-none">+</span> Add Product
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            @click="exportCsv"
+            class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export CSV
+          </button>
+          <button
+            @click="router.push('/inventory/create')"
+            class="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm font-medium"
+          >
+            <span class="text-xl leading-none">+</span> Add Product
+          </button>
+        </div>
       </div>
 
       <FormAlert :visible="!!error" :message="error" class="mb-6" />
@@ -134,6 +145,7 @@ import { useRouter } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import FormAlert from '@/Components/UI/FormAlert.vue'
 import { formatCurrency } from '@/utils/format'
+import axios from 'axios'
 
 const router = useRouter()
 const store = useInventoryStore()
@@ -175,6 +187,25 @@ const viewDetails = (item) => {
 
 const editItem = (item) => {
   router.push(`/inventory/${item.id}/edit`)
+}
+
+const exportCsv = async () => {
+  try {
+    const response = await axios.get('/api/reports/export/inventory', {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `inventory_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Failed to export:', err)
+    alert('Failed to export CSV')
+  }
 }
 
 // Visual Helpers

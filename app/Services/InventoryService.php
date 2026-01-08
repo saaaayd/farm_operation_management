@@ -37,17 +37,17 @@ class InventoryService
         try {
             // Fix: Mapped array keys to match Database Columns exactly
             $item = InventoryItem::create([
-                'user_id'       => $itemData['user_id'],
-                'name'          => $itemData['name'],
-                'description'   => $itemData['description'] ?? '',
-                'category'      => $itemData['category'],
+                'user_id' => $itemData['user_id'],
+                'name' => $itemData['name'],
+                'description' => $itemData['description'] ?? '',
+                'category' => $itemData['category'],
                 'current_stock' => $itemData['quantity'] ?? $itemData['current_stock'] ?? 0, // Handle both inputs
-                'unit'          => $itemData['unit'],
-                'unit_price'    => $itemData['price'] ?? $itemData['unit_price'] ?? 0,
+                'unit' => $itemData['unit'],
+                'unit_price' => $itemData['price'] ?? $itemData['unit_price'] ?? 0,
                 'minimum_stock' => $itemData['min_stock'] ?? $itemData['minimum_stock'] ?? 0,
-                'supplier'      => $itemData['supplier'] ?? '',
-                'location'      => $itemData['location'] ?? '',
-                'expiry_date'   => $itemData['expiry_date'] ?? null,
+                'supplier' => $itemData['supplier'] ?? '',
+                'location' => $itemData['location'] ?? '',
+                'expiry_date' => $itemData['expiry_date'] ?? null,
             ]);
 
             return $item;
@@ -64,7 +64,7 @@ class InventoryService
     {
         try {
             $item = InventoryItem::findOrFail($itemId);
-            
+
             // Map legacy keys if they exist in update data
             if (isset($itemData['quantity'])) {
                 $itemData['current_stock'] = $itemData['quantity'];
@@ -103,7 +103,7 @@ class InventoryService
     {
         try {
             $item = InventoryItem::findOrFail($itemId);
-            
+
             switch ($operation) {
                 case 'add':
                     $item->increment('current_stock', $quantity);
@@ -151,5 +151,24 @@ class InventoryService
             })->count(),
             'out_of_stock_items' => $items->where('current_stock', '<=', 0)->count(),
         ];
+    }
+
+    /**
+     * Get all inventory categories
+     */
+    public function getCategories()
+    {
+        return InventoryItem::CATEGORIES;
+    }
+
+    /**
+     * Get low stock items for a user
+     */
+    public function getLowStockItems($userId)
+    {
+        return InventoryItem::where('user_id', $userId)
+            ->whereRaw('current_stock <= minimum_stock')
+            ->orderBy('name')
+            ->get();
     }
 }

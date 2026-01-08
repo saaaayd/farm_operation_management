@@ -18,10 +18,24 @@ class RiceOrderController extends Controller
      */
     public function buyerOrders(Request $request): JsonResponse
     {
-        $orders = RiceOrder::where('buyer_id', Auth::id())
-            ->with(['riceProduct.farmer', 'riceProduct.riceVariety'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = RiceOrder::where('buyer_id', Auth::id())
+            ->with(['riceProduct.farmer', 'riceProduct.riceVariety']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by date range
+        if ($request->has('from_date') && $request->from_date) {
+            $query->where('order_date', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date') && $request->to_date) {
+            $query->where('order_date', '<=', $request->to_date);
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json(['orders' => $orders]);
     }
@@ -31,10 +45,24 @@ class RiceOrderController extends Controller
      */
     public function farmerOrders(Request $request): JsonResponse
     {
-        $orders = RiceOrder::forFarmer(Auth::id())
-            ->with(['buyer', 'riceProduct'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = RiceOrder::forFarmer(Auth::id())
+            ->with(['buyer', 'riceProduct']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by date range
+        if ($request->has('from_date') && $request->from_date) {
+            $query->where('order_date', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date') && $request->to_date) {
+            $query->where('order_date', '<=', $request->to_date);
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json(['orders' => $orders]);
     }
@@ -110,11 +138,22 @@ class RiceOrderController extends Controller
 
         $order->load(['riceProduct.farmer']);
 
+        // Notify farmer of new order
+        \App\Models\Notification::notify(
+            $product->farmer_id,
+            \App\Models\Notification::TYPE_ORDER_PLACED,
+            'New Order Received',
+            "You have a new order for {$request->quantity} kg of {$product->name}",
+            ['order_id' => $order->id],
+            "/farmer/orders/{$order->id}"
+        );
+
         return response()->json([
             'message' => 'Order placed successfully',
             'order' => $order
         ], 201);
     }
+
 
     /**
      * Farmer accepts an order

@@ -362,6 +362,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useFarmStore } from '@/stores/farm';
 import { useWeatherStore } from '@/stores/weather';
+import { useMarketplaceStore } from '@/stores/marketplace';
 import LineChart from '@/Components/Charts/LineChart.vue';
 import BarChart from '@/Components/Charts/BarChart.vue';
 import PieChart from '@/Components/Charts/PieChart.vue';
@@ -369,6 +370,7 @@ import { formatCurrency } from '@/utils/format';
 
 const farmStore = useFarmStore();
 const weatherStore = useWeatherStore();
+const marketplaceStore = useMarketplaceStore();
 
 const activeTab = ref('yield');
 const selectedPeriod = ref('365');
@@ -470,6 +472,8 @@ const fields = computed(() => ensureArray(farmStore.fields));
 const sales = computed(() => ensureArray(farmStore.sales));
 const expensesList = computed(() => ensureArray(farmStore.expenses));
 const weatherHistoryRecords = computed(() => ensureArray(weatherStore.weatherHistory));
+// Marketplace orders for revenue calculation
+const farmerOrders = computed(() => ensureArray(marketplaceStore.orders));
 
 const loadReportData = async () => {
   if (loading.value) {
@@ -490,7 +494,8 @@ const loadReportData = async () => {
 
     await Promise.all([
       farmStore.fetchSales(filters),
-      farmStore.fetchExpenses(filters)
+      farmStore.fetchExpenses(filters),
+      marketplaceStore.fetchFarmerOrders() // Fetch marketplace orders for revenue
     ]);
 
     const primaryFieldId = fields.value[0]?.id;
@@ -603,8 +608,13 @@ const varietyChartData = computed(() => {
 
 // Financial Report Data
 const totalRevenue = computed(() => {
-  const total = sales.value.reduce((sum, sale) => sum + (Number(sale?.total_amount) || 0), 0);
-  return Number(total.toFixed(2));
+  // Traditional sales revenue
+  const salesTotal = sales.value.reduce((sum, sale) => sum + (Number(sale?.total_amount) || 0), 0);
+  // Marketplace orders revenue (confirmed, shipped, delivered)
+  const ordersTotal = farmerOrders.value
+    .filter(order => ['confirmed', 'shipped', 'delivered'].includes(order?.status))
+    .reduce((sum, order) => sum + (Number(order?.total_amount) || 0), 0);
+  return Number((salesTotal + ordersTotal).toFixed(2));
 });
 
 const totalExpenses = computed(() => {
@@ -626,7 +636,28 @@ const profitMargin = computed(() => {
   return ((profit / revenue) * 100).toFixed(1);
 });
 
-const revenueByMonth = computed(() => aggregateByMonth(sales.value, 'sale_date', 'total_amount'));
+// Aggregate sales revenue by month
+const salesByMonth = computed(() => aggregateByMonth(sales.value, 'sale_date', 'total_amount'));
+// Aggregate marketplace orders revenue by month (only confirmed, shipped, delivered)
+const ordersByMonth = computed(() => {
+  const confirmedOrders = farmerOrders.value.filter(order => 
+    ['confirmed', 'shipped', 'delivered'].includes(order?.status)
+  );
+  return aggregateByMonth(confirmedOrders, 'order_date', 'total_amount');
+});
+// Combined revenue by month (sales + orders)
+const revenueByMonth = computed(() => {
+  const combined = new Map();
+  // Add sales
+  salesByMonth.value.forEach((value, key) => {
+    combined.set(key, (combined.get(key) || 0) + value);
+  });
+  // Add orders
+  ordersByMonth.value.forEach((value, key) => {
+    combined.set(key, (combined.get(key) || 0) + value);
+  });
+  return combined;
+});
 const expensesByMonth = computed(() => aggregateByMonth(expensesList.value, 'date', 'amount'));
 
 const monthLabels = computed(() => {

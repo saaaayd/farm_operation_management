@@ -43,6 +43,65 @@
             </div>
           </div>
 
+          <!-- Profile Picture Upload -->
+          <div class="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200">
+            <div class="relative">
+              <div v-if="profilePicture || photoPreview" class="h-24 w-24 rounded-full shadow-lg overflow-hidden">
+                <img :src="photoPreview || profilePicture" alt="Profile Picture" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="h-24 w-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg text-white font-bold text-2xl">
+                {{ getInitials(form.name) }}
+              </div>
+              <label class="absolute bottom-0 right-0 h-8 w-8 bg-emerald-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-emerald-700 transition-colors shadow-md">
+                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoSelect" />
+              </label>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Profile Picture</h3>
+              <p class="text-xs text-gray-500 mb-3">Upload a photo to easily identify this laborer. JPG, PNG or WebP, max 2MB.</p>
+              <div class="flex gap-2">
+                <button
+                  v-if="photoPreview"
+                  type="button"
+                  @click="uploadPhoto"
+                  :disabled="uploadingPhoto"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <svg v-if="uploadingPhoto" class="animate-spin -ml-0.5 mr-1.5 h-3 w-3" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ uploadingPhoto ? 'Uploading...' : 'Save Photo' }}
+                </button>
+                <button
+                  v-if="photoPreview"
+                  type="button"
+                  @click="cancelPhotoSelect"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  v-if="profilePicture && !photoPreview"
+                  type="button"
+                  @click="removePhoto"
+                  :disabled="removingPhoto"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <svg v-if="removingPhoto" class="animate-spin -ml-0.5 mr-1.5 h-3 w-3" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ removingPhoto ? 'Removing...' : 'Remove Photo' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
@@ -274,6 +333,11 @@ const initialLoading = ref(true)
 const error = ref('')
 const availableGroups = ref([])
 const loadingGroups = ref(false)
+const profilePicture = ref('')
+const photoPreview = ref(null)
+const selectedPhoto = ref(null)
+const uploadingPhoto = ref(false)
+const removingPhoto = ref(false)
 
 const form = reactive({
   name: '',
@@ -325,12 +389,86 @@ const fetchLaborer = async () => {
         form.emergency_contact_phone = laborer.emergency_contact_phone || ''
         form.notes = laborer.notes || ''
         form.groups = laborer.groups ? laborer.groups.map(g => g.id) : []
+        profilePicture.value = laborer.profile_picture || ''
         
     } catch (err) {
         console.error('Failed to fetch laborer:', err)
         error.value = 'Failed to load laborer details.'
     } finally {
         initialLoading.value = false
+    }
+}
+
+const getInitials = (name) => {
+    if (!name) return ''
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2)
+}
+
+const handlePhotoSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        // Revoke old preview URL to prevent memory leak
+        if (photoPreview.value) {
+            URL.revokeObjectURL(photoPreview.value)
+        }
+        selectedPhoto.value = file
+        photoPreview.value = URL.createObjectURL(file)
+    }
+}
+
+const cancelPhotoSelect = () => {
+    // Revoke preview URL to prevent memory leak
+    if (photoPreview.value) {
+        URL.revokeObjectURL(photoPreview.value)
+    }
+    selectedPhoto.value = null
+    photoPreview.value = null
+}
+
+const uploadPhoto = async () => {
+    if (!selectedPhoto.value) return
+    
+    uploadingPhoto.value = true
+    try {
+        const formData = new FormData()
+        formData.append('photo', selectedPhoto.value)
+        
+        const { data } = await axios.post(`/api/laborers/${route.params.id}/photo`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        
+        profilePicture.value = data.profile_picture
+        selectedPhoto.value = null
+        // Revoke preview URL to prevent memory leak
+        if (photoPreview.value) {
+            URL.revokeObjectURL(photoPreview.value)
+        }
+        photoPreview.value = null
+    } catch (err) {
+        console.error('Failed to upload photo:', err)
+        alert('Failed to upload photo. Please try again.')
+    } finally {
+        uploadingPhoto.value = false
+    }
+}
+
+const removePhoto = async () => {
+    if (!confirm('Are you sure you want to remove this photo?')) return
+    
+    removingPhoto.value = true
+    try {
+        await axios.delete(`/api/laborers/${route.params.id}/photo`)
+        profilePicture.value = ''
+    } catch (err) {
+        console.error('Failed to remove photo:', err)
+        alert('Failed to remove photo. Please try again.')
+    } finally {
+        removingPhoto.value = false
     }
 }
 

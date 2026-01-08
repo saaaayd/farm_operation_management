@@ -51,7 +51,10 @@
         <div class="bg-white shadow rounded-2xl overflow-hidden">
           <div class="px-6 py-8 sm:p-10">
             <div class="flex items-center gap-6 mb-8">
-              <div class="h-20 w-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg text-white font-bold text-3xl">
+              <div v-if="laborer.profile_picture" class="h-20 w-20 rounded-full shadow-lg overflow-hidden">
+                <img :src="laborer.profile_picture" :alt="laborer.name" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="h-20 w-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg text-white font-bold text-3xl">
                 {{ getInitials(laborer.name) }}
               </div>
               <div>

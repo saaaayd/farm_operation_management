@@ -24,6 +24,15 @@
             Refresh
           </button>
           <button
+            @click="exportCsv"
+            class="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export CSV
+          </button>
+          <button
             @click="goToReports"
             class="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
           >
@@ -197,6 +206,25 @@ const refreshExpenses = async () => {
 
 const goToReports = () => {
   router.push('/reports')
+}
+
+const exportCsv = async () => {
+  try {
+    const response = await axios.get('/api/reports/export/expenses', {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `expenses_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Failed to export:', err)
+    alert('Failed to export CSV')
+  }
 }
 
 const formatCurrency = (value) => {

@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Laborer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class LaborerController extends Controller
 {
@@ -197,6 +199,14 @@ class LaborerController extends Controller
             ], 403);
         }
 
+        // Clean up profile picture if exists
+        if ($laborer->profile_picture) {
+            $path = str_replace(asset('storage/'), '', $laborer->profile_picture);
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
         $laborer->delete();
 
         return response()->json([
@@ -242,5 +252,112 @@ class LaborerController extends Controller
                 'total_wages' => $totalWages,
             ]
         ]);
+    }
+
+    /**
+     * Upload profile photo for a laborer
+     */
+    public function uploadPhoto(Request $request, Laborer $laborer): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($laborer->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'photo.required' => 'Please select an image to upload.',
+            'photo.image' => 'The file must be an image.',
+            'photo.mimes' => 'Only JPG, JPEG, PNG, and WebP images are allowed.',
+            'photo.max' => 'The image must be less than 2MB.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Delete old photo if exists
+            if ($laborer->profile_picture) {
+                $oldPath = str_replace(asset('storage/'), '', $laborer->profile_picture);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
+            // Generate unique filename
+            $photo = $request->file('photo');
+            $filename = Str::uuid() . '.' . $photo->getClientOriginalExtension();
+
+            // Store in public disk under laborers directory
+            $path = $photo->storeAs('laborers', $filename, 'public');
+
+            // Generate public URL
+            $url = asset('storage/' . $path);
+
+            // Update laborer profile picture
+            $laborer->update(['profile_picture' => $url]);
+
+            return response()->json([
+                'message' => 'Profile picture uploaded successfully',
+                'profile_picture' => $url
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload profile picture',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete profile photo for a laborer
+     */
+    public function deletePhoto(Request $request, Laborer $laborer): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($laborer->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        try {
+            if ($laborer->profile_picture) {
+                // Extract path from URL
+                $path = str_replace(asset('storage/'), '', $laborer->profile_picture);
+
+                // Delete file if exists
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+
+                // Clear profile picture in database
+                $laborer->update(['profile_picture' => null]);
+
+                return response()->json([
+                    'message' => 'Profile picture deleted successfully'
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'No profile picture to delete'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete profile picture',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

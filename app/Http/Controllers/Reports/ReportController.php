@@ -729,13 +729,25 @@ class ReportController extends Controller
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
-        // Get sales/revenue
+        // Get sales/revenue from traditional Sales table
         $sales = \App\Models\Sale::where('user_id', $user->id)
             ->whereBetween('sale_date', [$startDate, $endDate])
             ->get();
 
+        // Also get revenue from RiceOrders (marketplace) for farmers
+        $riceOrderRevenue = 0;
+        $riceOrders = collect();
+        if ($user->isFarmer()) {
+            $riceOrders = \App\Models\RiceOrder::forFarmer($user->id)
+                ->whereBetween('order_date', [$startDate, $endDate])
+                ->whereIn('status', ['confirmed', 'shipped', 'delivered'])
+                ->get();
+            $riceOrderRevenue = $riceOrders->sum('total_amount');
+        }
+
         $totalExpenses = $expenses->sum('amount');
-        $totalRevenue = $sales->sum('total_amount');
+        $salesRevenue = $sales->sum('total_amount');
+        $totalRevenue = $salesRevenue + $riceOrderRevenue;
         $netProfit = $totalRevenue - $totalExpenses;
         $profitMargin = $totalRevenue > 0 ? ($netProfit / $totalRevenue) * 100 : 0;
 
@@ -761,13 +773,20 @@ class ReportController extends Controller
         $currentDate = clone $startDate;
         while ($currentDate <= $endDate) {
             $monthKey = $currentDate->format('Y-m');
-            $monthRevenue = $sales->filter(function ($sale) use ($monthKey) {
+
+            // Traditional sales revenue
+            $monthSalesRevenue = $sales->filter(function ($sale) use ($monthKey) {
                 return Carbon::parse($sale->sale_date)->format('Y-m') === $monthKey;
+            })->sum('total_amount');
+
+            // Rice orders revenue (marketplace)
+            $monthOrderRevenue = $riceOrders->filter(function ($order) use ($monthKey) {
+                return Carbon::parse($order->order_date)->format('Y-m') === $monthKey;
             })->sum('total_amount');
 
             $monthlyRevenue[] = [
                 'month' => $currentDate->format('M Y'),
-                'revenue' => $monthRevenue,
+                'revenue' => $monthSalesRevenue + $monthOrderRevenue,
             ];
             $currentDate->addMonth();
         }
@@ -792,6 +811,17 @@ class ReportController extends Controller
                 'category' => 'Crop Sales',
                 'type' => 'income',
                 'amount' => $sale->total_amount,
+            ]);
+        }
+        // Add rice orders (marketplace) as income
+        foreach ($riceOrders->take(10) as $order) {
+            $transactions->push([
+                'id' => 'order_' . $order->id,
+                'date' => $order->order_date,
+                'description' => 'Marketplace Order #' . $order->id,
+                'category' => 'Product Sales',
+                'type' => 'income',
+                'amount' => $order->total_amount,
             ]);
         }
         $transactions = $transactions->sortByDesc('date')->take(10)->values();
@@ -1238,5 +1268,135 @@ class ReportController extends Controller
                 'fields' => $fields,
             ]
         ]);
+    }
+
+    /**
+     * Export expenses to CSV
+     */
+    public function exportExpensesCsv(Request $request)
+    {
+        $user = Auth::user();
+
+        $expenses = \App\Models\Expense::where('user_id', $user->id)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $filename = 'expenses_' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($expenses) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Header
+            fputcsv($file, ['Date', 'Category', 'Description', 'Amount', 'Payment Method', 'Planting']);
+
+            foreach ($expenses as $expense) {
+                fputcsv($file, [
+                    $expense->date?->format('Y-m-d'),
+                    $expense->category,
+                    $expense->description,
+                    $expense->amount,
+                    $expense->payment_method,
+                    $expense->planting?->name ?? 'N/A',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export inventory to CSV
+     */
+    public function exportInventoryCsv(Request $request)
+    {
+        $user = Auth::user();
+
+        $items = \App\Models\InventoryItem::where('user_id', $user->id)
+            ->orderBy('name')
+            ->get();
+
+        $filename = 'inventory_' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($items) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Header
+            fputcsv($file, ['Name', 'Category', 'Current Stock', 'Unit', 'Minimum Stock', 'Unit Price', 'Supplier', 'Location', 'Expiry Date']);
+
+            foreach ($items as $item) {
+                fputcsv($file, [
+                    $item->name,
+                    $item->category,
+                    $item->current_stock,
+                    $item->unit,
+                    $item->minimum_stock,
+                    $item->unit_price,
+                    $item->supplier,
+                    $item->location,
+                    $item->expiry_date?->format('Y-m-d'),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export sales to CSV
+     */
+    public function exportSalesCsv(Request $request)
+    {
+        $user = Auth::user();
+
+        $sales = \App\Models\Sale::whereHas('harvest.planting.field', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })->with(['harvest.planting.riceVariety', 'buyer'])
+            ->orderBy('sale_date', 'desc')
+            ->get();
+
+        $filename = 'sales_' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($sales) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Header
+            fputcsv($file, ['Date', 'Crop', 'Buyer', 'Quantity', 'Unit', 'Price/Unit', 'Total Amount', 'Payment Status']);
+
+            foreach ($sales as $sale) {
+                fputcsv($file, [
+                    $sale->sale_date?->format('Y-m-d'),
+                    $sale->harvest?->planting?->riceVariety?->name ?? 'N/A',
+                    $sale->buyer?->name ?? 'N/A',
+                    $sale->quantity,
+                    $sale->unit,
+                    $sale->price_per_unit,
+                    $sale->total_amount,
+                    $sale->payment_status,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

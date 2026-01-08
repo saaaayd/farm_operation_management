@@ -587,14 +587,63 @@ class DatabaseSeeder extends Seeder
                 'minimum_stock' => 0.0
             ]);
 
-            // Create harvests
+            // Create harvests - linked to plantings which link to fields which link to farmer
             $harvest1 = Harvest::updateOrCreate([
                 'planting_id' => $planting4->id,
             ], [
                 'yield' => 125.5,
+                'quantity' => 125.5,
                 'harvest_date' => now()->subDays(7),
-                'quality' => 'excellent'
+                'quality' => 'excellent',
+                'quality_grade' => 'grade_a',
+                'unit' => 'kg',
+                'price_per_unit' => 45.00,
+                'total_value' => 5647.50,
+                'notes' => 'First harvest of the season, excellent quality'
             ]);
+
+            $harvest2 = Harvest::updateOrCreate([
+                'planting_id' => $planting1->id,
+            ], [
+                'yield' => 200.0,
+                'quantity' => 200.0,
+                'harvest_date' => now()->subDays(14),
+                'quality' => 'good',
+                'quality_grade' => 'grade_a',
+                'unit' => 'kg',
+                'price_per_unit' => 42.00,
+                'total_value' => 8400.00,
+                'notes' => 'Good yield from corn planting'
+            ]);
+
+            $harvest3 = Harvest::updateOrCreate([
+                'planting_id' => $planting2->id,
+            ], [
+                'yield' => 180.0,
+                'quantity' => 180.0,
+                'harvest_date' => now()->subDays(21),
+                'quality' => 'good',
+                'quality_grade' => 'grade_b',
+                'unit' => 'kg',
+                'price_per_unit' => 38.00,
+                'total_value' => 6840.00,
+                'notes' => 'Healthy soybean harvest'
+            ]);
+
+            $harvest4 = Harvest::updateOrCreate([
+                'planting_id' => $planting3->id,
+            ], [
+                'yield' => 150.0,
+                'quantity' => 150.0,
+                'harvest_date' => now()->subDays(30),
+                'quality' => 'excellent',
+                'quality_grade' => 'premium',
+                'unit' => 'kg',
+                'price_per_unit' => 55.00,
+                'total_value' => 8250.00,
+                'notes' => 'Premium wheat harvest, excellent quality'
+            ]);
+
 
             // Create expenses
             Expense::updateOrCreate([

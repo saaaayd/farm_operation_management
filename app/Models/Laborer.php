@@ -9,6 +9,7 @@ class Laborer extends Model
 
     protected $fillable = [
         'name',
+        'profile_picture',
         'phone',
         'email',
         'address',

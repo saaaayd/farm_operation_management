@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
-import { riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
+import api, { riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
 import { useAuthStore } from './auth';
 
 export const useMarketplaceStore = defineStore('marketplace', {
@@ -268,7 +268,15 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.error = null;
 
       try {
-        const response = await riceMarketplaceAPI.getOrders(filters);
+        const authStore = useAuthStore();
+        const isFarmer = authStore.user?.role === 'farmer';
+
+        // Use role-specific endpoint
+        const endpoint = isFarmer
+          ? '/rice-marketplace/farmer/orders'
+          : '/rice-marketplace/buyer/orders';
+
+        const response = await api.get(endpoint, { params: filters });
         const payload = response.data?.orders;
         const items = payload?.data || payload || [];
 
@@ -292,6 +300,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.loading = false;
       }
     },
+
 
     async fetchSales() {
       this.loading = true;

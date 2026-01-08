@@ -420,8 +420,9 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
       return farmStore.plantings
       .filter(p => p && p.status !== 'harvested')
       .reduce((total, planting) => {
-        const fieldSize = planting?.field?.size || 0;
-        return total + (typeof fieldSize === 'number' ? fieldSize : 0);
+        // Use area_planted from the planting record, not field size
+        const areaPlanted = parseFloat(planting?.area_planted) || 0;
+        return total + areaPlanted;
       }, 0).toFixed(2);
     } catch (error) {
       console.warn('Error calculating total planted area:', error);

@@ -39,6 +39,45 @@
             </div>
           </div>
 
+          <!-- Profile Picture Upload -->
+          <div class="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200">
+            <div class="relative">
+              <div v-if="photoPreview" class="h-24 w-24 rounded-full shadow-lg overflow-hidden">
+                <img :src="photoPreview" alt="Profile Picture Preview" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="h-24 w-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg text-white font-bold text-2xl">
+                {{ getInitials(form.name) }}
+              </div>
+              <label class="absolute bottom-0 right-0 h-8 w-8 bg-emerald-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-emerald-700 transition-colors shadow-md">
+                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoSelect" />
+              </label>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Profile Picture</h3>
+              <p class="text-xs text-gray-500 mb-3">Upload a photo to easily identify this laborer. JPG, PNG or WebP, max 2MB.</p>
+              <div class="flex gap-2">
+                <button
+                  v-if="photoPreview"
+                  type="button"
+                  @click="cancelPhotoSelect"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Remove
+                </button>
+                <span v-if="photoPreview" class="text-xs text-emerald-600 flex items-center">
+                  <svg class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  Photo will be uploaded when you save
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
@@ -268,6 +307,8 @@ const loading = ref(false)
 const error = ref('')
 const availableGroups = ref([])
 const loadingGroups = ref(false)
+const photoPreview = ref(null)
+const selectedPhoto = ref(null)
 
 const form = reactive({
   name: '',
@@ -303,7 +344,23 @@ const submitLaborer = async () => {
   error.value = ''
 
   try {
-    await axios.post('/api/laborers', form)
+    const { data } = await axios.post('/api/laborers', form)
+    const laborerId = data.laborer.id
+    
+    // Upload photo if selected
+    if (selectedPhoto.value && laborerId) {
+      try {
+        const formData = new FormData()
+        formData.append('photo', selectedPhoto.value)
+        await axios.post(`/api/laborers/${laborerId}/photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      } catch (photoErr) {
+        console.error('Failed to upload photo:', photoErr)
+        // Continue anyway - laborer was created
+      }
+    }
+    
     router.push('/laborers')
   } catch (err) {
     console.error('Failed to create laborer:', err)
@@ -311,6 +368,37 @@ const submitLaborer = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const getInitials = (name) => {
+    if (!name) return ''
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2)
+}
+
+const handlePhotoSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        // Revoke old preview URL to prevent memory leak
+        if (photoPreview.value) {
+            URL.revokeObjectURL(photoPreview.value)
+        }
+        selectedPhoto.value = file
+        photoPreview.value = URL.createObjectURL(file)
+    }
+}
+
+const cancelPhotoSelect = () => {
+    // Revoke preview URL to prevent memory leak
+    if (photoPreview.value) {
+        URL.revokeObjectURL(photoPreview.value)
+    }
+    selectedPhoto.value = null
+    photoPreview.value = null
 }
 
 onMounted(() => {

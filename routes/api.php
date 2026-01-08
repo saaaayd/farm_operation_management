@@ -46,11 +46,30 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard routes
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
+    // Notification routes
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
+        Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
+        Route::post('/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{notification}', [\App\Http\Controllers\NotificationController::class, 'destroy']);
+    });
+
     // Rice Farm Profile routes
     Route::middleware('farmer')->prefix('farmer')->group(function () {
         Route::get('/profile', [RiceFarmProfileController::class, 'getProfile']);
         Route::post('/profile', [RiceFarmProfileController::class, 'createRiceFarmProfile']);
         Route::put('/profile', [RiceFarmProfileController::class, 'updateProfile']);
+    });
+
+    // Pest Incident routes
+    Route::middleware('farmer')->prefix('pest-incidents')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Farm\PestIncidentController::class, 'index']);
+        Route::get('/options', [\App\Http\Controllers\Farm\PestIncidentController::class, 'options']);
+        Route::post('/', [\App\Http\Controllers\Farm\PestIncidentController::class, 'store']);
+        Route::get('/{pestIncident}', [\App\Http\Controllers\Farm\PestIncidentController::class, 'show']);
+        Route::put('/{pestIncident}', [\App\Http\Controllers\Farm\PestIncidentController::class, 'update']);
+        Route::delete('/{pestIncident}', [\App\Http\Controllers\Farm\PestIncidentController::class, 'destroy']);
     });
 
     // Rice Varieties routes
@@ -165,6 +184,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'show']);
         Route::put('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'update']);
         Route::delete('/{laborer}', [\App\Http\Controllers\Labor\LaborerController::class, 'destroy']);
+        Route::post('/{laborer}/photo', [\App\Http\Controllers\Labor\LaborerController::class, 'uploadPhoto']);
+        Route::delete('/{laborer}/photo', [\App\Http\Controllers\Labor\LaborerController::class, 'deletePhoto']);
     });
 
     Route::middleware('farmer')->prefix('labor-wages')->group(function () {
@@ -194,6 +215,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/products/{product}', [\App\Http\Controllers\RiceMarketplaceController::class, 'getProduct']);
         Route::get('/stats', [\App\Http\Controllers\RiceMarketplaceController::class, 'getMarketplaceStats']);
 
+        // Product reviews (public)
+        Route::get('/products/{product}/reviews', [\App\Http\Controllers\MarketPlace\ProductReviewController::class, 'index']);
+
         // Product management (farmers only)
         Route::middleware('farmer')->group(function () {
             Route::post('/products', [\App\Http\Controllers\RiceMarketplaceController::class, 'createProduct']);
@@ -215,7 +239,22 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/orders/{order}/deliver', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'confirmDelivery']);
             Route::post('/orders/{order}/dispute', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'dispute']);
             Route::post('/orders/{order}/cancel', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'cancel']);
+
+            // Review routes
+            Route::post('/reviews', [\App\Http\Controllers\MarketPlace\ProductReviewController::class, 'store']);
+            Route::get('/reviews/my', [\App\Http\Controllers\MarketPlace\ProductReviewController::class, 'myReviews']);
+            Route::get('/orders/{order}/can-review', [\App\Http\Controllers\MarketPlace\ProductReviewController::class, 'canReview']);
+
+            // Cart routes
+            Route::get('/cart', [\App\Http\Controllers\MarketPlace\CartController::class, 'index']);
+            Route::get('/cart/count', [\App\Http\Controllers\MarketPlace\CartController::class, 'count']);
+            Route::post('/cart', [\App\Http\Controllers\MarketPlace\CartController::class, 'addItem']);
+            Route::put('/cart/{cartItem}', [\App\Http\Controllers\MarketPlace\CartController::class, 'updateItem']);
+            Route::delete('/cart/{cartItem}', [\App\Http\Controllers\MarketPlace\CartController::class, 'removeItem']);
+            Route::delete('/cart', [\App\Http\Controllers\MarketPlace\CartController::class, 'clear']);
+            Route::post('/cart/checkout', [\App\Http\Controllers\MarketPlace\CartController::class, 'checkout']);
         });
+
 
         // Farmer order routes
         Route::middleware('farmer')->group(function () {
@@ -230,6 +269,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'index']);
         Route::post('/orders/{order}/messages', [\App\Http\Controllers\RiceOrderMessageController::class, 'store']);
     });
+
 
     // Legacy Marketplace routes (for backward compatibility)
     Route::prefix('marketplace')->group(function () {
@@ -289,6 +329,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/labor-cost', [\App\Http\Controllers\Labor\WageController::class, 'index']);
         Route::get('/weather-analysis', [\App\Http\Controllers\Weather\WeatherController::class, 'dashboard']);
         Route::get('/inventory-usage', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'index']);
+
+        // CSV Export routes
+        Route::get('/export/expenses', [\App\Http\Controllers\Reports\ReportController::class, 'exportExpensesCsv']);
+        Route::get('/export/inventory', [\App\Http\Controllers\Reports\ReportController::class, 'exportInventoryCsv']);
+        Route::get('/export/sales', [\App\Http\Controllers\Reports\ReportController::class, 'exportSalesCsv']);
+
+        // Profit/Loss routes
+        Route::get('/profit-loss', [\App\Http\Controllers\Reports\ProfitLossController::class, 'summary']);
+        Route::get('/profit-loss/by-planting', [\App\Http\Controllers\Reports\ProfitLossController::class, 'byPlanting']);
     });
+
+
 
 });

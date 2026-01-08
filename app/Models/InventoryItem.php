@@ -41,6 +41,17 @@ class InventoryItem extends Model
     const CATEGORY_PRODUCE = 'produce';
 
     /**
+     * All available categories
+     */
+    const CATEGORIES = [
+        self::CATEGORY_SEEDS,
+        self::CATEGORY_FERTILIZER,
+        self::CATEGORY_PESTICIDE,
+        self::CATEGORY_EQUIPMENT,
+        self::CATEGORY_PRODUCE,
+    ];
+
+    /**
      * Get the order items for this inventory item
      */
     public function orderItems()

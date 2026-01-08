@@ -58,6 +58,10 @@
                 @click="confirmDelivery(order)"
                 class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
               >Confirm Delivery</button>
+              <button v-if="order.status === 'delivered' && !order.has_review"
+                @click="openReviewModal(order)"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+              >Leave Review</button>
             </div>
           </div>
         </div>
@@ -73,17 +77,108 @@
         </router-link>
       </div>
     </div>
+
+    <!-- Review Modal -->
+    <div v-if="showReviewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Leave a Review</h2>
+        <p class="text-gray-600 mb-4">{{ reviewOrder?.rice_product?.name }}</p>
+        
+        <form @submit.prevent="submitReview">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Overall Rating</label>
+            <div class="flex gap-2">
+              <button v-for="n in 5" :key="n" type="button"
+                @click="reviewForm.rating = n"
+                :class="['text-3xl', n <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-300']"
+              >★</button>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Review Title (Optional)</label>
+            <input v-model="reviewForm.title" type="text" maxlength="100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Summarize your experience"
+            />
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
+            <textarea v-model="reviewForm.review_text" rows="4" required minlength="10"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Share your experience with this product..."
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Quality</label>
+              <select v-model="reviewForm.quality_rating" class="w-full px-2 py-1 border rounded text-sm">
+                <option :value="null">—</option>
+                <option v-for="n in 5" :key="n" :value="n">{{ n }} ★</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Delivery</label>
+              <select v-model="reviewForm.delivery_rating" class="w-full px-2 py-1 border rounded text-sm">
+                <option :value="null">—</option>
+                <option v-for="n in 5" :key="n" :value="n">{{ n }} ★</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Farmer</label>
+              <select v-model="reviewForm.farmer_rating" class="w-full px-2 py-1 border rounded text-sm">
+                <option :value="null">—</option>
+                <option v-for="n in 5" :key="n" :value="n">{{ n }} ★</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" v-model="reviewForm.would_recommend" class="rounded">
+              <span class="text-sm text-gray-700">I would recommend this product</span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
+            <button type="button" @click="showReviewModal = false"
+              class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            >Cancel</button>
+            <button type="submit" :disabled="submittingReview || reviewForm.rating === 0"
+              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >{{ submittingReview ? 'Submitting...' : 'Submit Review' }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useMarketplaceStore } from '@/stores/marketplace'
+import axios from 'axios'
 
 const marketplaceStore = useMarketplaceStore()
 const loading = ref(true)
 const orders = ref([])
 const activeTab = ref('all')
+
+// Review modal state
+const showReviewModal = ref(false)
+const reviewOrder = ref(null)
+const submittingReview = ref(false)
+const reviewForm = ref({
+  rating: 0,
+  title: '',
+  review_text: '',
+  quality_rating: null,
+  delivery_rating: null,
+  farmer_rating: null,
+  would_recommend: true,
+})
 
 const tabs = [
   { value: 'all', label: 'All Orders' },
@@ -132,6 +227,46 @@ const confirmDelivery = async (order) => {
   }
 }
 
+const openReviewModal = (order) => {
+  reviewOrder.value = order
+  reviewForm.value = {
+    rating: 0,
+    title: '',
+    review_text: '',
+    quality_rating: null,
+    delivery_rating: null,
+    farmer_rating: null,
+    would_recommend: true,
+  }
+  showReviewModal.value = true
+}
+
+const submitReview = async () => {
+  if (reviewForm.value.rating === 0) {
+    alert('Please select a rating')
+    return
+  }
+  if (reviewForm.value.review_text.length < 10) {
+    alert('Review must be at least 10 characters')
+    return
+  }
+
+  submittingReview.value = true
+  try {
+    await axios.post('/api/rice-marketplace/reviews', {
+      rice_order_id: reviewOrder.value.id,
+      ...reviewForm.value,
+    })
+    alert('Review submitted successfully!')
+    reviewOrder.value.has_review = true
+    showReviewModal.value = false
+  } catch (err) {
+    alert(err.response?.data?.message || 'Failed to submit review')
+  } finally {
+    submittingReview.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     const response = await marketplaceStore.fetchBuyerOrders()
@@ -143,3 +278,4 @@ onMounted(async () => {
   }
 })
 </script>
+

@@ -132,7 +132,10 @@
               <div class="flex items-start justify-between mb-5">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2 pr-16">
-                    <div class="h-12 w-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md text-white font-bold text-xl">
+                    <div v-if="laborer.profile_picture" class="h-12 w-12 rounded-full shadow-md overflow-hidden">
+                      <img :src="laborer.profile_picture" :alt="laborer.name" class="h-full w-full object-cover" />
+                    </div>
+                    <div v-else class="h-12 w-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md text-white font-bold text-xl">
                       {{ getInitials(laborer.name) }}
                     </div>
                     <div>
@@ -293,6 +296,7 @@ const formatDate = (value) => {
 }
 
 const formatStatus = (status) => {
+    if (!status) return 'Unknown'
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 

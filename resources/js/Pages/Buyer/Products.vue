@@ -16,7 +16,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Filters -->
       <div class="mb-6 bg-white rounded-lg shadow p-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
             <input
@@ -52,6 +52,54 @@
               <option value="available_from">Available Date</option>
             </select>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Quality Grade</label>
+            <select
+              v-model="filters.quality_grade"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              @change="loadProducts"
+            >
+              <option value="">All Grades</option>
+              <option value="grade_a">Grade A (Premium)</option>
+              <option value="grade_b">Grade B</option>
+              <option value="commercial">Commercial</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Min Price (₱)</label>
+            <input
+              v-model.number="filters.min_price"
+              type="number"
+              min="0"
+              placeholder="Min"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              @change="loadProducts"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Max Price (₱)</label>
+            <input
+              v-model.number="filters.max_price"
+              type="number"
+              min="0"
+              placeholder="Max"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              @change="loadProducts"
+            />
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                v-model="filters.is_organic"
+                @change="loadProducts"
+                class="w-4 h-4 text-green-600 rounded"
+              />
+              <span class="text-sm font-medium text-gray-700">Organic Only</span>
+            </label>
+          </div>
           <div class="flex items-end">
             <button
               @click="resetFilters"
@@ -62,6 +110,7 @@
           </div>
         </div>
       </div>
+
 
       <!-- Loading State -->
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -205,6 +254,10 @@ const pagination = ref(null)
 const filters = ref({
   search: '',
   production_status: '',
+  quality_grade: '',
+  min_price: null,
+  max_price: null,
+  is_organic: false,
   sort_by: 'created_at',
   sort_order: 'desc',
   page: 1
@@ -240,6 +293,22 @@ const loadProducts = async (page = 1) => {
       params.production_status = filters.value.production_status
     }
 
+    if (filters.value.quality_grade) {
+      params.quality_grade = filters.value.quality_grade
+    }
+
+    if (filters.value.min_price) {
+      params.min_price = filters.value.min_price
+    }
+
+    if (filters.value.max_price) {
+      params.max_price = filters.value.max_price
+    }
+
+    if (filters.value.is_organic) {
+      params.is_organic = 1
+    }
+
     const response = await axios.get('/api/rice-marketplace/products', { params })
     
     products.value = response.data.products.data || response.data.products
@@ -268,12 +337,17 @@ const resetFilters = () => {
   filters.value = {
     search: '',
     production_status: '',
+    quality_grade: '',
+    min_price: null,
+    max_price: null,
+    is_organic: false,
     sort_by: 'created_at',
     sort_order: 'desc',
     page: 1
   }
   loadProducts()
 }
+
 
 const viewProduct = (productId) => {
   router.push(`/buyer/products/${productId}`)

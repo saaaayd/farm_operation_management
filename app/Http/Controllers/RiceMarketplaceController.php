@@ -22,18 +22,18 @@ class RiceMarketplaceController extends Controller
         try {
             $user = auth()->user();
             $showMyProducts = $request->boolean('my_products') && $user && $user->isFarmer();
-            
+
             \Log::info('RiceMarketplaceController::getProducts', [
                 'user_id' => $user?->id,
                 'is_farmer' => $user?->isFarmer(),
                 'my_products_param' => $request->input('my_products'),
                 'show_my_products' => $showMyProducts,
             ]);
-            
+
             // For buyers, show only products that are available or in production (for pre-order)
             // For farmers viewing their own products, show all statuses
             $query = RiceProduct::with(['riceVariety', 'farmer', 'reviews']);
-            
+
             if ($showMyProducts) {
                 // Show all products for the logged-in farmer
                 $query->where('farmer_id', $user->id);
@@ -48,11 +48,17 @@ class RiceMarketplaceController extends Controller
                 $query->byVariety($request->variety_id);
             }
 
-            if ($request->has('grade')) {
-                $query->byGrade($request->grade);
+            // Support both 'grade' and 'quality_grade' param names
+            if ($request->has('grade') || $request->has('quality_grade')) {
+                $grade = $request->grade ?? $request->quality_grade;
+                $query->byGrade($grade);
             }
 
-            if ($request->has('organic') && $request->organic) {
+            // Support both 'organic' and 'is_organic' param names
+            if (
+                ($request->has('organic') && $request->organic) ||
+                ($request->has('is_organic') && $request->is_organic)
+            ) {
                 $query->organic();
             }
 
@@ -62,14 +68,20 @@ class RiceMarketplaceController extends Controller
                 $query->where('production_status', $request->production_status);
             }
 
-            if ($request->has('min_price') && $request->has('max_price')) {
-                $query->priceRange($request->min_price, $request->max_price);
+            // Price range filters (can work independently)
+            if ($request->has('min_price') && $request->min_price) {
+                $query->where('price_per_unit', '>=', $request->min_price);
+            }
+
+            if ($request->has('max_price') && $request->max_price) {
+                $query->where('price_per_unit', '<=', $request->max_price);
             }
 
             if ($request->has('location') && $request->has('radius')) {
+
                 $location = $request->location;
                 $radius = $request->radius ?? 50;
-                
+
                 if (isset($location['latitude']) && isset($location['longitude'])) {
                     $query->nearLocation($location['latitude'], $location['longitude'], $radius);
                 }
@@ -80,7 +92,7 @@ class RiceMarketplaceController extends Controller
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -94,7 +106,7 @@ class RiceMarketplaceController extends Controller
                     break;
                 case 'rating':
                     $query->withAvg('reviews', 'rating')
-                          ->orderBy('reviews_avg_rating', $sortOrder);
+                        ->orderBy('reviews_avg_rating', $sortOrder);
                     break;
                 case 'quantity':
                     $query->orderBy('quantity_available', $sortOrder);
@@ -196,7 +208,7 @@ class RiceMarketplaceController extends Controller
                 ->where('id', '!=', $product->id)
                 ->where(function ($query) use ($product) {
                     $query->where('rice_variety_id', $product->rice_variety_id)
-                          ->orWhere('quality_grade', $product->quality_grade);
+                        ->orWhere('quality_grade', $product->quality_grade);
                 })
                 ->limit(4)
                 ->get();
@@ -483,7 +495,7 @@ class RiceMarketplaceController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'message' => 'Failed to create order',
                 'error' => $e->getMessage()
@@ -498,7 +510,7 @@ class RiceMarketplaceController extends Controller
     {
         try {
             $user = auth()->user();
-            
+
             $query = RiceOrder::with(['riceProduct.riceVariety', 'riceProduct.farmer']);
 
             if ($user->isFarmer()) {
@@ -552,7 +564,7 @@ class RiceMarketplaceController extends Controller
     {
         try {
             $user = auth()->user();
-            
+
             $order = RiceOrder::with([
                 'riceProduct.riceVariety',
                 'riceProduct.farmer',
@@ -561,7 +573,7 @@ class RiceMarketplaceController extends Controller
 
             // Check if user can access this order
             $canAccess = ($user->isFarmer() && $order->riceProduct->farmer_id === $user->id) ||
-                        ($user->canBuy() && $order->buyer_id === $user->id);
+                ($user->canBuy() && $order->buyer_id === $user->id);
 
             if (!$canAccess) {
                 return response()->json(['message' => 'Unauthorized'], 403);
@@ -652,7 +664,7 @@ class RiceMarketplaceController extends Controller
 
             // Check if user can cancel this order
             $canCancel = ($user->isFarmer() && $order->riceProduct->farmer_id === $user->id) ||
-                        ($user->canBuy() && $order->buyer_id === $user->id);
+                ($user->canBuy() && $order->buyer_id === $user->id);
 
             if (!$canCancel) {
                 return response()->json(['message' => 'Unauthorized'], 403);
