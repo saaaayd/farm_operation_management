@@ -6,7 +6,6 @@ export const useFarmStore = defineStore('farm', {
   state: () => ({
     farmProfile: null,
     fields: [],
-    fields: [],
     plantings: [],
     seedPlantings: [], // <-- Nursery storage
     currentPlanting: null,

@@ -29,11 +29,11 @@ class DashboardController extends Controller
         }
 
         $fields = Field::where('user_id', $user->id)->get();
-        $fieldIds = $fields->pluck('_id');
+        $fieldIds = $fields->pluck('id');
 
         // Get plantings for user's fields
         $plantings = Planting::whereIn('field_id', $fieldIds)->get();
-        $plantingIds = $plantings->pluck('_id');
+        $plantingIds = $plantings->pluck('id');
 
         // Dashboard stats
         $stats = [
@@ -75,7 +75,7 @@ class DashboardController extends Controller
         // Weather data for user's fields
         $weatherData = [];
         foreach ($fields as $field) {
-            $latestWeather = WeatherLog::where('field_id', $field->_id)
+            $latestWeather = WeatherLog::where('field_id', $field->id)
                 ->orderBy('recorded_at', 'desc')
                 ->first();
 
@@ -145,7 +145,7 @@ class DashboardController extends Controller
 
         // Available products
         $availableProducts = InventoryItem::where('category', InventoryItem::CATEGORY_PRODUCE)
-            ->where('quantity', '>', 0)
+            ->where('current_stock', '>', 0)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

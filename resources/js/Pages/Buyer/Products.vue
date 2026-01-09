@@ -231,7 +231,7 @@
           </button>
         </nav>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

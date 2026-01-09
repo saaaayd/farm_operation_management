@@ -30,10 +30,6 @@ class LaborerController extends Controller
             $query->where('skill_level', $request->skill_level);
         }
 
-        if ($request->has('skill_level')) {
-            $query->where('skill_level', $request->skill_level);
-        }
-
         $laborers = $query->with('groups')->orderBy('name')->get();
 
         return response()->json([
