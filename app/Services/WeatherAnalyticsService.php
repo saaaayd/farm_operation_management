@@ -24,17 +24,18 @@ class WeatherAnalyticsService
      */
     public function getHistoricalComparison(Field $field, int $periodDays = 30)
     {
-        $currentPeriod = $this->getWeatherDataForPeriod($field, now()->subDays($periodDays), now());
-        $previousPeriod = $this->getWeatherDataForPeriod($field, now()->subDays($periodDays * 2), now()->subDays($periodDays));
-        $lastYearPeriod = $this->getWeatherDataForPeriod($field, now()->subYear()->subDays($periodDays), now()->subYear());
+        // Use DB aggregates for efficient querying
+        $currentStats = $this->getPeriodStats($field, now()->subDays($periodDays), now());
+        $previousStats = $this->getPeriodStats($field, now()->subDays($periodDays * 2), now()->subDays($periodDays));
+        $lastYearStats = $this->getPeriodStats($field, now()->subYear()->subDays($periodDays), now()->subYear());
 
         return [
-            'current_period' => $this->calculatePeriodStats($currentPeriod),
-            'previous_period' => $this->calculatePeriodStats($previousPeriod),
-            'last_year_period' => $this->calculatePeriodStats($lastYearPeriod),
+            'current_period' => $currentStats,
+            'previous_period' => $previousStats,
+            'last_year_period' => $lastYearStats,
             'comparisons' => [
-                'vs_previous_period' => $this->compareWeatherPeriods($currentPeriod, $previousPeriod),
-                'vs_last_year' => $this->compareWeatherPeriods($currentPeriod, $lastYearPeriod),
+                'vs_previous_period' => $this->compareStats($currentStats, $previousStats),
+                'vs_last_year' => $this->compareStats($currentStats, $lastYearStats),
             ],
         ];
     }
@@ -115,14 +116,14 @@ class WeatherAnalyticsService
     public function analyzeWeatherImpact(Field $field, int $plantingId = null, string $analysisPeriod = 'planting_season')
     {
         $planting = $plantingId ? Planting::find($plantingId) : $field->getCurrentRicePlanting();
-        
+
         if (!$planting) {
             return ['error' => 'No planting data available for analysis'];
         }
 
         $analysisData = $this->getAnalysisPeriodData($planting, $analysisPeriod);
         $weatherData = $this->getWeatherDataForPeriod($field, $analysisData['start_date'], $analysisData['end_date']);
-        
+
         $impact = [
             'planting_info' => [
                 'id' => $planting->id,
@@ -148,7 +149,7 @@ class WeatherAnalyticsService
     {
         $planting = Planting::findOrFail($plantingId);
         $weatherData = $this->getWeatherDataForPeriod($field, $planting->planting_date, now());
-        
+
         switch ($predictionModel) {
             case 'simple':
                 return $this->simpleYieldPrediction($planting, $weatherData);
@@ -168,7 +169,7 @@ class WeatherAnalyticsService
     {
         $recommendations = [];
         $historicalData = $this->getHistoricalWeatherPatterns($farm, $cropType);
-        
+
         for ($month = 1; $month <= $planningMonths; $month++) {
             $targetDate = now()->addMonths($month);
             $monthRecommendation = $this->evaluateMonthForPlanting($farm, $cropType, $targetDate, $historicalData);
@@ -191,7 +192,7 @@ class WeatherAnalyticsService
     {
         $risks = [];
         $weatherData = $this->getWeatherDataForAssessmentPeriod($field, $assessmentPeriod);
-        
+
         foreach ($riskTypes as $riskType) {
             $risks[$riskType] = $this->assessSpecificRisk($riskType, $weatherData, $field);
         }
@@ -214,7 +215,7 @@ class WeatherAnalyticsService
         $currentWeather = $field->latestWeather;
         $forecast = $this->getWeatherForecast($field, 7); // 7-day forecast
         $planting = $field->getCurrentRicePlanting();
-        
+
         $recommendations = [
             'immediate_action' => $this->getImmediateIrrigationAction($currentWeather, $soilMoistureLevel, $cropStage),
             'weekly_schedule' => $this->generateWeeklyIrrigationSchedule($forecast, $soilMoistureLevel, $cropStage),
@@ -233,7 +234,7 @@ class WeatherAnalyticsService
     {
         $weatherData = $this->getWeatherDataForPeriod($field, now()->subDays(14), now());
         $forecast = $this->getWeatherForecast($field, 7);
-        
+
         $pestRisks = [];
         foreach ($pestTypes as $pest) {
             $pestRisks[$pest] = $this->assessPestRisk($pest, $weatherData, $forecast);
@@ -261,7 +262,7 @@ class WeatherAnalyticsService
     {
         $historicalData = $this->getHistoricalClimateData($farm, $analysisYears);
         $projections = [];
-        
+
         foreach ($climateScenarios as $scenario) {
             $projections[$scenario] = $this->projectClimateScenario($farm, $scenario, $analysisYears);
         }
@@ -329,6 +330,19 @@ class WeatherAnalyticsService
         ];
     }
 
+    private function compareStats($currentStats, $comparisonStats)
+    {
+        if (!$currentStats || !$comparisonStats) {
+            return null;
+        }
+
+        return [
+            'temperature_change' => $currentStats['avg_temperature'] - $comparisonStats['avg_temperature'],
+            'humidity_change' => $currentStats['avg_humidity'] - $comparisonStats['avg_humidity'],
+            'wind_speed_change' => $currentStats['avg_wind_speed'] - $comparisonStats['avg_wind_speed'],
+        ];
+    }
+
     private function compareWeatherPeriods($currentPeriod, $comparisonPeriod)
     {
         if ($currentPeriod->isEmpty() || $comparisonPeriod->isEmpty()) {
@@ -338,10 +352,47 @@ class WeatherAnalyticsService
         $currentStats = $this->calculatePeriodStats($currentPeriod);
         $comparisonStats = $this->calculatePeriodStats($comparisonPeriod);
 
+        return $this->compareStats($currentStats, $comparisonStats);
+    }
+
+    /**
+     * Efficiently get calculated stats directly from DB
+     */
+    public function getPeriodStats(Field $field, Carbon $startDate, Carbon $endDate)
+    {
+        $query = WeatherLog::where('field_id', $field->id)
+            ->whereBetween('recorded_at', [$startDate, $endDate]);
+
+        // Aggregate stats
+        $stats = $query->selectRaw('
+            AVG(temperature) as avg_temperature,
+            MIN(temperature) as min_temperature,
+            MAX(temperature) as max_temperature,
+            AVG(humidity) as avg_humidity,
+            AVG(wind_speed) as avg_wind_speed,
+            COUNT(*) as total_readings
+        ')->first();
+
+        if (!$stats || $stats->total_readings == 0) {
+            return null;
+        }
+
+        // Mode of conditions (separate efficient query)
+        $mostCommon = WeatherLog::where('field_id', $field->id)
+            ->whereBetween('recorded_at', [$startDate, $endDate])
+            ->select('conditions', DB::raw('count(*) as count'))
+            ->groupBy('conditions')
+            ->orderByDesc('count')
+            ->value('conditions');
+
         return [
-            'temperature_change' => $currentStats['avg_temperature'] - $comparisonStats['avg_temperature'],
-            'humidity_change' => $currentStats['avg_humidity'] - $comparisonStats['avg_humidity'],
-            'wind_speed_change' => $currentStats['avg_wind_speed'] - $comparisonStats['avg_wind_speed'],
+            'avg_temperature' => round($stats->avg_temperature, 1),
+            'min_temperature' => round($stats->min_temperature, 1),
+            'max_temperature' => round($stats->max_temperature, 1),
+            'avg_humidity' => round($stats->avg_humidity, 1),
+            'avg_wind_speed' => round($stats->avg_wind_speed, 1),
+            'most_common_condition' => $mostCommon ?? 'unknown',
+            'total_readings' => $stats->total_readings,
         ];
     }
 
@@ -354,7 +405,8 @@ class WeatherAnalyticsService
     private function calculateFarmAverages($fieldAnalytics)
     {
         $totalFields = count($fieldAnalytics);
-        if ($totalFields === 0) return null;
+        if ($totalFields === 0)
+            return null;
 
         $avgTemperature = collect($fieldAnalytics)->avg(function ($field) {
             return $field['weather_stats']['avg_temperature'] ?? 0;
@@ -394,13 +446,13 @@ class WeatherAnalyticsService
     {
         $recommendations = [];
         $focusField = collect($fieldAnalytics)->firstWhere('field.id', $focusFieldId);
-        
+
         if (!$focusField) {
             return $recommendations;
         }
 
         $farmAverage = $this->calculateFarmAverages($fieldAnalytics);
-        
+
         if ($focusField['suitability_score'] < $farmAverage['avg_suitability_score']) {
             $recommendations[] = [
                 'type' => 'improvement',
@@ -416,31 +468,31 @@ class WeatherAnalyticsService
     {
         $startDate = now()->subDays($periodDays);
         $endDate = now();
-        
+
         $allTemps = [];
         $fieldTrends = [];
-        
+
         foreach ($fields as $field) {
             $weatherLogs = WeatherLog::where('field_id', $field->id)
                 ->whereBetween('recorded_at', [$startDate, $endDate])
                 ->orderBy('recorded_at')
                 ->get();
-            
+
             if ($weatherLogs->isEmpty()) {
                 continue;
             }
-            
+
             // Split into two halves to compare
-            $midPoint = (int)($weatherLogs->count() / 2);
+            $midPoint = (int) ($weatherLogs->count() / 2);
             $firstHalf = $weatherLogs->take($midPoint);
             $secondHalf = $weatherLogs->skip($midPoint);
-            
+
             $firstHalfAvg = $firstHalf->avg('temperature') ?? 0;
             $secondHalfAvg = $secondHalf->avg('temperature') ?? 0;
             $change = $secondHalfAvg - $firstHalfAvg;
-            
+
             $allTemps = array_merge($allTemps, $weatherLogs->pluck('temperature')->toArray());
-            
+
             $fieldTrends[] = [
                 'field_id' => $field->id,
                 'field_name' => $field->name,
@@ -450,12 +502,12 @@ class WeatherAnalyticsService
                 'change' => round($change, 2),
             ];
         }
-        
+
         $overallAvg = !empty($allTemps) ? array_sum($allTemps) / count($allTemps) : 0;
         $overallChange = !empty($fieldTrends) ? array_sum(array_column($fieldTrends, 'change')) / count($fieldTrends) : 0;
-        
+
         $trend = abs($overallChange) < 0.5 ? 'stable' : ($overallChange > 0 ? 'increasing' : 'decreasing');
-        
+
         return [
             'trend' => $trend,
             'average_change' => round($overallChange, 2),
@@ -469,30 +521,30 @@ class WeatherAnalyticsService
     {
         $startDate = now()->subDays($periodDays);
         $endDate = now();
-        
+
         $allHumidities = [];
         $fieldTrends = [];
-        
+
         foreach ($fields as $field) {
             $weatherLogs = WeatherLog::where('field_id', $field->id)
                 ->whereBetween('recorded_at', [$startDate, $endDate])
                 ->orderBy('recorded_at')
                 ->get();
-            
+
             if ($weatherLogs->isEmpty()) {
                 continue;
             }
-            
-            $midPoint = (int)($weatherLogs->count() / 2);
+
+            $midPoint = (int) ($weatherLogs->count() / 2);
             $firstHalf = $weatherLogs->take($midPoint);
             $secondHalf = $weatherLogs->skip($midPoint);
-            
+
             $firstHalfAvg = $firstHalf->avg('humidity') ?? 0;
             $secondHalfAvg = $secondHalf->avg('humidity') ?? 0;
             $change = $secondHalfAvg - $firstHalfAvg;
-            
+
             $allHumidities = array_merge($allHumidities, $weatherLogs->pluck('humidity')->toArray());
-            
+
             $fieldTrends[] = [
                 'field_id' => $field->id,
                 'field_name' => $field->name,
@@ -502,12 +554,12 @@ class WeatherAnalyticsService
                 'change' => round($change, 2),
             ];
         }
-        
+
         $overallAvg = !empty($allHumidities) ? array_sum($allHumidities) / count($allHumidities) : 0;
         $overallChange = !empty($fieldTrends) ? array_sum(array_column($fieldTrends, 'change')) / count($fieldTrends) : 0;
-        
+
         $trend = abs($overallChange) < 1 ? 'stable' : ($overallChange > 0 ? 'increasing' : 'decreasing');
-        
+
         return [
             'trend' => $trend,
             'average_change' => round($overallChange, 2),
@@ -521,27 +573,27 @@ class WeatherAnalyticsService
     {
         $startDate = now()->subDays($periodDays);
         $endDate = now();
-        
+
         $allConditions = [];
         $fieldConditions = [];
-        
+
         foreach ($fields as $field) {
             $weatherLogs = WeatherLog::where('field_id', $field->id)
                 ->whereBetween('recorded_at', [$startDate, $endDate])
                 ->get();
-            
+
             if ($weatherLogs->isEmpty()) {
                 continue;
             }
-            
+
             $conditions = $weatherLogs->pluck('conditions')->filter()->toArray();
             $allConditions = array_merge($allConditions, $conditions);
-            
+
             $conditionCounts = array_count_values($conditions);
             arsort($conditionCounts);
             $mostCommon = !empty($conditionCounts) ? array_key_first($conditionCounts) : 'unknown';
             $stability = count($conditionCounts) <= 2 ? 'high' : (count($conditionCounts) <= 4 ? 'moderate' : 'low');
-            
+
             $fieldConditions[] = [
                 'field_id' => $field->id,
                 'field_name' => $field->name,
@@ -550,12 +602,12 @@ class WeatherAnalyticsService
                 'unique_conditions' => count($conditionCounts),
             ];
         }
-        
+
         $overallConditionCounts = array_count_values($allConditions);
         arsort($overallConditionCounts);
         $mostCommon = !empty($overallConditionCounts) ? array_key_first($overallConditionCounts) : 'clear';
         $stability = count($overallConditionCounts) <= 2 ? 'high' : (count($overallConditionCounts) <= 4 ? 'moderate' : 'low');
-        
+
         return [
             'most_common' => $mostCommon,
             'stability' => $stability,
@@ -570,30 +622,30 @@ class WeatherAnalyticsService
     {
         $startDate = now()->subDays($periodDays);
         $endDate = now();
-        
+
         $allWindSpeeds = [];
         $fieldTrends = [];
-        
+
         foreach ($fields as $field) {
             $weatherLogs = WeatherLog::where('field_id', $field->id)
                 ->whereBetween('recorded_at', [$startDate, $endDate])
                 ->orderBy('recorded_at')
                 ->get();
-            
+
             if ($weatherLogs->isEmpty()) {
                 continue;
             }
-            
-            $midPoint = (int)($weatherLogs->count() / 2);
+
+            $midPoint = (int) ($weatherLogs->count() / 2);
             $firstHalf = $weatherLogs->take($midPoint);
             $secondHalf = $weatherLogs->skip($midPoint);
-            
+
             $firstHalfAvg = $firstHalf->avg('wind_speed') ?? 0;
             $secondHalfAvg = $secondHalf->avg('wind_speed') ?? 0;
             $change = $secondHalfAvg - $firstHalfAvg;
-            
+
             $allWindSpeeds = array_merge($allWindSpeeds, $weatherLogs->pluck('wind_speed')->filter()->toArray());
-            
+
             $fieldTrends[] = [
                 'field_id' => $field->id,
                 'field_name' => $field->name,
@@ -602,12 +654,12 @@ class WeatherAnalyticsService
                 'change' => round($change, 2),
             ];
         }
-        
+
         $overallAvg = !empty($allWindSpeeds) ? array_sum($allWindSpeeds) / count($allWindSpeeds) : 0;
         $overallChange = !empty($fieldTrends) ? array_sum(array_column($fieldTrends, 'change')) / count($fieldTrends) : 0;
-        
+
         $trend = abs($overallChange) < 0.5 ? 'stable' : ($overallChange > 0 ? 'increasing' : 'decreasing');
-        
+
         return [
             'trend' => $trend,
             'average_speed' => round($overallAvg, 1),
@@ -622,10 +674,10 @@ class WeatherAnalyticsService
         if (empty($trends)) {
             return ['overall_stability' => 'unknown', 'risk_level' => 'unknown', 'message' => 'No trend data available'];
         }
-        
+
         $stabilityScores = [];
         $riskFactors = [];
-        
+
         // Analyze temperature stability
         if (isset($trends['temperature'])) {
             $tempChange = abs($trends['temperature']['average_change'] ?? 0);
@@ -638,7 +690,7 @@ class WeatherAnalyticsService
                 $stabilityScores[] = 9; // High stability
             }
         }
-        
+
         // Analyze humidity stability
         if (isset($trends['humidity'])) {
             $humidityChange = abs($trends['humidity']['average_change'] ?? 0);
@@ -651,7 +703,7 @@ class WeatherAnalyticsService
                 $stabilityScores[] = 9;
             }
         }
-        
+
         // Analyze conditions stability
         if (isset($trends['conditions'])) {
             $stability = $trends['conditions']['stability'] ?? 'moderate';
@@ -664,7 +716,7 @@ class WeatherAnalyticsService
                 $riskFactors[] = 'variable_weather_conditions';
             }
         }
-        
+
         // Analyze wind stability
         if (isset($trends['wind'])) {
             $windChange = abs($trends['wind']['average_change'] ?? 0);
@@ -678,12 +730,12 @@ class WeatherAnalyticsService
                 $stabilityScores[] = 8;
             }
         }
-        
+
         $avgStability = !empty($stabilityScores) ? array_sum($stabilityScores) / count($stabilityScores) : 5;
-        
+
         $overallStability = $avgStability >= 8 ? 'high' : ($avgStability >= 5 ? 'moderate' : 'low');
         $riskLevel = count($riskFactors) >= 3 ? 'high' : (count($riskFactors) >= 1 ? 'medium' : 'low');
-        
+
         return [
             'overall_stability' => $overallStability,
             'stability_score' => round($avgStability, 1),
@@ -702,18 +754,18 @@ class WeatherAnalyticsService
     {
         $startDate = now()->subDays($periodDays);
         $endDate = now();
-        
+
         $monthlyData = [];
-        
+
         foreach ($fields as $field) {
             $weatherLogs = WeatherLog::where('field_id', $field->id)
                 ->whereBetween('recorded_at', [$startDate, $endDate])
                 ->get();
-            
+
             if ($weatherLogs->isEmpty()) {
                 continue;
             }
-            
+
             // Group by month
             foreach ($weatherLogs as $log) {
                 $month = Carbon::parse($log->recorded_at)->format('Y-m');
@@ -724,7 +776,7 @@ class WeatherAnalyticsService
                         'humidity' => [],
                     ];
                 }
-                
+
                 if ($log->temperature !== null) {
                     $monthlyData[$month]['temperature'][] = $log->temperature;
                 }
@@ -736,20 +788,20 @@ class WeatherAnalyticsService
                 }
             }
         }
-        
+
         if (empty($monthlyData)) {
             return ['season' => 'unknown', 'pattern_strength' => 'none', 'message' => 'Insufficient data for seasonal analysis'];
         }
-        
+
         // Determine season based on current month
-        $currentMonth = (int)now()->format('n');
-        $season = match(true) {
+        $currentMonth = (int) now()->format('n');
+        $season = match (true) {
             in_array($currentMonth, [12, 1, 2]) => 'dry',
             in_array($currentMonth, [3, 4, 5]) => 'transition',
             in_array($currentMonth, [6, 7, 8]) => 'wet',
             default => 'transition',
         };
-        
+
         // Calculate pattern strength based on data consistency
         $tempVariances = [];
         foreach ($monthlyData as $month => $data) {
@@ -762,14 +814,14 @@ class WeatherAnalyticsService
                 $tempVariances[] = $variance / count($data['temperature']);
             }
         }
-        
+
         $avgVariance = !empty($tempVariances) ? array_sum($tempVariances) / count($tempVariances) : 100;
         $patternStrength = $avgVariance < 5 ? 'strong' : ($avgVariance < 15 ? 'moderate' : 'weak');
-        
+
         return [
             'season' => $season,
             'pattern_strength' => $patternStrength,
-            'monthly_data' => array_map(function($data) {
+            'monthly_data' => array_map(function ($data) {
                 return [
                     'avg_temperature' => !empty($data['temperature']) ? round(array_sum($data['temperature']) / count($data['temperature']), 1) : null,
                     'total_rainfall' => !empty($data['rainfall']) ? round(array_sum($data['rainfall']), 1) : null,
@@ -786,7 +838,7 @@ class WeatherAnalyticsService
         $baseYield = 4500; // kg per hectare
         $weatherScore = $this->calculateWeatherScore($weatherData);
         $predictedYield = $baseYield * ($weatherScore / 100);
-        
+
         return [
             'predicted_yield_kg_per_ha' => round($predictedYield, 0),
             'confidence_level' => 'medium',
@@ -799,27 +851,27 @@ class WeatherAnalyticsService
         if ($weatherData->isEmpty()) {
             return $this->simpleYieldPrediction($planting, $weatherData);
         }
-        
+
         $baseYield = 4500; // kg per hectare
         $weatherScore = $this->calculateWeatherScore($weatherData);
-        
+
         // Factor 1: Temperature optimization (0-30% impact)
         $optimalTempDays = $weatherData->whereBetween('temperature', [22, 28])->count();
         $totalDays = $weatherData->count();
         $tempScore = $totalDays > 0 ? ($optimalTempDays / $totalDays) * 100 : 50;
         $tempFactor = 1 + (($tempScore - 50) / 100) * 0.3;
-        
+
         // Factor 2: Rainfall adequacy (0-25% impact)
         $totalRainfall = $weatherData->sum('rainfall');
         $expectedRainfall = 1000; // mm per season
         $rainfallRatio = min(1.2, max(0.5, $totalRainfall / $expectedRainfall));
         $rainfallFactor = 0.75 + ($rainfallRatio * 0.25);
-        
+
         // Factor 3: Humidity optimization (0-15% impact)
         $optimalHumidityDays = $weatherData->whereBetween('humidity', [65, 80])->count();
         $humidityScore = $totalDays > 0 ? ($optimalHumidityDays / $totalDays) * 100 : 50;
         $humidityFactor = 1 + (($humidityScore - 50) / 100) * 0.15;
-        
+
         // Factor 4: Stress events (0-20% negative impact)
         $stressEvents = $this->identifyStressEvents($weatherData);
         $stressDays = 0;
@@ -828,19 +880,19 @@ class WeatherAnalyticsService
         }
         $stressRatio = min(1, $stressDays / max(1, $totalDays));
         $stressFactor = 1 - ($stressRatio * 0.2);
-        
+
         // Factor 5: Growth stage weather alignment (0-10% impact)
         $growthStageScore = $this->calculateGrowthStageAlignment($planting, $weatherData);
         $growthFactor = 0.9 + (($growthStageScore / 100) * 0.1);
-        
+
         // Combine all factors
         $combinedFactor = $tempFactor * $rainfallFactor * $humidityFactor * $stressFactor * $growthFactor;
         $predictedYield = $baseYield * $combinedFactor;
-        
+
         // Calculate confidence based on data quality
         $dataQuality = min(100, ($totalDays / 90) * 100); // Assuming 90 days is full season
         $confidenceLevel = $dataQuality >= 80 ? 'high' : ($dataQuality >= 50 ? 'medium' : 'low');
-        
+
         return [
             'predicted_yield_kg_per_ha' => round($predictedYield, 0),
             'confidence_level' => $confidenceLevel,
@@ -864,29 +916,29 @@ class WeatherAnalyticsService
     {
         // Note: This is a simplified ML-like approach using weighted factors
         // A true ML implementation would require training data and a model
-        
+
         if ($weatherData->isEmpty()) {
             return [
                 'message' => 'Insufficient data for ML-based prediction',
                 'fallback' => $this->simpleYieldPrediction($planting, $weatherData),
             ];
         }
-        
+
         // Use advanced prediction as base
         $advancedPrediction = $this->advancedYieldPrediction($planting, $weatherData);
-        
+
         // Add ML-like adjustments based on historical patterns
         // This would normally use a trained model, but we'll use pattern matching
-        
+
         $historicalYield = $this->getHistoricalYieldForPlanting($planting);
         if ($historicalYield) {
             // Adjust prediction based on historical performance
             $historicalAvg = $historicalYield['average_yield'] ?? 4500;
             $currentPrediction = $advancedPrediction['predicted_yield_kg_per_ha'];
-            
+
             // Weighted average: 60% current prediction, 40% historical average
             $mlAdjustedYield = ($currentPrediction * 0.6) + ($historicalAvg * 0.4);
-            
+
             return [
                 'predicted_yield_kg_per_ha' => round($mlAdjustedYield, 0),
                 'confidence_level' => 'high',
@@ -900,14 +952,14 @@ class WeatherAnalyticsService
                 ]),
             ];
         }
-        
+
         return [
             'message' => 'ML-based prediction using advanced model (no historical data available)',
             'prediction' => $advancedPrediction,
             'note' => 'Full ML model requires historical yield data for training',
         ];
     }
-    
+
     private function getHistoricalYieldForPlanting($planting)
     {
         // Get historical yields for similar plantings
@@ -915,23 +967,23 @@ class WeatherAnalyticsService
         if (!$field) {
             return null;
         }
-        
-        $historicalHarvests = Harvest::whereHas('planting', function($q) use ($field) {
+
+        $historicalHarvests = Harvest::whereHas('planting', function ($q) use ($field) {
             $q->where('field_id', $field->id)
-              ->where('crop_type', $planting->crop_type ?? 'rice');
+                ->where('crop_type', $planting->crop_type ?? 'rice');
         })
-        ->where('id', '!=', $planting->id)
-        ->get();
-        
+            ->where('id', '!=', $planting->id)
+            ->get();
+
         if ($historicalHarvests->isEmpty()) {
             return null;
         }
-        
+
         $yields = $historicalHarvests->pluck('yield')->filter();
         if ($yields->isEmpty()) {
             return null;
         }
-        
+
         return [
             'average_yield' => round($yields->avg(), 0),
             'min_yield' => round($yields->min(), 0),
@@ -939,33 +991,34 @@ class WeatherAnalyticsService
             'sample_size' => $yields->count(),
         ];
     }
-    
+
     private function calculateGrowthStageAlignment($planting, $weatherData)
     {
         if ($weatherData->isEmpty() || !$planting) {
             return 50;
         }
-        
+
         $currentStage = $planting->current_stage ?? 'seedling';
         $stageWeather = $this->getWeatherForStage($planting, $weatherData, $currentStage);
-        
+
         if ($stageWeather->isEmpty()) {
             return 50;
         }
-        
+
         $optimalDays = $this->countOptimalDays($stageWeather, $currentStage);
         $totalDays = $stageWeather->count();
-        
+
         return $totalDays > 0 ? ($optimalDays / $totalDays) * 100 : 50;
     }
 
     private function calculateWeatherScore($weatherData)
     {
-        if ($weatherData->isEmpty()) return 50;
-        
+        if ($weatherData->isEmpty())
+            return 50;
+
         $optimalTempDays = $weatherData->whereBetween('temperature', [20, 30])->count();
         $totalDays = $weatherData->count();
-        
+
         return $totalDays > 0 ? ($optimalTempDays / $totalDays) * 100 : 50;
     }
 
@@ -985,7 +1038,7 @@ class WeatherAnalyticsService
 
         $currentStage = $planting->current_stage ?? 'seedling';
         $stageWeather = $this->getWeatherForStage($planting, $weatherData, $currentStage);
-        
+
         $analysis = [
             'current_stage' => $currentStage,
             'temperature_avg' => $stageWeather->avg('temperature'),
@@ -1016,10 +1069,10 @@ class WeatherAnalyticsService
             'grain_filling' => 90,
             'ripening' => 120,
         ];
-        
+
         $daysOffset = $daysPerStage[$stage] ?? 0;
-        return $planting->planting_date ? 
-            Carbon::parse($planting->planting_date)->addDays($daysOffset) : 
+        return $planting->planting_date ?
+            Carbon::parse($planting->planting_date)->addDays($daysOffset) :
             now()->subDays(30);
     }
 
@@ -1034,12 +1087,12 @@ class WeatherAnalyticsService
         ];
 
         $range = $optimalRanges[$stage] ?? ['temp' => [20, 30], 'humidity' => [60, 80]];
-        
-        return $weatherData->filter(function($log) use ($range) {
+
+        return $weatherData->filter(function ($log) use ($range) {
             $temp = $log->temperature ?? 0;
             $humidity = $log->humidity ?? 0;
             return $temp >= $range['temp'][0] && $temp <= $range['temp'][1] &&
-                   $humidity >= $range['humidity'][0] && $humidity <= $range['humidity'][1];
+                $humidity >= $range['humidity'][0] && $humidity <= $range['humidity'][1];
         })->count();
     }
 
@@ -1054,23 +1107,23 @@ class WeatherAnalyticsService
         ];
 
         $thresholds = $stressThresholds[$stage] ?? ['temp_high' => 35, 'temp_low' => 15, 'humidity_low' => 50];
-        
-        return $weatherData->filter(function($log) use ($thresholds) {
+
+        return $weatherData->filter(function ($log) use ($thresholds) {
             $temp = $log->temperature ?? 0;
             $humidity = $log->humidity ?? 0;
-            return $temp > $thresholds['temp_high'] || 
-                   $temp < $thresholds['temp_low'] || 
-                   $humidity < $thresholds['humidity_low'];
+            return $temp > $thresholds['temp_high'] ||
+                $temp < $thresholds['temp_low'] ||
+                $humidity < $thresholds['humidity_low'];
         })->count();
     }
 
     private function getStageRecommendations($stage, $weatherData)
     {
         $recommendations = [];
-        
+
         $avgTemp = $weatherData->avg('temperature');
         $avgHumidity = $weatherData->avg('humidity');
-        
+
         if ($avgTemp > 32) {
             $recommendations[] = 'High temperature detected. Consider increasing irrigation frequency.';
         }
@@ -1080,24 +1133,24 @@ class WeatherAnalyticsService
         if ($weatherData->where('rainfall', '>', 50)->count() > 0) {
             $recommendations[] = 'Heavy rainfall detected. Ensure proper drainage.';
         }
-        
+
         return $recommendations;
     }
 
     private function identifyStressEvents($weatherData)
     {
         if ($weatherData->isEmpty()) {
-        return ['stress_events' => []];
+            return ['stress_events' => []];
         }
-        
+
         $stressEvents = [];
         $eventId = 1;
-        
+
         // Identify heat stress events (temperature > 35°C)
-        $heatEvents = $weatherData->filter(function($log) {
+        $heatEvents = $weatherData->filter(function ($log) {
             return ($log->temperature ?? 0) > 35;
         });
-        
+
         if ($heatEvents->isNotEmpty()) {
             $consecutiveHeatDays = $this->findConsecutivePeriods($heatEvents, 'temperature', 35, '>');
             foreach ($consecutiveHeatDays as $period) {
@@ -1113,12 +1166,12 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Identify cold stress events (temperature < 15°C)
-        $coldEvents = $weatherData->filter(function($log) {
+        $coldEvents = $weatherData->filter(function ($log) {
             return ($log->temperature ?? 0) < 15;
         });
-        
+
         if ($coldEvents->isNotEmpty()) {
             $consecutiveColdDays = $this->findConsecutivePeriods($coldEvents, 'temperature', 15, '<');
             foreach ($consecutiveColdDays as $period) {
@@ -1134,12 +1187,12 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Identify drought stress (low humidity < 40% for extended period)
-        $droughtEvents = $weatherData->filter(function($log) {
+        $droughtEvents = $weatherData->filter(function ($log) {
             return ($log->humidity ?? 0) < 40 && ($log->rainfall ?? 0) < 1;
         });
-        
+
         if ($droughtEvents->isNotEmpty()) {
             $consecutiveDroughtDays = $this->findConsecutivePeriods($droughtEvents, 'humidity', 40, '<');
             foreach ($consecutiveDroughtDays as $period) {
@@ -1157,12 +1210,12 @@ class WeatherAnalyticsService
                 }
             }
         }
-        
+
         // Identify flooding stress (heavy rainfall > 50mm in a day)
-        $floodEvents = $weatherData->filter(function($log) {
+        $floodEvents = $weatherData->filter(function ($log) {
             return ($log->rainfall ?? 0) > 50;
         });
-        
+
         if ($floodEvents->isNotEmpty()) {
             foreach ($floodEvents as $log) {
                 $stressEvents[] = [
@@ -1177,24 +1230,24 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         return [
             'stress_events' => $stressEvents,
             'total_events' => count($stressEvents),
             'event_summary' => $this->summarizeStressEvents($stressEvents),
         ];
     }
-    
+
     private function findConsecutivePeriods($events, $field, $threshold, $operator)
     {
         $periods = [];
         $currentPeriod = null;
-        
+
         foreach ($events->sortBy('recorded_at') as $log) {
             $date = Carbon::parse($log->recorded_at)->toDateString();
             $value = $log->$field ?? 0;
             $meetsCondition = $operator === '>' ? $value > $threshold : $value < $threshold;
-            
+
             if ($meetsCondition) {
                 if ($currentPeriod === null) {
                     $currentPeriod = [
@@ -1221,14 +1274,14 @@ class WeatherAnalyticsService
                 }
             }
         }
-        
+
         if ($currentPeriod !== null) {
             $periods[] = $currentPeriod;
         }
-        
+
         return $periods;
     }
-    
+
     private function summarizeStressEvents($events)
     {
         $summary = [
@@ -1237,7 +1290,7 @@ class WeatherAnalyticsService
             'drought_stress' => ['count' => 0, 'total_days' => 0],
             'flooding_stress' => ['count' => 0, 'total_days' => 0],
         ];
-        
+
         foreach ($events as $event) {
             $type = $event['type'];
             if (isset($summary[$type])) {
@@ -1245,18 +1298,18 @@ class WeatherAnalyticsService
                 $summary[$type]['total_days'] += $event['duration_days'] ?? 1;
             }
         }
-        
+
         return $summary;
     }
 
     private function calculateYieldImpactFactors($weatherData, $planting)
     {
         if ($weatherData->isEmpty() || !$planting) {
-        return ['impact_factors' => []];
+            return ['impact_factors' => []];
         }
-        
+
         $factors = [];
-        
+
         // Temperature impact
         $avgTemp = $weatherData->avg('temperature');
         $optimalTempRange = [25, 30]; // Optimal for rice
@@ -1285,12 +1338,12 @@ class WeatherAnalyticsService
                 'yield_impact_percent' => 5,
             ];
         }
-        
+
         // Rainfall impact
         $totalRainfall = $weatherData->sum('rainfall');
         $optimalRainfall = 1000; // mm per season (approximate)
         $rainfallRatio = $totalRainfall / max($optimalRainfall, 1);
-        
+
         if ($rainfallRatio < 0.7) {
             $factors[] = [
                 'factor' => 'insufficient_rainfall',
@@ -1316,7 +1369,7 @@ class WeatherAnalyticsService
                 'yield_impact_percent' => 3,
             ];
         }
-        
+
         // Humidity impact
         $avgHumidity = $weatherData->avg('humidity');
         if ($avgHumidity < 60) {
@@ -1336,7 +1389,7 @@ class WeatherAnalyticsService
                 'yield_impact_percent' => -8,
             ];
         }
-        
+
         // Stress events impact
         $stressEvents = $this->identifyStressEvents($weatherData);
         $totalStressDays = array_sum(array_column($stressEvents['event_summary'] ?? [], 'total_days'));
@@ -1349,10 +1402,10 @@ class WeatherAnalyticsService
                 'yield_impact_percent' => $totalStressDays > 20 ? -15 : -8,
             ];
         }
-        
+
         // Calculate overall yield impact
         $totalImpact = array_sum(array_column($factors, 'yield_impact_percent'));
-        
+
         return [
             'impact_factors' => $factors,
             'total_yield_impact_percent' => round($totalImpact, 1),
@@ -1365,10 +1418,10 @@ class WeatherAnalyticsService
         if ($weatherData->isEmpty() || !$planting) {
             return ['recommendations' => []];
         }
-        
+
         $recommendations = [];
         $impactFactors = $this->calculateYieldImpactFactors($weatherData, $planting);
-        
+
         foreach ($impactFactors['impact_factors'] ?? [] as $factor) {
             if ($factor['impact'] === 'negative' && ($factor['severity'] ?? 'low') !== 'low') {
                 $recommendations[] = [
@@ -1379,12 +1432,12 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Add general recommendations
         $avgTemp = $weatherData->avg('temperature');
         $avgHumidity = $weatherData->avg('humidity');
         $totalRainfall = $weatherData->sum('rainfall');
-        
+
         if ($avgTemp > 32) {
             $recommendations[] = [
                 'priority' => 'medium',
@@ -1393,7 +1446,7 @@ class WeatherAnalyticsService
                 'expected_benefit' => 'Reduces heat stress on plants',
             ];
         }
-        
+
         if ($avgHumidity > 85) {
             $recommendations[] = [
                 'priority' => 'medium',
@@ -1402,7 +1455,7 @@ class WeatherAnalyticsService
                 'expected_benefit' => 'Reduces disease risk from high humidity',
             ];
         }
-        
+
         if ($totalRainfall < 500) {
             $recommendations[] = [
                 'priority' => 'high',
@@ -1411,14 +1464,14 @@ class WeatherAnalyticsService
                 'expected_benefit' => 'Maintains adequate soil moisture for crop growth',
             ];
         }
-        
+
         return [
             'recommendations' => $recommendations,
             'total_recommendations' => count($recommendations),
             'high_priority_count' => collect($recommendations)->where('priority', 'high')->count(),
         ];
     }
-    
+
     private function getRecommendationForFactor($factor)
     {
         $recommendations = [
@@ -1430,7 +1483,7 @@ class WeatherAnalyticsService
             'high_humidity' => 'Improve field ventilation, apply preventive fungicides, and ensure proper drainage',
             'extended_stress_periods' => 'Review overall field management practices and consider stress-tolerant varieties',
         ];
-        
+
         return $recommendations[$factor['factor']] ?? 'Monitor conditions closely and adjust management practices as needed';
     }
 
@@ -1438,27 +1491,27 @@ class WeatherAnalyticsService
     {
         $fields = $farm->fields;
         $patterns = [];
-        
+
         // Get weather data for last 3 years
         $years = [now()->year - 2, now()->year - 1, now()->year];
-        
+
         foreach ($fields as $field) {
             $fieldPatterns = [];
-            
+
             foreach ($years as $year) {
                 $yearLogs = WeatherLog::where('field_id', $field->id)
                     ->whereYear('recorded_at', $year)
                     ->get();
-                
+
                 if ($yearLogs->isNotEmpty()) {
                     // Group by month
                     $monthlyPatterns = [];
                     for ($month = 1; $month <= 12; $month++) {
-                        $monthLogs = $yearLogs->filter(function($log) use ($year, $month) {
+                        $monthLogs = $yearLogs->filter(function ($log) use ($year, $month) {
                             return Carbon::parse($log->recorded_at)->year == $year &&
-                                   Carbon::parse($log->recorded_at)->month == $month;
+                                Carbon::parse($log->recorded_at)->month == $month;
                         });
-                        
+
                         if ($monthLogs->isNotEmpty()) {
                             $monthlyPatterns[$month] = [
                                 'avg_temperature' => round($monthLogs->avg('temperature'), 1),
@@ -1467,7 +1520,7 @@ class WeatherAnalyticsService
                             ];
                         }
                     }
-                    
+
                     $fieldPatterns[$year] = [
                         'year' => $year,
                         'monthly_patterns' => $monthlyPatterns,
@@ -1476,7 +1529,7 @@ class WeatherAnalyticsService
                     ];
                 }
             }
-            
+
             if (!empty($fieldPatterns)) {
                 $patterns[$field->id] = [
                     'field_id' => $field->id,
@@ -1485,18 +1538,18 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         return ['patterns' => $patterns];
     }
 
     private function evaluateMonthForPlanting($farm, $cropType, $targetDate, $historicalData)
     {
-        $targetMonth = (int)$targetDate->format('n');
-        $targetYear = (int)$targetDate->format('Y');
-        
+        $targetMonth = (int) $targetDate->format('n');
+        $targetYear = (int) $targetDate->format('Y');
+
         $suitabilityScore = 50; // Base score
         $factors = [];
-        
+
         // Analyze historical patterns for this month
         $monthlyPatterns = [];
         foreach ($historicalData['patterns'] ?? [] as $fieldPattern) {
@@ -1506,13 +1559,13 @@ class WeatherAnalyticsService
                 }
             }
         }
-        
+
         if (!empty($monthlyPatterns)) {
             // Calculate average conditions for this month
             $avgTemp = array_sum(array_column($monthlyPatterns, 'avg_temperature')) / count($monthlyPatterns);
             $avgRainfall = array_sum(array_column($monthlyPatterns, 'total_rainfall')) / count($monthlyPatterns);
             $avgHumidity = array_sum(array_column($monthlyPatterns, 'avg_humidity')) / count($monthlyPatterns);
-            
+
             // Evaluate temperature suitability for rice
             if ($avgTemp >= 22 && $avgTemp <= 30) {
                 $suitabilityScore += 20;
@@ -1524,7 +1577,7 @@ class WeatherAnalyticsService
                 $suitabilityScore -= 15;
                 $factors[] = 'suboptimal_temperature';
             }
-            
+
             // Evaluate rainfall suitability
             if ($avgRainfall >= 100 && $avgRainfall <= 300) {
                 $suitabilityScore += 15;
@@ -1536,7 +1589,7 @@ class WeatherAnalyticsService
                 $suitabilityScore -= 10;
                 $factors[] = 'inadequate_rainfall';
             }
-            
+
             // Evaluate humidity suitability
             if ($avgHumidity >= 65 && $avgHumidity <= 85) {
                 $suitabilityScore += 10;
@@ -1551,7 +1604,7 @@ class WeatherAnalyticsService
         } else {
             // No historical data - use general seasonal knowledge
             $factors[] = 'no_historical_data';
-            
+
             // General rice planting season (varies by region, but typically wet season)
             if (in_array($targetMonth, [6, 7, 8, 9])) {
                 $suitabilityScore += 15;
@@ -1564,18 +1617,18 @@ class WeatherAnalyticsService
                 $factors[] = 'off_season';
             }
         }
-        
+
         // Clamp score between 0 and 100
         $suitabilityScore = max(0, min(100, $suitabilityScore));
-        
+
         // Determine recommendation
-        $recommendation = match(true) {
+        $recommendation = match (true) {
             $suitabilityScore >= 80 => 'highly_suitable',
             $suitabilityScore >= 60 => 'suitable',
             $suitabilityScore >= 40 => 'moderately_suitable',
             default => 'not_recommended',
         };
-        
+
         return [
             'month' => $targetDate->format('M Y'),
             'month_number' => $targetMonth,
@@ -1589,11 +1642,11 @@ class WeatherAnalyticsService
     private function identifyOptimalPlantingWindows($recommendations)
     {
         $windows = [];
-        
+
         foreach ($recommendations as $recommendation) {
             $suitabilityScore = $recommendation['suitability_score'] ?? 0;
             $month = $recommendation['month'] ?? '';
-            
+
             if ($suitabilityScore >= 80) {
                 $windows[] = [
                     'month' => $month,
@@ -1610,12 +1663,12 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Sort by suitability score
-        usort($windows, function($a, $b) {
+        usort($windows, function ($a, $b) {
             return ($b['suitability_score'] ?? 0) <=> ($a['suitability_score'] ?? 0);
         });
-        
+
         return [
             'optimal_windows' => $windows,
             'best_window' => !empty($windows) ? $windows[0] : null,
@@ -1627,13 +1680,13 @@ class WeatherAnalyticsService
     {
         $riskFactors = [];
         $fields = $farm->fields;
-        
+
         // Analyze historical weather patterns
         $historicalData = $this->getHistoricalWeatherPatterns($farm, $cropType);
-        
+
         foreach ($historicalData['patterns'] ?? [] as $fieldPattern) {
             $fieldRisks = [];
-            
+
             foreach ($fieldPattern['yearly_patterns'] ?? [] as $yearData) {
                 // Check for drought risk
                 if (($yearData['annual_total_rainfall'] ?? 0) < 800) {
@@ -1643,7 +1696,7 @@ class WeatherAnalyticsService
                         'description' => "Low annual rainfall ({$yearData['annual_total_rainfall']}mm) in {$yearData['year']}",
                     ];
                 }
-                
+
                 // Check for extreme temperature risk
                 if (($yearData['annual_avg_temp'] ?? 0) > 30) {
                     $fieldRisks[] = [
@@ -1653,7 +1706,7 @@ class WeatherAnalyticsService
                     ];
                 }
             }
-            
+
             if (!empty($fieldRisks)) {
                 $riskFactors[$fieldPattern['field_id']] = [
                     'field_id' => $fieldPattern['field_id'],
@@ -1662,7 +1715,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // General risk factors
         $generalRisks = [
             [
@@ -1676,7 +1729,7 @@ class WeatherAnalyticsService
                 'description' => 'Long-term climate trends may affect planting windows',
             ],
         ];
-        
+
         return [
             'risk_factors' => array_values($riskFactors),
             'general_risks' => $generalRisks,
@@ -1708,14 +1761,14 @@ class WeatherAnalyticsService
                 'Time planting to avoid frost risk',
             ],
         ];
-        
+
         $cropPractices = $practices[$cropType] ?? [
             'Monitor weather conditions before planting',
             'Ensure adequate soil preparation',
             'Use quality seeds',
             'Time planting for optimal conditions',
         ];
-        
+
         return [
             'best_practices' => $cropPractices,
             'crop_type' => $cropType,
@@ -1730,12 +1783,12 @@ class WeatherAnalyticsService
 
     private function getWeatherDataForAssessmentPeriod($field, $assessmentPeriod)
     {
-        $days = match($assessmentPeriod) {
+        $days = match ($assessmentPeriod) {
             'short_term' => 7,
             'long_term' => 90,
             default => 30,
         };
-        
+
         return $this->getWeatherDataForPeriod($field, now()->subDays($days), now());
     }
 
@@ -1756,22 +1809,22 @@ class WeatherAnalyticsService
 
         $totalRisk = 0;
         $count = 0;
-        
+
         foreach ($risks as $risk) {
             if (is_array($risk) && isset($risk['risk_level'])) {
-                $riskValue = match($risk['risk_level']) {
+                $riskValue = match ($risk['risk_level']) {
                     'critical' => 90,
                     'high' => 70,
                     'medium' => 50,
                     'low' => 30,
                     default => 50,
                 };
-                
+
                 // Adjust by probability if available
                 if (isset($risk['probability'])) {
                     $riskValue *= $risk['probability'];
                 }
-                
+
                 $totalRisk += $riskValue;
                 $count++;
             } elseif (is_numeric($risk)) {
@@ -1779,22 +1832,22 @@ class WeatherAnalyticsService
                 $count++;
             }
         }
-        
+
         return $count > 0 ? min(100, round($totalRisk / $count)) : 0;
     }
 
     private function getMitigationStrategies($risks)
     {
         $strategies = [];
-        
+
         foreach ($risks as $riskType => $risk) {
             if (!is_array($risk)) {
                 continue;
             }
-            
+
             $riskLevel = $risk['risk_level'] ?? 'low';
             $probability = $risk['probability'] ?? 0;
-            
+
             if ($riskLevel === 'critical' || ($riskLevel === 'high' && $probability > 0.5)) {
                 $strategies[] = [
                     'risk_type' => $riskType,
@@ -1813,10 +1866,10 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         return ['strategies' => $strategies];
     }
-    
+
     private function getStrategyForRiskType($riskType)
     {
         $strategies = [
@@ -1851,7 +1904,7 @@ class WeatherAnalyticsService
                 'Use disease-resistant varieties',
             ],
         ];
-        
+
         return $strategies[$riskType] ?? [
             'Monitor conditions closely',
             'Implement appropriate mitigation measures',
@@ -1864,36 +1917,36 @@ class WeatherAnalyticsService
         $recommendations = [];
         $maxRisk = 0;
         $criticalRisks = [];
-        
+
         foreach ($risks as $riskType => $risk) {
             if (!is_array($risk)) {
                 continue;
             }
-            
+
             $riskLevel = $risk['risk_level'] ?? 'low';
-            $riskScore = match($riskLevel) {
+            $riskScore = match ($riskLevel) {
                 'critical' => 90,
                 'high' => 70,
                 'medium' => 50,
                 'low' => 30,
                 default => 0,
             };
-            
+
             $maxRisk = max($maxRisk, $riskScore);
-            
+
             if ($riskLevel === 'critical' || $riskLevel === 'high') {
                 $criticalRisks[] = $riskType;
             }
         }
-        
+
         // Determine monitoring frequency
-        $frequency = match(true) {
+        $frequency = match (true) {
             $maxRisk >= 80 => 'daily',
             $maxRisk >= 60 => 'every_2_days',
             $maxRisk >= 40 => 'weekly',
             default => 'bi_weekly',
         };
-        
+
         $recommendations[] = [
             'frequency' => $frequency,
             'activities' => [
@@ -1912,7 +1965,7 @@ class WeatherAnalyticsService
                 'Crop growth stage',
             ],
         ];
-        
+
         // Add specific monitoring for critical risks
         foreach ($criticalRisks as $riskType) {
             $recommendations[] = [
@@ -1920,10 +1973,10 @@ class WeatherAnalyticsService
                 'specific_monitoring' => $this->getSpecificMonitoringForRisk($riskType),
             ];
         }
-        
+
         return ['monitoring' => $recommendations];
     }
-    
+
     private function getSpecificMonitoringForRisk($riskType)
     {
         $monitoring = [
@@ -1958,7 +2011,7 @@ class WeatherAnalyticsService
                 'Track disease progression',
             ],
         ];
-        
+
         return $monitoring[$riskType] ?? ['Monitor conditions regularly'];
     }
 
@@ -1967,16 +2020,16 @@ class WeatherAnalyticsService
         // Integrate with WeatherForecastService
         $forecastService = app(WeatherForecastService::class);
         $forecast = $forecastService->getFieldForecast($field, $days);
-        
+
         if (isset($forecast['error'])) {
-        return collect();
+            return collect();
         }
-        
+
         // Convert forecast to collection format
         $forecastData = [];
         if (isset($forecast['daily_forecasts'])) {
             foreach ($forecast['daily_forecasts'] as $day) {
-                $forecastData[] = (object)[
+                $forecastData[] = (object) [
                     'date' => $day['date'] ?? now()->toDateString(),
                     'temperature' => $day['temperature']['avg'] ?? $day['temp']['day'] ?? 25,
                     'humidity' => $day['humidity'] ?? 70,
@@ -1986,7 +2039,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         return collect($forecastData);
     }
 
@@ -1999,11 +2052,11 @@ class WeatherAnalyticsService
                 'message' => 'Weather data not available - monitor soil moisture manually',
             ];
         }
-        
+
         $temp = $currentWeather->temperature ?? 0;
         $humidity = $currentWeather->humidity ?? 0;
         $rainfall = $currentWeather->rainfall ?? 0;
-        
+
         // Determine action based on soil moisture
         if ($soilMoistureLevel !== null) {
             if ($soilMoistureLevel < 30) {
@@ -2031,7 +2084,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Determine action based on weather conditions
         if ($rainfall > 10) {
             return [
@@ -2041,7 +2094,7 @@ class WeatherAnalyticsService
                 'recommended_amount_mm' => 0,
             ];
         }
-        
+
         if ($temp > 32 && $humidity < 50) {
             return [
                 'action' => 'irrigate',
@@ -2051,7 +2104,7 @@ class WeatherAnalyticsService
                 'recommended_time' => 'early_morning',
             ];
         }
-        
+
         return [
             'action' => 'monitor',
             'urgency' => 'low',
@@ -2065,38 +2118,38 @@ class WeatherAnalyticsService
         if ($forecast->isEmpty()) {
             return ['schedule' => [], 'message' => 'No forecast data available'];
         }
-        
+
         $schedule = [];
         $baseWaterNeed = $this->getBaseWaterRequirement($cropStage);
-        
+
         foreach ($forecast as $index => $day) {
             $date = $day->date ?? now()->addDays($index)->toDateString();
             $rainfall = $day->rainfall ?? 0;
             $temp = $day->temperature ?? 0;
             $humidity = $day->humidity ?? 0;
-            
+
             // Calculate water need adjustment
             $waterNeed = $baseWaterNeed;
-            
+
             // Adjust for temperature
             if ($temp > 30) {
                 $waterNeed *= 1.3; // 30% more water in hot weather
             } elseif ($temp < 20) {
                 $waterNeed *= 0.8; // 20% less water in cool weather
             }
-            
+
             // Adjust for humidity
             if ($humidity < 50) {
                 $waterNeed *= 1.2; // 20% more water in dry conditions
             } elseif ($humidity > 85) {
                 $waterNeed *= 0.7; // 30% less water in humid conditions
             }
-            
+
             // Account for rainfall
             $netWaterNeed = max(0, $waterNeed - ($rainfall * 0.8)); // 80% of rainfall is effective
-            
+
             $shouldIrrigate = $netWaterNeed > 2; // Irrigate if need > 2mm
-            
+
             $schedule[] = [
                 'date' => $date,
                 'day' => Carbon::parse($date)->format('l'),
@@ -2110,14 +2163,14 @@ class WeatherAnalyticsService
                 'recommended_time' => $this->getOptimalIrrigationTime($temp, $humidity),
             ];
         }
-        
+
         return [
             'schedule' => $schedule,
             'total_irrigation_days' => collect($schedule)->where('irrigation_needed', true)->count(),
             'total_water_requirement_mm' => round(collect($schedule)->sum('net_water_need'), 1),
         ];
     }
-    
+
     private function getBaseWaterRequirement($cropStage)
     {
         $requirements = [
@@ -2127,10 +2180,10 @@ class WeatherAnalyticsService
             'grain_filling' => 6,
             'ripening' => 4,
         ];
-        
+
         return $requirements[$cropStage] ?? 5;
     }
-    
+
     private function getOptimalIrrigationTime($temp, $humidity)
     {
         if ($temp > 30) {
@@ -2145,22 +2198,22 @@ class WeatherAnalyticsService
     private function calculateWaterRequirements($field, $planting, $cropStage)
     {
         $baseRequirement = $this->getBaseWaterRequirement($cropStage);
-        
+
         // Adjust for field area
         $fieldArea = $field->area ?? 1; // hectares
         $dailyVolume = $baseRequirement * 10 * $fieldArea; // mm * 10 = m³ per hectare
-        
+
         // Adjust for soil type
-        $soilMultiplier = match($field->soil_type) {
+        $soilMultiplier = match ($field->soil_type) {
             'clay' => 0.9,      // Clay retains more water
             'sandy' => 1.2,     // Sandy soil needs more water
             'loamy' => 1.0,     // Loamy is optimal
             default => 1.0,
         };
-        
+
         $adjustedRequirement = $baseRequirement * $soilMultiplier;
         $adjustedVolume = $dailyVolume * $soilMultiplier;
-        
+
         return [
             'daily_requirement_mm' => round($adjustedRequirement, 1),
             'daily_volume_m3' => round($adjustedVolume, 1),
@@ -2178,63 +2231,63 @@ class WeatherAnalyticsService
     private function getIrrigationEfficiencyTips($field, $currentWeather)
     {
         $tips = [];
-        
+
         if (!$currentWeather) {
             return ['tips' => ['Monitor weather conditions for optimal irrigation timing']];
         }
-        
+
         $temp = $currentWeather->temperature ?? 0;
         $humidity = $currentWeather->humidity ?? 0;
         $rainfall = $currentWeather->rainfall ?? 0;
-        
+
         // Temperature-based tips
         if ($temp > 30) {
             $tips[] = 'High temperature detected - irrigate in early morning or late evening to reduce evaporation';
         } elseif ($temp < 20) {
             $tips[] = 'Low temperature - reduce irrigation frequency to prevent waterlogging';
         }
-        
+
         // Humidity-based tips
         if ($humidity > 85) {
             $tips[] = 'High humidity - reduce irrigation to prevent disease development';
         } elseif ($humidity < 50) {
             $tips[] = 'Low humidity - increase irrigation frequency to maintain soil moisture';
         }
-        
+
         // Rainfall-based tips
         if ($rainfall > 10) {
             $tips[] = 'Recent rainfall - skip irrigation and monitor soil moisture levels';
         }
-        
+
         // General efficiency tips
         $tips[] = 'Use drip irrigation or furrow irrigation for better water efficiency';
         $tips[] = 'Irrigate based on soil moisture sensors rather than fixed schedules';
         $tips[] = 'Apply mulch to reduce evaporation and maintain soil moisture';
         $tips[] = 'Schedule irrigation during low wind conditions to reduce drift';
-        
+
         // Field-specific tips
         if ($field->soil_type === 'clay') {
             $tips[] = 'Clay soil - use longer intervals between irrigation to prevent waterlogging';
         } elseif ($field->soil_type === 'sandy') {
             $tips[] = 'Sandy soil - use shorter, more frequent irrigation cycles';
         }
-        
+
         return ['tips' => array_unique($tips)];
     }
 
     private function getIrrigationRiskWarnings($forecast, $soilMoistureLevel)
     {
         $warnings = [];
-        
+
         if ($forecast->isEmpty()) {
-        return ['warnings' => []];
+            return ['warnings' => []];
         }
-        
+
         // Check forecast for heavy rainfall
-        $heavyRainDays = $forecast->filter(function($day) {
+        $heavyRainDays = $forecast->filter(function ($day) {
             return ($day->rainfall ?? 0) > 20; // mm
         })->count();
-        
+
         if ($heavyRainDays > 0) {
             $warnings[] = [
                 'type' => 'heavy_rainfall',
@@ -2243,12 +2296,12 @@ class WeatherAnalyticsService
                 'action' => 'Postpone irrigation until after rainfall',
             ];
         }
-        
+
         // Check for high humidity + temperature (disease risk)
-        $highRiskDays = $forecast->filter(function($day) {
+        $highRiskDays = $forecast->filter(function ($day) {
             return ($day->humidity ?? 0) > 85 && ($day->temperature ?? 0) > 25;
         })->count();
-        
+
         if ($highRiskDays > 2) {
             $warnings[] = [
                 'type' => 'disease_risk',
@@ -2257,7 +2310,7 @@ class WeatherAnalyticsService
                 'action' => 'Use drip irrigation or reduce irrigation frequency',
             ];
         }
-        
+
         // Check soil moisture level
         if ($soilMoistureLevel !== null) {
             if ($soilMoistureLevel > 80) {
@@ -2276,13 +2329,13 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // Check for extreme temperatures
-        $extremeTempDays = $forecast->filter(function($day) {
+        $extremeTempDays = $forecast->filter(function ($day) {
             $temp = $day->temperature ?? 0;
             return $temp > 35 || $temp < 15;
         })->count();
-        
+
         if ($extremeTempDays > 0) {
             $warnings[] = [
                 'type' => 'extreme_temperature',
@@ -2291,7 +2344,7 @@ class WeatherAnalyticsService
                 'action' => 'Irrigate during cooler parts of the day',
             ];
         }
-        
+
         return ['warnings' => $warnings];
     }
 
@@ -2299,7 +2352,7 @@ class WeatherAnalyticsService
     {
         $riskFactors = [];
         $riskScore = 0;
-        
+
         // Common pest risk factors based on weather
         $pestConditions = [
             'aphids' => ['temp_range' => [20, 30], 'humidity_range' => [60, 80], 'risk_temp' => 25],
@@ -2307,59 +2360,59 @@ class WeatherAnalyticsService
             'brown_planthopper' => ['temp_range' => [25, 32], 'humidity_range' => [70, 90], 'risk_temp' => 28],
             'stem_borer' => ['temp_range' => [22, 30], 'humidity_range' => [70, 85], 'risk_temp' => 26],
         ];
-        
+
         $conditions = $pestConditions[$pest] ?? ['temp_range' => [20, 30], 'humidity_range' => [60, 80], 'risk_temp' => 25];
-        
+
         // Analyze historical weather data
         if ($weatherData->isNotEmpty()) {
             $avgTemp = $weatherData->avg('temperature');
             $avgHumidity = $weatherData->avg('humidity');
-            $daysInOptimalRange = $weatherData->filter(function($log) use ($conditions) {
+            $daysInOptimalRange = $weatherData->filter(function ($log) use ($conditions) {
                 $temp = $log->temperature ?? 0;
                 $humidity = $log->humidity ?? 0;
-                return $temp >= $conditions['temp_range'][0] && 
-                       $temp <= $conditions['temp_range'][1] &&
-                       $humidity >= $conditions['humidity_range'][0] && 
-                       $humidity <= $conditions['humidity_range'][1];
+                return $temp >= $conditions['temp_range'][0] &&
+                    $temp <= $conditions['temp_range'][1] &&
+                    $humidity >= $conditions['humidity_range'][0] &&
+                    $humidity <= $conditions['humidity_range'][1];
             })->count();
-            
+
             $optimalDaysPercent = ($daysInOptimalRange / $weatherData->count()) * 100;
-            
+
             if ($optimalDaysPercent > 60) {
                 $riskScore += 40;
                 $riskFactors[] = "High number of days with optimal conditions for {$pest}";
             }
-            
+
             if ($avgTemp >= $conditions['risk_temp'] - 2 && $avgTemp <= $conditions['risk_temp'] + 2) {
                 $riskScore += 30;
                 $riskFactors[] = "Temperature in optimal range for {$pest} development";
             }
-            
+
             if ($avgHumidity >= $conditions['humidity_range'][0]) {
                 $riskScore += 20;
                 $riskFactors[] = "High humidity favorable for {$pest}";
             }
         }
-        
+
         // Analyze forecast
         if ($forecast->isNotEmpty()) {
-            $forecastOptimalDays = $forecast->filter(function($day) use ($conditions) {
+            $forecastOptimalDays = $forecast->filter(function ($day) use ($conditions) {
                 $temp = $day->temperature ?? 0;
                 $humidity = $day->humidity ?? 0;
-                return $temp >= $conditions['temp_range'][0] && 
-                       $temp <= $conditions['temp_range'][1] &&
-                       $humidity >= $conditions['humidity_range'][0] && 
-                       $humidity <= $conditions['humidity_range'][1];
+                return $temp >= $conditions['temp_range'][0] &&
+                    $temp <= $conditions['temp_range'][1] &&
+                    $humidity >= $conditions['humidity_range'][0] &&
+                    $humidity <= $conditions['humidity_range'][1];
             })->count();
-            
+
             if ($forecastOptimalDays > 3) {
                 $riskScore += 10;
                 $riskFactors[] = "Forecast shows favorable conditions for next few days";
             }
         }
-        
+
         $riskLevel = $riskScore >= 70 ? 'high' : ($riskScore >= 40 ? 'medium' : 'low');
-        
+
         return [
             'risk_level' => $riskLevel,
             'risk_score' => min(100, $riskScore),
@@ -2372,7 +2425,7 @@ class WeatherAnalyticsService
     {
         $riskFactors = [];
         $riskScore = 0;
-        
+
         // Common disease risk factors based on weather
         $diseaseConditions = [
             'rice_blast' => ['temp_range' => [20, 28], 'humidity_min' => 85, 'rainfall_risk' => true],
@@ -2380,35 +2433,35 @@ class WeatherAnalyticsService
             'bacterial_blight' => ['temp_range' => [25, 35], 'humidity_min' => 70, 'rainfall_risk' => true],
             'sheath_blight' => ['temp_range' => [28, 32], 'humidity_min' => 90, 'rainfall_risk' => true],
         ];
-        
+
         $conditions = $diseaseConditions[$disease] ?? ['temp_range' => [20, 30], 'humidity_min' => 80, 'rainfall_risk' => true];
-        
+
         // Analyze historical weather data
         if ($weatherData->isNotEmpty()) {
             $avgTemp = $weatherData->avg('temperature');
             $avgHumidity = $weatherData->avg('humidity');
             $totalRainfall = $weatherData->sum('rainfall');
-            $highHumidityDays = $weatherData->filter(function($log) use ($conditions) {
+            $highHumidityDays = $weatherData->filter(function ($log) use ($conditions) {
                 return ($log->humidity ?? 0) >= $conditions['humidity_min'];
             })->count();
-            
+
             $highHumidityPercent = ($highHumidityDays / $weatherData->count()) * 100;
-            
+
             if ($highHumidityPercent > 50) {
                 $riskScore += 40;
                 $riskFactors[] = "High humidity conditions (>{$conditions['humidity_min']}%) for extended periods";
             }
-            
+
             if ($avgTemp >= $conditions['temp_range'][0] && $avgTemp <= $conditions['temp_range'][1]) {
                 $riskScore += 30;
                 $riskFactors[] = "Temperature in optimal range for {$disease} development";
             }
-            
+
             if ($conditions['rainfall_risk'] && $totalRainfall > 50) {
                 $riskScore += 20;
                 $riskFactors[] = "High rainfall creates favorable conditions for {$disease}";
             }
-            
+
             // Check for prolonged wet conditions
             $consecutiveWetDays = $this->countConsecutiveWetDays($weatherData, $conditions['humidity_min']);
             if ($consecutiveWetDays >= 3) {
@@ -2416,21 +2469,21 @@ class WeatherAnalyticsService
                 $riskFactors[] = "Prolonged wet conditions ({$consecutiveWetDays} days)";
             }
         }
-        
+
         // Analyze forecast
         if ($forecast->isNotEmpty()) {
-            $forecastHighHumidity = $forecast->filter(function($day) use ($conditions) {
+            $forecastHighHumidity = $forecast->filter(function ($day) use ($conditions) {
                 return ($day->humidity ?? 0) >= $conditions['humidity_min'];
             })->count();
-            
+
             if ($forecastHighHumidity > 2) {
                 $riskScore += 10;
                 $riskFactors[] = "Forecast indicates high humidity conditions ahead";
             }
         }
-        
+
         $riskLevel = $riskScore >= 70 ? 'high' : ($riskScore >= 40 ? 'medium' : 'low');
-        
+
         return [
             'risk_level' => $riskLevel,
             'risk_score' => min(100, $riskScore),
@@ -2438,12 +2491,12 @@ class WeatherAnalyticsService
             'disease_type' => $disease,
         ];
     }
-    
+
     private function countConsecutiveWetDays($weatherData, $humidityThreshold)
     {
         $maxConsecutive = 0;
         $currentConsecutive = 0;
-        
+
         foreach ($weatherData as $log) {
             if (($log->humidity ?? 0) >= $humidityThreshold) {
                 $currentConsecutive++;
@@ -2452,7 +2505,7 @@ class WeatherAnalyticsService
                 $currentConsecutive = 0;
             }
         }
-        
+
         return $maxConsecutive;
     }
 
@@ -2464,7 +2517,7 @@ class WeatherAnalyticsService
     private function getPestDiseasePreventionMeasures($pestRisks, $diseaseRisks)
     {
         $measures = [];
-        
+
         // High risk pests
         foreach ($pestRisks as $pest => $risk) {
             if (($risk['risk_level'] ?? 'low') === 'high' || ($risk['risk_score'] ?? 0) >= 70) {
@@ -2476,7 +2529,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // High risk diseases
         foreach ($diseaseRisks as $disease => $risk) {
             if (($risk['risk_level'] ?? 'low') === 'high' || ($risk['risk_score'] ?? 0) >= 70) {
@@ -2488,7 +2541,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         // General prevention measures
         if (!empty($measures)) {
             $measures[] = [
@@ -2502,10 +2555,10 @@ class WeatherAnalyticsService
                 ],
             ];
         }
-        
+
         return ['measures' => $measures];
     }
-    
+
     private function getPestPreventionActions($pest)
     {
         $actions = [
@@ -2534,14 +2587,14 @@ class WeatherAnalyticsService
                 'Practice crop rotation',
             ],
         ];
-        
+
         return $actions[$pest] ?? [
             'Monitor field regularly',
             'Apply appropriate pest control measures',
             'Maintain field hygiene',
         ];
     }
-    
+
     private function getDiseasePreventionActions($disease)
     {
         $actions = [
@@ -2571,7 +2624,7 @@ class WeatherAnalyticsService
                 'Maintain proper water levels',
             ],
         ];
-        
+
         return $actions[$disease] ?? [
             'Apply appropriate fungicide',
             'Maintain field hygiene',
@@ -2584,15 +2637,15 @@ class WeatherAnalyticsService
     {
         $schedule = [];
         $maxRisk = 0;
-        
+
         // Determine monitoring frequency based on highest risk
         foreach (array_merge($pestRisks, $diseaseRisks) as $risk) {
             $riskScore = $risk['risk_score'] ?? 0;
             $maxRisk = max($maxRisk, $riskScore);
         }
-        
+
         $frequency = $maxRisk >= 70 ? 'daily' : ($maxRisk >= 40 ? 'every_2_days' : 'weekly');
-        
+
         $schedule[] = [
             'frequency' => $frequency,
             'activities' => [
@@ -2603,26 +2656,26 @@ class WeatherAnalyticsService
             ],
             'focus_areas' => $this->getFocusAreas($pestRisks, $diseaseRisks),
         ];
-        
+
         return ['schedule' => $schedule];
     }
-    
+
     private function getFocusAreas($pestRisks, $diseaseRisks)
     {
         $focus = [];
-        
+
         foreach ($pestRisks as $pest => $risk) {
             if (($risk['risk_level'] ?? 'low') !== 'low') {
                 $focus[] = "Monitor for {$pest} - " . ($risk['factors'][0] ?? 'High risk conditions detected');
             }
         }
-        
+
         foreach ($diseaseRisks as $disease => $risk) {
             if (($risk['risk_level'] ?? 'low') !== 'low') {
                 $focus[] = "Monitor for {$disease} - " . ($risk['factors'][0] ?? 'High risk conditions detected');
             }
         }
-        
+
         return $focus;
     }
 
@@ -2631,17 +2684,17 @@ class WeatherAnalyticsService
         $startYear = now()->year - $years;
         $fields = $farm->fields;
         $historicalData = [];
-        
+
         foreach ($fields as $field) {
             $fieldData = [];
             for ($year = $startYear; $year <= now()->year; $year++) {
                 $yearStart = Carbon::create($year, 1, 1);
                 $yearEnd = Carbon::create($year, 12, 31);
-                
+
                 $yearLogs = WeatherLog::where('field_id', $field->id)
                     ->whereYear('recorded_at', $year)
                     ->get();
-                
+
                 if ($yearLogs->isNotEmpty()) {
                     $fieldData[$year] = [
                         'year' => $year,
@@ -2655,7 +2708,7 @@ class WeatherAnalyticsService
                     ];
                 }
             }
-            
+
             if (!empty($fieldData)) {
                 $historicalData[$field->id] = [
                     'field_id' => $field->id,
@@ -2664,7 +2717,7 @@ class WeatherAnalyticsService
                 ];
             }
         }
-        
+
         return ['data' => $historicalData];
     }
 
@@ -2672,19 +2725,19 @@ class WeatherAnalyticsService
     {
         $historicalData = $this->getHistoricalClimateData($farm, min($years, 10));
         $projections = [];
-        
+
         // Calculate trends from historical data
         $trends = $this->calculateClimateTrends($historicalData);
-        
+
         // Apply scenario multipliers
         $scenarioMultipliers = [
             'conservative' => ['temp' => 1.01, 'rainfall' => 0.98], // +1% temp, -2% rain
             'moderate' => ['temp' => 1.02, 'rainfall' => 0.95],     // +2% temp, -5% rain
             'severe' => ['temp' => 1.05, 'rainfall' => 0.90],        // +5% temp, -10% rain
         ];
-        
+
         $multiplier = $scenarioMultipliers[$scenario] ?? $scenarioMultipliers['moderate'];
-        
+
         $baseYear = now()->year;
         for ($i = 1; $i <= $years; $i++) {
             $projectedYear = $baseYear + $i;
@@ -2696,16 +2749,16 @@ class WeatherAnalyticsService
                 'scenario' => $scenario,
             ];
         }
-        
+
         return ['projection' => $projections, 'scenario' => $scenario, 'trends' => $trends];
     }
-    
+
     private function calculateClimateTrends($historicalData)
     {
         $allTemps = [];
         $allRainfall = [];
         $allHumidity = [];
-        
+
         foreach ($historicalData['data'] ?? [] as $fieldData) {
             foreach ($fieldData['yearly_data'] ?? [] as $yearData) {
                 if (isset($yearData['avg_temperature'])) {
@@ -2719,7 +2772,7 @@ class WeatherAnalyticsService
                 }
             }
         }
-        
+
         return [
             'avg_temp' => !empty($allTemps) ? array_sum($allTemps) / count($allTemps) : 25,
             'avg_rainfall' => !empty($allRainfall) ? array_sum($allRainfall) / count($allRainfall) : 1000,
@@ -2730,7 +2783,7 @@ class WeatherAnalyticsService
     private function analyzeHistoricalTrends($historicalData)
     {
         $trends = [];
-        
+
         foreach ($historicalData['data'] ?? [] as $fieldData) {
             $fieldTrends = [
                 'field_id' => $fieldData['field_id'],
@@ -2739,10 +2792,10 @@ class WeatherAnalyticsService
                 'rainfall_trend' => $this->calculateTrend($fieldData['yearly_data'] ?? [], 'total_rainfall'),
                 'humidity_trend' => $this->calculateTrend($fieldData['yearly_data'] ?? [], 'avg_humidity'),
             ];
-            
+
             $trends[] = $fieldTrends;
         }
-        
+
         return [
             'trends' => $trends,
             'overall_temperature_trend' => $this->aggregateTrends($trends, 'temperature_trend'),
@@ -2750,13 +2803,13 @@ class WeatherAnalyticsService
             'overall_humidity_trend' => $this->aggregateTrends($trends, 'humidity_trend'),
         ];
     }
-    
+
     private function calculateTrend($yearlyData, $metric)
     {
         if (count($yearlyData) < 2) {
             return ['direction' => 'insufficient_data', 'rate' => 0];
         }
-        
+
         $values = [];
         $years = [];
         foreach ($yearlyData as $year => $data) {
@@ -2765,55 +2818,55 @@ class WeatherAnalyticsService
                 $years[] = $year;
             }
         }
-        
+
         if (count($values) < 2) {
             return ['direction' => 'insufficient_data', 'rate' => 0];
         }
-        
+
         // Simple linear regression
         $n = count($values);
         $sumX = array_sum($years);
         $sumY = array_sum($values);
         $sumXY = 0;
         $sumX2 = 0;
-        
+
         for ($i = 0; $i < $n; $i++) {
             $sumXY += $years[$i] * $values[$i];
             $sumX2 += $years[$i] * $years[$i];
         }
-        
+
         $slope = ($n * $sumXY - $sumX * $sumY) / ($n * $sumX2 - $sumX * $sumX);
-        
+
         $direction = $slope > 0.1 ? 'increasing' : ($slope < -0.1 ? 'decreasing' : 'stable');
-        
+
         return [
             'direction' => $direction,
             'rate' => round($slope, 3),
             'change_per_year' => round($slope, 2),
         ];
     }
-    
+
     private function aggregateTrends($trends, $trendKey)
     {
         $directions = [];
         $rates = [];
-        
+
         foreach ($trends as $trend) {
             if (isset($trend[$trendKey])) {
                 $directions[] = $trend[$trendKey]['direction'] ?? 'stable';
                 $rates[] = $trend[$trendKey]['rate'] ?? 0;
             }
         }
-        
+
         $avgRate = !empty($rates) ? array_sum($rates) / count($rates) : 0;
         $mostCommonDirection = !empty($directions) ? $this->getMostCommon($directions) : 'stable';
-        
+
         return [
             'direction' => $mostCommonDirection,
             'average_rate' => round($avgRate, 3),
         ];
     }
-    
+
     private function getMostCommon($array)
     {
         $counts = array_count_values($array);
@@ -2824,25 +2877,25 @@ class WeatherAnalyticsService
     private function assessClimateImpacts($projections)
     {
         $impacts = [];
-        
+
         foreach ($projections as $scenario => $projection) {
             $projectionData = $projection['projection'] ?? [];
             if (empty($projectionData)) {
                 continue;
             }
-            
+
             $avgTempChange = 0;
             $avgRainfallChange = 0;
             $years = count($projectionData);
-            
+
             if ($years > 0) {
                 $firstYear = reset($projectionData);
                 $lastYear = end($projectionData);
-                
+
                 $avgTempChange = ($lastYear['projected_avg_temperature'] ?? 0) - ($firstYear['projected_avg_temperature'] ?? 0);
                 $avgRainfallChange = ($lastYear['projected_total_rainfall'] ?? 0) - ($firstYear['projected_total_rainfall'] ?? 0);
             }
-            
+
             $impacts[$scenario] = [
                 'scenario' => $scenario,
                 'temperature_impact' => [
@@ -2859,10 +2912,10 @@ class WeatherAnalyticsService
                 'water_management_impact' => $this->assessWaterManagementImpact($avgTempChange, $avgRainfallChange),
             ];
         }
-        
+
         return ['impacts' => $impacts];
     }
-    
+
     private function describeTemperatureImpact($change)
     {
         if ($change > 2) {
@@ -2875,7 +2928,7 @@ class WeatherAnalyticsService
             return 'Minimal temperature change expected';
         }
     }
-    
+
     private function describeRainfallImpact($change)
     {
         if ($change < -200) {
@@ -2890,67 +2943,67 @@ class WeatherAnalyticsService
             return 'Minimal rainfall change expected';
         }
     }
-    
+
     private function assessCropImpact($tempChange, $rainfallChange)
     {
         $impacts = [];
-        
+
         if ($tempChange > 1) {
             $impacts[] = 'Increased heat stress on crops';
             $impacts[] = 'Higher water requirements';
             $impacts[] = 'Potential yield reduction in heat-sensitive varieties';
         }
-        
+
         if ($rainfallChange < -100) {
             $impacts[] = 'Increased irrigation needs';
             $impacts[] = 'Potential water scarcity issues';
             $impacts[] = 'Risk of drought stress';
         }
-        
+
         if ($rainfallChange > 100) {
             $impacts[] = 'Increased flooding risk';
             $impacts[] = 'Disease pressure from high humidity';
             $impacts[] = 'Need for improved drainage';
         }
-        
+
         return empty($impacts) ? ['Minimal crop impact expected'] : $impacts;
     }
-    
+
     private function assessWaterManagementImpact($tempChange, $rainfallChange)
     {
         $impacts = [];
-        
+
         if ($tempChange > 1 || $rainfallChange < -100) {
             $impacts[] = 'Increased irrigation water requirements';
             $impacts[] = 'Need for water storage systems';
             $impacts[] = 'Improved irrigation efficiency critical';
         }
-        
+
         if ($rainfallChange > 100) {
             $impacts[] = 'Enhanced drainage systems needed';
             $impacts[] = 'Water harvesting opportunities';
             $impacts[] = 'Flood management infrastructure';
         }
-        
+
         return empty($impacts) ? ['Current water management practices should be adequate'] : $impacts;
     }
 
     private function getClimateAdaptationStrategies($projections)
     {
         $strategies = [];
-        
+
         foreach ($projections as $scenario => $projection) {
             $projectionData = $projection['projection'] ?? [];
             if (empty($projectionData)) {
                 continue;
             }
-            
+
             $lastYear = end($projectionData);
             $tempChange = ($lastYear['projected_avg_temperature'] ?? 25) - 25; // Assuming 25°C baseline
             $rainfallChange = ($lastYear['projected_total_rainfall'] ?? 1000) - 1000; // Assuming 1000mm baseline
-            
+
             $scenarioStrategies = [];
-            
+
             // Temperature adaptation strategies
             if ($tempChange > 2) {
                 $scenarioStrategies[] = [
@@ -2969,7 +3022,7 @@ class WeatherAnalyticsService
                     'priority' => 'medium',
                 ];
             }
-            
+
             // Rainfall adaptation strategies
             if ($rainfallChange < -200) {
                 $scenarioStrategies[] = [
@@ -2999,7 +3052,7 @@ class WeatherAnalyticsService
                     'priority' => 'medium',
                 ];
             }
-            
+
             // General adaptation strategies
             $scenarioStrategies[] = [
                 'category' => 'monitoring',
@@ -3011,21 +3064,21 @@ class WeatherAnalyticsService
                 'strategy' => 'Diversify crop portfolio to reduce climate risk',
                 'priority' => 'medium',
             ];
-            
+
             $strategies[$scenario] = [
                 'scenario' => $scenario,
                 'strategies' => $scenarioStrategies,
                 'implementation_timeline' => 'short_to_medium_term',
             ];
         }
-        
+
         return ['strategies' => $strategies];
     }
 
     private function getResilienceRecommendations($farm, $projections)
     {
         $recommendations = [];
-        
+
         // Infrastructure resilience
         $recommendations[] = [
             'category' => 'infrastructure',
@@ -3037,7 +3090,7 @@ class WeatherAnalyticsService
                 'Build water storage capacity',
             ],
         ];
-        
+
         // Crop management resilience
         $recommendations[] = [
             'category' => 'crop_management',
@@ -3049,7 +3102,7 @@ class WeatherAnalyticsService
                 'Use cover crops to improve soil resilience',
             ],
         ];
-        
+
         // Financial resilience
         $recommendations[] = [
             'category' => 'financial',
@@ -3060,7 +3113,7 @@ class WeatherAnalyticsService
                 'Diversify income sources',
             ],
         ];
-        
+
         // Knowledge and capacity building
         $recommendations[] = [
             'category' => 'capacity_building',
@@ -3072,7 +3125,7 @@ class WeatherAnalyticsService
                 'Share knowledge with other farmers',
             ],
         ];
-        
+
         // Technology adoption
         $recommendations[] = [
             'category' => 'technology',
@@ -3084,31 +3137,31 @@ class WeatherAnalyticsService
                 'Utilize weather forecasting tools',
             ],
         ];
-        
+
         return [
             'recommendations' => $recommendations,
             'overall_resilience_score' => $this->calculateResilienceScore($farm, $projections),
             'priority_actions' => $this->getPriorityActions($recommendations),
         ];
     }
-    
+
     private function calculateResilienceScore($farm, $projections)
     {
         // Simplified resilience score calculation
         $score = 50; // Base score
-        
+
         // Add points for existing infrastructure
         if ($farm->fields->count() > 0) {
             $score += 10;
         }
-        
+
         // Adjust based on projection severity
         $maxSeverity = 0;
         foreach ($projections as $projection) {
             $impacts = $projection['impact_assessment'] ?? [];
             foreach ($impacts as $impact) {
                 $severity = $impact['severity'] ?? 'low';
-                $severityValue = match($severity) {
+                $severityValue = match ($severity) {
                     'high' => 3,
                     'medium' => 2,
                     'low' => 1,
@@ -3117,23 +3170,23 @@ class WeatherAnalyticsService
                 $maxSeverity = max($maxSeverity, $severityValue);
             }
         }
-        
+
         // Higher severity = lower resilience score
         $score -= ($maxSeverity * 5);
-        
+
         return max(0, min(100, $score));
     }
-    
+
     private function getPriorityActions($recommendations)
     {
         $priorityActions = [];
-        
+
         foreach ($recommendations as $category) {
             if (($category['priority'] ?? 'low') === 'high') {
                 $priorityActions = array_merge($priorityActions, $category['recommendations'] ?? []);
             }
         }
-        
+
         return array_slice($priorityActions, 0, 5); // Top 5 priority actions
     }
 
@@ -3142,15 +3195,15 @@ class WeatherAnalyticsService
         if ($weatherLogs->isEmpty()) {
             return ['gaps' => [['start' => $startDate->toDateString(), 'end' => now()->toDateString(), 'duration_days' => $startDate->diffInDays(now())]]];
         }
-        
+
         $gaps = [];
         $sortedLogs = $weatherLogs->sortBy('recorded_at');
         $previousDate = $startDate;
-        
+
         foreach ($sortedLogs as $log) {
             $logDate = Carbon::parse($log->recorded_at);
             $daysDiff = $previousDate->diffInDays($logDate);
-            
+
             // Consider gap if more than 24 hours between readings
             if ($daysDiff > 1) {
                 $gaps[] = [
@@ -3160,10 +3213,10 @@ class WeatherAnalyticsService
                     'gap_type' => $daysDiff > 7 ? 'major' : ($daysDiff > 3 ? 'moderate' : 'minor'),
                 ];
             }
-            
+
             $previousDate = $logDate;
         }
-        
+
         // Check for gap at the end
         $lastLogDate = Carbon::parse($sortedLogs->last()->recorded_at);
         $endGap = $lastLogDate->diffInDays(now());
@@ -3175,7 +3228,7 @@ class WeatherAnalyticsService
                 'gap_type' => $endGap > 7 ? 'major' : ($endGap > 3 ? 'moderate' : 'minor'),
             ];
         }
-        
+
         return [
             'gaps' => $gaps,
             'total_gaps' => count($gaps),
@@ -3193,23 +3246,23 @@ class WeatherAnalyticsService
         $completeLogs = 0;
         $recentLogs = 0;
         $now = now();
-        
+
         foreach ($weatherLogs as $log) {
             // Check if log has essential fields
             $hasTemp = isset($log->temperature) && $log->temperature !== null;
             $hasHumidity = isset($log->humidity) && $log->humidity !== null;
             $hasConditions = isset($log->conditions) && !empty($log->conditions);
-            
+
             if ($hasTemp && $hasHumidity && $hasConditions) {
                 $completeLogs++;
             }
-            
+
             // Check if log is recent (within last 7 days)
             if ($log->recorded_at && Carbon::parse($log->recorded_at)->diffInDays($now) <= 7) {
                 $recentLogs++;
             }
         }
-        
+
         // Calculate quality score based on:
         // - Completeness (40%): percentage of logs with all required fields
         // - Recency (30%): percentage of logs from last 7 days
@@ -3217,9 +3270,9 @@ class WeatherAnalyticsService
         $completenessScore = ($completeLogs / $totalLogs) * 100;
         $recencyScore = min(100, ($recentLogs / max(1, $totalLogs)) * 100);
         $consistencyScore = $this->calculateConsistencyScore($weatherLogs);
-        
+
         $qualityScore = ($completenessScore * 0.4) + ($recencyScore * 0.3) + ($consistencyScore * 0.3);
-        
+
         return min(100, round($qualityScore));
     }
 
@@ -3228,41 +3281,42 @@ class WeatherAnalyticsService
         if ($weatherLogs->count() < 2) {
             return 50; // Can't determine consistency with less than 2 logs
         }
-        
+
         $temps = $weatherLogs->pluck('temperature')->filter();
         $humidities = $weatherLogs->pluck('humidity')->filter();
-        
+
         if ($temps->isEmpty() || $humidities->isEmpty()) {
             return 50;
         }
-        
+
         // Calculate coefficient of variation (lower is better)
         $tempAvg = $temps->avg();
         $tempStd = $this->calculateStdDev($temps->toArray());
         $tempCV = $tempAvg > 0 ? ($tempStd / $tempAvg) * 100 : 100;
-        
+
         $humidityAvg = $humidities->avg();
         $humidityStd = $this->calculateStdDev($humidities->toArray());
         $humidityCV = $humidityAvg > 0 ? ($humidityStd / $humidityAvg) * 100 : 100;
-        
+
         // Lower CV = higher consistency score
         $consistencyScore = 100 - min(50, ($tempCV + $humidityCV) / 2);
-        
+
         return max(0, $consistencyScore);
     }
 
     private function calculateStdDev($values)
     {
         $count = count($values);
-        if ($count < 2) return 0;
-        
+        if ($count < 2)
+            return 0;
+
         $mean = array_sum($values) / $count;
         $variance = 0;
-        
+
         foreach ($values as $value) {
             $variance += pow($value - $mean, 2);
         }
-        
+
         return sqrt($variance / $count);
     }
 
@@ -3277,55 +3331,55 @@ class WeatherAnalyticsService
                 'message' => 'No weather data available',
             ];
         }
-        
+
         $totalLogs = $weatherLogs->count();
         $now = now();
-        
+
         // Calculate data availability (recent data)
-        $recentLogs = $weatherLogs->filter(function($log) use ($now) {
+        $recentLogs = $weatherLogs->filter(function ($log) use ($now) {
             return $log->recorded_at && Carbon::parse($log->recorded_at)->diffInDays($now) <= 7;
         })->count();
         $availabilityScore = ($recentLogs / max(1, $totalLogs)) * 100;
-        
+
         // Calculate completeness (logs with all essential fields)
-        $completeLogs = $weatherLogs->filter(function($log) {
-            return isset($log->temperature) && 
-                   isset($log->humidity) && 
-                   isset($log->conditions) &&
-                   $log->temperature !== null &&
-                   $log->humidity !== null &&
-                   !empty($log->conditions);
+        $completeLogs = $weatherLogs->filter(function ($log) {
+            return isset($log->temperature) &&
+                isset($log->humidity) &&
+                isset($log->conditions) &&
+                $log->temperature !== null &&
+                $log->humidity !== null &&
+                !empty($log->conditions);
         })->count();
         $completenessScore = ($completeLogs / $totalLogs) * 100;
-        
+
         // Calculate consistency (low variance in readings)
         $temps = $weatherLogs->pluck('temperature')->filter();
         $humidities = $weatherLogs->pluck('humidity')->filter();
-        
+
         $consistencyScore = 50; // Default
         if ($temps->count() >= 2 && $humidities->count() >= 2) {
             $tempStd = $this->calculateStdDev($temps->toArray());
             $humidityStd = $this->calculateStdDev($humidities->toArray());
-            
+
             $tempAvg = $temps->avg();
             $humidityAvg = $humidities->avg();
-            
+
             // Coefficient of variation (lower is better)
             $tempCV = $tempAvg > 0 ? ($tempStd / $tempAvg) * 100 : 100;
             $humidityCV = $humidityAvg > 0 ? ($humidityStd / $humidityAvg) * 100 : 100;
-            
+
             // Lower CV = higher consistency
             $avgCV = ($tempCV + $humidityCV) / 2;
             $consistencyScore = max(0, 100 - min(50, $avgCV));
         }
-        
+
         // Calculate timeliness (regular intervals)
         $timelinessScore = 50; // Default
         if ($totalLogs >= 2) {
             $sortedLogs = $weatherLogs->sortBy('recorded_at');
             $intervals = [];
             $previous = null;
-            
+
             foreach ($sortedLogs as $log) {
                 if ($previous) {
                     $interval = Carbon::parse($log->recorded_at)->diffInHours(Carbon::parse($previous->recorded_at));
@@ -3333,17 +3387,17 @@ class WeatherAnalyticsService
                 }
                 $previous = $log->recorded_at;
             }
-            
+
             if (!empty($intervals)) {
                 $avgInterval = array_sum($intervals) / count($intervals);
                 $expectedInterval = 24; // Expected hourly readings
-                
+
                 // Score based on how close to expected interval
                 $intervalDeviation = abs($avgInterval - $expectedInterval) / $expectedInterval;
                 $timelinessScore = max(0, 100 - ($intervalDeviation * 100));
             }
         }
-        
+
         // Overall reliability score (weighted average)
         $reliabilityScore = (
             ($availabilityScore * 0.3) +
@@ -3351,14 +3405,14 @@ class WeatherAnalyticsService
             ($consistencyScore * 0.25) +
             ($timelinessScore * 0.15)
         );
-        
-        $reliability = match(true) {
+
+        $reliability = match (true) {
             $reliabilityScore >= 80 => 'high',
             $reliabilityScore >= 60 => 'moderate',
             $reliabilityScore >= 40 => 'low',
             default => 'poor',
         };
-        
+
         return [
             'reliability' => $reliability,
             'reliability_score' => round($reliabilityScore, 1),

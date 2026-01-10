@@ -38,7 +38,20 @@ class ReportService
      */
     public function getDashboardAnalytics($userId, $farmId = null)
     {
-        $farms = Farm::where('user_id', $userId)->get();
+        $farms = Farm::where('user_id', $userId)
+            ->with([
+                'fields' => function ($query) {
+                    $query->with([
+                        'latestWeather',
+                        'plantings' => function ($q) {
+                            $q->where('crop_type', 'rice')
+                                ->whereIn('status', ['planted', 'growing'])
+                                ->latest('planting_date');
+                        }
+                    ]);
+                }
+            ])
+            ->get();
 
         if ($farmId) {
             $farms = $farms->where('id', $farmId);

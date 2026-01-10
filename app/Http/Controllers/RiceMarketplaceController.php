@@ -768,24 +768,30 @@ class RiceMarketplaceController extends Controller
                 ->groupBy('status')
                 ->pluck('count', 'status');
 
-            // Revenue trend for last 7 days
+            // Revenue trend for last 7 days (Optimized to single query)
+            $endDate = now();
+            $startDate = now()->subDays(6);
+
+            $dailyRevenueMap = RiceOrder::forFarmer($user->id)
+                ->whereDate('order_date', '>=', $startDate)
+                ->whereDate('order_date', '<=', $endDate)
+                ->whereIn('status', [
+                    RiceOrder::STATUS_CONFIRMED,
+                    RiceOrder::STATUS_PROCESSING,
+                    RiceOrder::STATUS_SHIPPED,
+                    RiceOrder::STATUS_DELIVERED
+                ])
+                ->selectRaw('DATE(order_date) as date, SUM(total_amount) as daily_total')
+                ->groupBy('date')
+                ->pluck('daily_total', 'date');
+
             $revenueTrend = [];
             for ($i = 6; $i >= 0; $i--) {
                 $date = now()->subDays($i)->format('Y-m-d');
-                $dayRevenue = RiceOrder::forFarmer($user->id)
-                    ->whereDate('order_date', $date)
-                    ->whereIn('status', [
-                        RiceOrder::STATUS_CONFIRMED,
-                        RiceOrder::STATUS_PROCESSING,
-                        RiceOrder::STATUS_SHIPPED,
-                        RiceOrder::STATUS_DELIVERED
-                    ])
-                    ->sum('total_amount');
-
                 $revenueTrend[] = [
                     'date' => $date,
                     'day' => now()->subDays($i)->format('D'),
-                    'revenue' => (float) $dayRevenue,
+                    'revenue' => (float) ($dailyRevenueMap[$date] ?? 0),
                 ];
             }
 

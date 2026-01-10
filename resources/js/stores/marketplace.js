@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
-import api, { riceMarketplaceAPI, riceVarietiesAPI } from '@/services/api';
+import api, { riceMarketplaceAPI, riceVarietiesAPI, cartAPI } from '@/services/api';
 import { useAuthStore } from './auth';
 
 export const useMarketplaceStore = defineStore('marketplace', {
@@ -390,6 +390,25 @@ export const useMarketplaceStore = defineStore('marketplace', {
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to create order';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async checkout(checkoutData) {
+      this.loading = true;
+      this.error = null;
+      try {
+        // Use the bulk checkout endpoint
+        const response = await cartAPI.checkout(checkoutData);
+
+        // Cart is cleared on backend, clear it locally
+        this.clearCart();
+
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Checkout failed';
         throw error;
       } finally {
         this.loading = false;

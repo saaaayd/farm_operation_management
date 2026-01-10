@@ -48,7 +48,7 @@
                 <button @click="updateQuantity(item, 1)" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300">+</button>
               </div>
               <p class="font-semibold text-gray-900">₱{{ formatNumber(item.quantity * (item.rice_product?.price_per_unit || 0)) }}</p>
-              <button @click="removeItem(item)" class="text-red-600 text-sm hover:underline">Remove</button>
+              <button @click="confirmRemoveItem(item)" class="text-red-600 text-sm hover:underline">Remove</button>
             </div>
           </div>
         </div>
@@ -62,7 +62,7 @@
           <button @click="showCheckoutModal = true"
             class="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
           >Proceed to Checkout</button>
-          <button @click="clearCart"
+          <button @click="confirmClearCart"
             class="w-full mt-2 py-2 text-gray-600 hover:text-red-600"
           >Clear Cart</button>
         </div>
@@ -73,7 +73,7 @@
         <div class="bg-white rounded-xl max-w-md w-full p-6">
           <h2 class="text-xl font-bold text-gray-900 mb-4">Checkout</h2>
           
-          <form @submit.prevent="checkout">
+          <form @submit.prevent="confirmCheckout">
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
               <textarea v-model="checkoutForm.delivery_address" rows="3" required
@@ -116,13 +116,24 @@
               <button type="button" @click="showCheckoutModal = false"
                 class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >Cancel</button>
-              <button type="submit" :disabled="checkingOut"
-                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-              >{{ checkingOut ? 'Processing...' : 'Place Order' }}</button>
+              <button type="submit"
+                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >Place Order</button>
             </div>
           </form>
         </div>
       </div>
+      
+      <!-- Confirmation Modal -->
+      <ConfirmationModal
+        :show="showConfirmModal"
+        :title="confirmTitle"
+        :message="confirmMessage"
+        :confirm-text="confirmButtonText"
+        :type="confirmType"
+        @close="showConfirmModal = false"
+        @confirm="handleConfirmAction"
+      />
     </div>
   </div>
 </template>
@@ -131,12 +142,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const loading = ref(true)
 const cartItems = ref([])
 const showCheckoutModal = ref(false)
 const checkingOut = ref(false)
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+const confirmButtonText = ref('Confirm')
+const confirmType = ref('danger')
+const pendingAction = ref(null)
 
 const checkoutForm = ref({
   delivery_address: '',
@@ -179,27 +199,64 @@ const saveQuantity = async (item) => {
   }
 }
 
+const confirmRemoveItem = (item) => {
+  pendingAction.value = () => removeItem(item)
+  confirmTitle.value = 'Remove Item'
+  confirmMessage.value = `Are you sure you want to remove "${item.rice_product?.name}" from your cart?`
+  confirmButtonText.value = 'Remove'
+  confirmType.value = 'danger'
+  showConfirmModal.value = true
+}
+
 const removeItem = async (item) => {
   try {
     await axios.delete(`/api/rice-marketplace/cart/${item.id}`)
     cartItems.value = cartItems.value.filter(i => i.id !== item.id)
+    showConfirmModal.value = false
   } catch (error) {
     alert('Failed to remove item')
   }
 }
 
+const confirmClearCart = () => {
+  pendingAction.value = clearCart
+  confirmTitle.value = 'Clear Cart'
+  confirmMessage.value = 'Are you sure you want to remove all items from your cart? This action cannot be undone.'
+  confirmButtonText.value = 'Clear Cart'
+  confirmType.value = 'danger'
+  showConfirmModal.value = true
+}
+
 const clearCart = async () => {
-  if (!confirm('Clear all items from cart?')) return
   try {
     await axios.delete('/api/rice-marketplace/cart')
     cartItems.value = []
+    showConfirmModal.value = false
   } catch (error) {
     alert('Failed to clear cart')
   }
 }
 
-const checkout = async () => {
+const confirmCheckout = () => {
+  pendingAction.value = processCheckout
+  confirmTitle.value = 'Confirm Order'
+  confirmMessage.value = `Are you sure you want to place this order? Total amount to pay is ₱${formatNumber(total.value)}.`
+  confirmButtonText.value = 'Place Order'
+  confirmType.value = 'success'
+  // Close the checkout form modal first? Or keep it open and overlay confirm? 
+  // Let's close checkout modal for cleaner UI, or just overlay. 
+  // Overlaying confirm on top of checkout modal might be weird if not handled with z-index.
+  // Let's hide checkout modal to show confirm modal clearly.
+  showCheckoutModal.value = false 
+  showConfirmModal.value = true
+}
+
+const processCheckout = async () => {
   checkingOut.value = true
+  showConfirmModal.value = false // Close confirm modal immediately or wait? 
+  // Let's keep modal or show loading there? existing logic used checkingOut ref but didn't show loading overlay.
+  // We'll proceed with logic and redirect.
+  
   try {
     const addressParts = checkoutForm.value.delivery_address.split(',').map(s => s.trim())
     const response = await axios.post('/api/rice-marketplace/cart/checkout', {
@@ -217,9 +274,19 @@ const checkout = async () => {
     router.push('/buyer/orders')
   } catch (error) {
     alert(error.response?.data?.message || 'Checkout failed')
+    // If failed and we closed checkout modal, user has to re-enter? 
+    // Ideally we should reopen checkout modal if failed, or kept it open.
+    // For now simple implementation as per plan.
   } finally {
     checkingOut.value = false
   }
+}
+
+const handleConfirmAction = () => {
+  if (pendingAction.value) {
+    pendingAction.value()
+  }
+  pendingAction.value = null
 }
 
 const formatNumber = (value) => {

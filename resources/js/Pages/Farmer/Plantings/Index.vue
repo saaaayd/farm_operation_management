@@ -194,6 +194,16 @@
         </div>
       </div>
       </div>
+      <!-- Confirmation Modal -->
+      <ConfirmationModal
+        :show="showConfirmModal"
+        title="Delete Planting"
+        :message="`Are you sure you want to delete ${plantingToDelete?.crop_type || 'this planting'} on ${plantingToDelete?.field?.name || 'its field'}? This action cannot be undone.`"
+        confirm-text="Delete"
+        type="danger"
+        @close="showConfirmModal = false"
+        @confirm="deletePlanting"
+      />
     </div>
   </div>
 </template>
@@ -202,6 +212,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const farmStore = useFarmStore()
@@ -213,6 +224,10 @@ const filters = ref({
   field: ''
 });
 const error = ref(null);
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const plantingToDelete = ref(null)
 
 const plantings = computed(() => farmStore.plantings);
 const fields = computed(() => farmStore.fields);
@@ -382,19 +397,23 @@ const goToEdit = (id) => {
 }
 
 // --- CRUD Actions ---
-const confirmDelete = async (planting) => {
-  const cropName = planting.crop_type || 'this planting'
-  const fieldName = planting.field?.name || 'its field'
-  if (window.confirm(`Are you sure you want to delete "${cropName} on ${fieldName}"? This cannot be undone.`)) {
-    try {
-      await farmStore.deletePlanting(planting.id)
-      // Store action will optimistically remove it from the list
-    } catch (err) { 
-      console.error('Failed to delete planting:', err)
-      error.value = err.userMessage || err.response?.data?.message || 'Unable to delete planting.'
-    }
+const confirmDelete = (planting) => {
+  plantingToDelete.value = planting;
+  showConfirmModal.value = true;
+};
+
+const deletePlanting = async () => {
+  if (!plantingToDelete.value) return;
+  showConfirmModal.value = false;
+  
+  try {
+    await farmStore.deletePlanting(plantingToDelete.value.id);
+    plantingToDelete.value = null;
+  } catch (err) { 
+    console.error('Failed to delete planting:', err);
+    error.value = err.userMessage || err.response?.data?.message || 'Unable to delete planting.';
   }
-}
+};
 
 // --- Formatters ---
 const formatDate = (value) => {

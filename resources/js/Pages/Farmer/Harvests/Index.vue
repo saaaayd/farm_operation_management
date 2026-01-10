@@ -232,6 +232,17 @@
       :harvest="selectedHarvest"
       @close="closeModal"
     />
+    
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Harvest"
+      :message="`Are you sure you want to delete this harvest of ${harvestToDelete?.quantity || 0} ${harvestToDelete?.unit || 'kg'}? This cannot be undone.`"
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deleteHarvest"
+    />
   </div>
 </template>
 
@@ -239,7 +250,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
-import HarvestFormModal from './HarvestFormModal.vue' // Import the new modal
+import HarvestFormModal from './HarvestFormModal.vue'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const farmStore = useFarmStore()
@@ -248,6 +260,10 @@ const loading = ref(true)
 const error = ref('')
 const isModalOpen = ref(false)
 const selectedHarvest = ref(null)
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const harvestToDelete = ref(null)
 
 const harvests = computed(() => farmStore.harvests || [])
 
@@ -282,16 +298,22 @@ const refreshHarvests = async () => {
 }
 
 // --- CRUD Actions ---
-const confirmDelete = async (harvest) => {
-  const harvestName = `${harvest.quantity} ${harvest.unit}`
-  if (window.confirm(`Are you sure you want to delete this harvest of "${harvestName}"? This cannot be undone.`)) {
-    try {
-      await farmStore.deleteHarvest(harvest.id)
-      // Store action will optimistically remove it from the list
-    } catch (err) {
-      console.error('Failed to delete harvest:', err)
-      error.value = err.userMessage || err.response?.data?.message || 'Unable to delete harvest.'
-    }
+const confirmDelete = (harvest) => {
+  harvestToDelete.value = harvest
+  showConfirmModal.value = true
+}
+
+const deleteHarvest = async () => {
+  if (!harvestToDelete.value) return
+  showConfirmModal.value = false
+  
+  try {
+    await farmStore.deleteHarvest(harvestToDelete.value.id)
+    // Store action will optimistically remove it from the list
+    harvestToDelete.value = null
+  } catch (err) {
+    console.error('Failed to delete harvest:', err)
+    error.value = err.userMessage || err.response?.data?.message || 'Unable to delete harvest.'
   }
 }
 

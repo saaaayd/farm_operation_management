@@ -161,10 +161,12 @@ class CartController extends Controller
             foreach ($cartItems as $item) {
                 $product = $item->riceProduct;
 
-                // Verify stock
-                if ($item->quantity > $product->quantity_available) {
+                // Reserve stock (throws exception if insufficient)
+                // Since we are inside a transaction, this is safe.
+                if (!$product->hasSufficientQuantity($item->quantity)) {
                     throw new \Exception("Insufficient stock for {$product->name}");
                 }
+                $product->reserveQuantity($item->quantity);
 
                 // Create order
                 $order = RiceOrder::create([

@@ -135,7 +135,7 @@ class RiceProduct extends Model
     public function scopeAvailable($query)
     {
         return $query->where('is_available', true)
-                    ->where('quantity_available', '>', 0);
+            ->where('quantity_available', '>', 0);
     }
 
     /**
@@ -153,7 +153,7 @@ class RiceProduct extends Model
     {
         return $query->where(function ($q) {
             $q->where('production_status', self::STATUS_AVAILABLE)
-              ->orWhere('production_status', self::STATUS_IN_PRODUCTION);
+                ->orWhere('production_status', self::STATUS_IN_PRODUCTION);
         });
     }
 
@@ -245,16 +245,27 @@ class RiceProduct extends Model
      */
     public function reserveQuantity($quantity)
     {
-        if (!$this->hasSufficientQuantity($quantity)) {
-            throw new \Exception('Insufficient quantity available');
-        }
+        // Use a transaction and lockForUpdate to ensure atomicity and prevent race conditions
+        \Illuminate\Support\Facades\DB::transaction(function () use ($quantity) {
+            // Re-fetch the product with a lock
+            $freshProduct = self::where('id', $this->id)->lockForUpdate()->first();
 
-        $this->decrement('quantity_available', $quantity);
-        
-        // Mark as unavailable if no quantity left
-        if ($this->quantity_available <= 0) {
-            $this->update(['is_available' => false]);
-        }
+            if (!$freshProduct->hasSufficientQuantity($quantity)) {
+                throw new \Exception('Insufficient quantity available');
+            }
+
+            // Decrement on the locked instance
+            $freshProduct->decrement('quantity_available', $quantity);
+
+            // Mark as unavailable if no quantity left (using the fresh instance)
+            if ($freshProduct->quantity_available <= 0) {
+                $freshProduct->update(['is_available' => false]);
+            }
+
+            // Sync current instance with fresh data to reflect changes in the calling scope
+            $this->quantity_available = $freshProduct->quantity_available;
+            $this->is_available = $freshProduct->is_available;
+        });
     }
 
     /**
@@ -263,7 +274,7 @@ class RiceProduct extends Model
     public function releaseQuantity($quantity)
     {
         $this->increment('quantity_available', $quantity);
-        
+
         // Mark as available if quantity is restored
         if ($this->quantity_available > 0) {
             $this->update(['is_available' => true]);
@@ -388,8 +399,8 @@ class RiceProduct extends Model
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
 
-        $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon/2) * sin($dLon/2);
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        $a = sin($dLat / 2) * sin($dLat / 2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
     }

@@ -154,19 +154,34 @@
         </div>
       </div>
       </div>
+      <!-- Confirmation Modal -->
+      <ConfirmationModal
+        :show="showConfirmModal"
+        title="Delete Product"
+        :message="`Are you sure you want to delete ${productToDelete?.name}? This action cannot be undone.`"
+        confirm-text="Delete"
+        type="danger"
+        @close="showConfirmModal = false"
+        @confirm="deleteProduct"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketplaceStore } from '@/stores/marketplace'
 import { useAuthStore } from '@/stores/auth'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const marketplaceStore = useMarketplaceStore()
 const authStore = useAuthStore()
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const productToDelete = ref(null)
 
 const qualityMap = {
   premium: 'Premium',
@@ -179,14 +194,27 @@ const products = computed(() => marketplaceStore.farmerProducts || [])
 
 const refresh = () => marketplaceStore.fetchFarmerProducts({ per_page: 100 })
 
-const removeProduct = async (product) => {
-  if (!confirm(`Delete ${product.name}? This action cannot be undone.`)) return
+const confirmDeleteProduct = (product) => {
+  productToDelete.value = product
+  showConfirmModal.value = true
+}
 
+const deleteProduct = async () => {
+  if (!productToDelete.value) return
+  showConfirmModal.value = false
+  
   try {
-    await marketplaceStore.deleteRiceProduct(product.id)
+    await marketplaceStore.deleteRiceProduct(productToDelete.value.id)
+    productToDelete.value = null
   } catch (error) {
     console.error('Failed to delete product:', error)
   }
+}
+
+// Kept removeProduct for backward compatibility if needed, but updated to use confirmDeleteProduct 
+// or simply replace usages. The template used removeProduct.
+const removeProduct = (product) => {
+  confirmDeleteProduct(product)
 }
 
 const formatQuantity = (value, unit) => {

@@ -223,6 +223,17 @@
       </div>
       </div>
     </div>
+    
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Laborer"
+      :message="`Are you sure you want to delete ${laborerToDelete?.name}? This action cannot be undone.`"
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deleteLaborer"
+    />
   </div>
 </template>
 
@@ -230,12 +241,17 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 
 const loading = ref(true)
 const error = ref('')
 const laborers = ref([])
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const laborerToDelete = ref(null)
 
 const fetchLaborers = async () => {
   loading.value = true
@@ -268,15 +284,22 @@ const goToEdit = (laborer) => {
     router.push(`/laborers/${laborer.id}/edit`)
 }
 
-const confirmDelete = async (laborer) => {
-    if (confirm(`Are you sure you want to delete ${laborer.name}?`)) {
-        try {
-            await axios.delete(`/api/laborers/${laborer.id}`)
-            fetchLaborers()
-        } catch (err) {
-            console.error('Failed to delete laborer:', err)
-            alert('Failed to delete laborer.')
-        }
+const confirmDelete = (laborer) => {
+    laborerToDelete.value = laborer
+    showConfirmModal.value = true
+}
+
+const deleteLaborer = async () => {
+    if (!laborerToDelete.value) return
+    showConfirmModal.value = false
+    
+    try {
+        await axios.delete(`/api/laborers/${laborerToDelete.value.id}`)
+        fetchLaborers()
+        laborerToDelete.value = null
+    } catch (err) {
+        console.error('Failed to delete laborer:', err)
+        alert('Failed to delete laborer.')
     }
 }
 

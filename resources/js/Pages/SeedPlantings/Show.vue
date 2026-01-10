@@ -48,7 +48,7 @@
             <div class="flex flex-wrap gap-2">
               <button
                 v-if="planting.status === 'sown' || planting.status === 'germinating'"
-                @click="updateStatus('ready')"
+                @click="confirmUpdateStatus('ready')"
                 class="inline-flex items-center px-4 py-2 border border-blue-200 shadow-sm text-sm font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 <CheckCircleIcon class="-ml-1 mr-2 h-4 w-4" />
@@ -61,7 +61,7 @@
               </button> -->
               
               <button 
-                @click="deletePlanting"
+                @click="confirmDelete"
                 class="inline-flex items-center px-4 py-2 border border-red-200 shadow-sm text-sm font-medium rounded-lg text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
               >
                 <TrashIcon class="-ml-1 mr-2 h-4 w-4" />
@@ -155,7 +155,19 @@
           Go back to list
         </button>
       </div>
+
     </div>
+    
+     <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      :title="modalConfig.title"
+      :message="modalConfig.message"
+      :confirm-text="modalConfig.confirmText"
+      :type="modalConfig.type"
+      @close="showConfirmModal = false"
+      @confirm="handleConfirm"
+    />
   </div>
 </template>
 
@@ -172,11 +184,21 @@ import {
   PencilIcon,
   DocumentTextIcon
 } from '@heroicons/vue/24/outline';
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue';
 
 const route = useRoute();
 const router = useRouter();
 const planting = ref(null);
 const loading = ref(true);
+
+const showConfirmModal = ref(false)
+const pendingAction = ref(null)
+const modalConfig = ref({
+  title: '',
+  message: '',
+  confirmText: 'Confirm',
+  type: 'danger'
+})
 
 const fetchPlanting = async () => {
   try {
@@ -189,29 +211,48 @@ const fetchPlanting = async () => {
   }
 };
 
-const updateStatus = async (status) => {
-  if (!confirm(`Mark this planting as ${status}?`)) return;
-  
-  try {
-    await axios.put(`/api/seed-plantings/${planting.value.id}`, { status });
-    await fetchPlanting();
-  } catch (error) {
-    console.error('Error updating status:', error);
-    alert('Failed to update status');
+const confirmUpdateStatus = (status) => {
+  pendingAction.value = { type: 'update', status }
+  modalConfig.value = {
+    title: 'Update Status',
+    message: `Mark this planting as ${status}?`,
+    confirmText: 'Update',
+    type: 'primary'
   }
-};
+  showConfirmModal.value = true
+}
 
-const deletePlanting = async () => {
-  if (!confirm('Are you sure you want to delete this record? This cannot be undone.')) return;
-  
-  try {
-    await axios.delete(`/api/seed-plantings/${planting.value.id}`);
-    router.push('/seed-plantings');
-  } catch (error) {
-    console.error('Error deleting planting:', error);
-    alert('Failed to delete record');
+const confirmDelete = () => {
+  pendingAction.value = { type: 'delete' }
+  modalConfig.value = {
+    title: 'Delete Sowing',
+    message: 'Are you sure you want to delete this record? This cannot be undone.',
+    confirmText: 'Delete',
+    type: 'danger'
   }
-};
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  showConfirmModal.value = false
+  const action = pendingAction.value
+  if (!action) return
+
+  try {
+    if (action.type === 'update') {
+       await axios.put(`/api/seed-plantings/${planting.value.id}`, { status: action.status });
+       await fetchPlanting();
+    } else if (action.type === 'delete') {
+      await axios.delete(`/api/seed-plantings/${planting.value.id}`);
+      router.push('/seed-plantings');
+    }
+  } catch (error) {
+    console.error(`Error performing ${action.type}:`, error);
+    alert(`Failed to ${action.type === 'delete' ? 'delete record' : 'update status'}`);
+  } finally {
+    pendingAction.value = null
+  }
+}
 
 // Helpers
 const getStatusClass = (status) => {

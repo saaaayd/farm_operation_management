@@ -95,6 +95,14 @@ class Field extends Model
      */
     public function getCurrentRicePlanting()
     {
+        if ($this->relationLoaded('plantings')) {
+            return $this->plantings
+                ->where('crop_type', 'rice')
+                ->whereIn('status', ['planted', 'growing'])
+                ->sortByDesc('planting_date')
+                ->first();
+        }
+
         return $this->plantings()
             ->where('crop_type', 'rice')
             ->whereIn('status', ['planted', 'growing'])

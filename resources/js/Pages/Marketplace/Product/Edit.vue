@@ -21,7 +21,7 @@
           
           <div class="flex items-center gap-3">
             <button
-              @click="deleteProduct"
+              @click="confirmDeleteProduct"
               class="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
             >
               Delete
@@ -315,6 +315,16 @@
           </div>
         </div>
       </div>
+      <!-- Confirmation Modal -->
+      <ConfirmationModal
+        :show="showConfirmModal"
+        title="Delete Product"
+        message="Are you sure you want to delete this product? This action cannot be undone."
+        confirm-text="Delete"
+        type="danger"
+        @close="showConfirmModal = false"
+        @confirm="deleteProduct"
+      />
     </main>
   </div>
 </template>
@@ -326,6 +336,7 @@ import { useMarketplaceStore } from '@/stores/marketplace'
 import InputField from '@/Components/Forms/InputField.vue'
 import SelectDropdown from '@/Components/Forms/SelectDropdown.vue'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 import axios from 'axios'
 
 const route = useRoute()
@@ -335,6 +346,7 @@ const marketplaceStore = useMarketplaceStore()
 const submitting = ref(false)
 const loadingProduct = ref(true)
 const errors = ref({})
+const showConfirmModal = ref(false)
 
 // Image upload state
 const fileInput = ref(null)
@@ -447,9 +459,12 @@ const submit = async () => {
   }
 }
 
-const deleteProduct = async () => {
-  if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
+const confirmDeleteProduct = () => {
+  showConfirmModal.value = true
+}
 
+const deleteProduct = async () => {
+  showConfirmModal.value = false
   try {
     await marketplaceStore.deleteRiceProduct(route.params.id)
     router.push('/marketplace/my-products')

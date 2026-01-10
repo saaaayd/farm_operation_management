@@ -109,49 +109,54 @@ class RiceOrderController extends Controller
 
         $product = RiceProduct::findOrFail($request->rice_product_id);
 
-        // Check if product has enough quantity
-        if (!$product->hasSufficientQuantity($request->quantity)) {
+        // Use transaction to ensure atomicity
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $product) {
+            // Check availability and Reserve quantity (DB-level lock)
+            try {
+                $product->reserveQuantity($request->quantity);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => 'Insufficient product quantity available'
+                ], 422);
+            }
+
+            // Calculate total
+            $unitPrice = $product->price_per_unit;
+            $totalAmount = $unitPrice * $request->quantity;
+
+            $order = RiceOrder::create([
+                'buyer_id' => Auth::id(),
+                'rice_product_id' => $request->rice_product_id,
+                'quantity' => $request->quantity,
+                'unit_price' => $unitPrice,
+                'total_amount' => $totalAmount,
+                'status' => RiceOrder::STATUS_PENDING,
+                'payment_status' => RiceOrder::PAYMENT_PENDING,
+                'delivery_address' => $request->delivery_address,
+                'delivery_method' => $request->delivery_method,
+                'payment_method' => $request->payment_method,
+                'buyer_notes' => $request->notes,
+                'order_date' => now(),
+                'is_pre_order' => $product->production_status === 'in_production',
+            ]);
+
+            $order->load(['riceProduct.farmer']);
+
+            // Notify farmer of new order
+            \App\Models\Notification::notify(
+                $product->farmer_id,
+                \App\Models\Notification::TYPE_ORDER_PLACED,
+                'New Order Received',
+                "You have a new order for {$request->quantity} kg of {$product->name}",
+                ['order_id' => $order->id],
+                "/farmer/orders/{$order->id}"
+            );
+
             return response()->json([
-                'message' => 'Insufficient product quantity available'
-            ], 422);
-        }
-
-        // Calculate total
-        $unitPrice = $product->price_per_kg;
-        $totalAmount = $unitPrice * $request->quantity;
-
-        $order = RiceOrder::create([
-            'buyer_id' => Auth::id(),
-            'rice_product_id' => $request->rice_product_id,
-            'quantity' => $request->quantity,
-            'unit_price' => $unitPrice,
-            'total_amount' => $totalAmount,
-            'status' => RiceOrder::STATUS_PENDING,
-            'payment_status' => RiceOrder::PAYMENT_PENDING,
-            'delivery_address' => $request->delivery_address,
-            'delivery_method' => $request->delivery_method,
-            'payment_method' => $request->payment_method,
-            'buyer_notes' => $request->notes,
-            'order_date' => now(),
-            'is_pre_order' => $product->production_status === 'in_production',
-        ]);
-
-        $order->load(['riceProduct.farmer']);
-
-        // Notify farmer of new order
-        \App\Models\Notification::notify(
-            $product->farmer_id,
-            \App\Models\Notification::TYPE_ORDER_PLACED,
-            'New Order Received',
-            "You have a new order for {$request->quantity} kg of {$product->name}",
-            ['order_id' => $order->id],
-            "/farmer/orders/{$order->id}"
-        );
-
-        return response()->json([
-            'message' => 'Order placed successfully',
-            'order' => $order
-        ], 201);
+                'message' => 'Order placed successfully',
+                'order' => $order
+            ], 201);
+        });
     }
 
 

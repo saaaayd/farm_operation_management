@@ -147,6 +147,17 @@
         </div>
       </div>
     </main>
+    
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Planting"
+      :message="`Are you sure you want to delete ${plantingToDelete?.crop_type || 'this planting'}? This action cannot be undone.`"
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deletePlanting"
+    />
   </div>
 </template>
 
@@ -155,6 +166,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -167,6 +179,10 @@ const plantingId = route.params.id
 const loading = computed(() => farmStore.loadingPlanting)
 const error = computed(() => farmStore.error)
 const planting = computed(() => farmStore.currentPlanting)
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const plantingToDelete = ref(null)
 
 const fetchPlantingData = async () => {
   // Clear any previous errors
@@ -190,17 +206,22 @@ const goToEdit = (id) => {
 }
 
 // --- CRUD Actions ---
-const confirmDelete = async (planting) => {
-  const cropName = planting.crop_type || 'this planting'
-  if (window.confirm(`Are you sure you want to delete "${cropName}"? This cannot be undone.`)) {
-    try {
-      await farmStore.deletePlanting(planting.id)
-      // After deleting, go back to the index page
-      router.push('/plantings')
-    } catch (err) {
-      console.error('Failed to delete planting:', err)
-      // The store action will set the error, which our computed prop will catch
-    }
+const confirmDelete = (planting) => {
+  plantingToDelete.value = planting
+  showConfirmModal.value = true
+}
+
+const deletePlanting = async () => {
+  if (!plantingToDelete.value) return
+  showConfirmModal.value = false
+  
+  try {
+    await farmStore.deletePlanting(plantingToDelete.value.id)
+    // After deleting, go back to the index page
+    router.push('/plantings')
+  } catch (err) {
+    console.error('Failed to delete planting:', err)
+    // The store action will set the error, which our computed prop will catch
   }
 }
 

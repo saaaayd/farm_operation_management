@@ -18,7 +18,7 @@
         </div>
         <div class="flex gap-3">
              <button
-            @click="deleteLaborer"
+            @click="confirmDelete"
             class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,6 +168,17 @@
 
       </div>
     </div>
+    
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Laborer"
+      :message="`Are you sure you want to delete ${laborer?.name}? This action cannot be undone.`"
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deleteLaborer"
+    />
   </div>
 </template>
 
@@ -175,6 +186,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -182,6 +194,7 @@ const route = useRoute()
 const loading = ref(true)
 const error = ref('')
 const laborer = ref({})
+const showConfirmModal = ref(false)
 
 const fetchLaborer = async () => {
     loading.value = true
@@ -197,15 +210,18 @@ const fetchLaborer = async () => {
     }
 }
 
+const confirmDelete = () => {
+    showConfirmModal.value = true
+}
+
 const deleteLaborer = async () => {
-    if (confirm(`Are you sure you want to delete ${laborer.value.name}?`)) {
-        try {
-            await axios.delete(`/api/laborers/${laborer.value.id}`)
-            router.push('/laborers')
-        } catch (err) {
-            console.error('Failed to delete laborer:', err)
-            alert('Failed to delete laborer.')
-        }
+    showConfirmModal.value = false
+    try {
+        await axios.delete(`/api/laborers/${laborer.value.id}`)
+        router.push('/laborers')
+    } catch (err) {
+        console.error('Failed to delete laborer:', err)
+        alert('Failed to delete laborer.')
     }
 }
 

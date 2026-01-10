@@ -159,7 +159,7 @@
             </div>
 
             <button 
-              @click="submitOrder"
+              @click="confirmOrder"
               :disabled="loading"
               class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
             >
@@ -176,6 +176,17 @@
           </div>
         </div>
       </div>
+      
+      <!-- Confirmation Modal -->
+      <ConfirmationModal
+        :show="showConfirmModal"
+        :title="confirmTitle"
+        :message="confirmMessage"
+        :confirm-text="confirmButtonText"
+        type="success"
+        @close="showConfirmModal = false"
+        @confirm="submitOrder"
+      />
     </main>
   </div>
 </template>
@@ -186,6 +197,7 @@ import { useRouter } from 'vue-router';
 import { useMarketplaceStore } from '@/stores/marketplace';
 import { useAuthStore } from '@/stores/auth';
 import { formatCurrency } from '@/utils/format';
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue';
 
 const router = useRouter();
 const marketplaceStore = useMarketplaceStore();
@@ -193,6 +205,12 @@ const authStore = useAuthStore();
 
 const loading = ref(false);
 const error = ref(null);
+
+// Confirmation State
+const showConfirmModal = ref(false);
+const confirmTitle = ref('');
+const confirmMessage = ref('');
+const confirmButtonText = ref('Place Order');
 
 const form = ref({
   address: {
@@ -233,43 +251,41 @@ const totalAmount = computed(() => {
   return marketplaceStore.cartTotal + shippingCost.value + taxAmount.value;
 });
 
+const confirmOrder = () => {
+  // Basic validation before showing confirmation
+  if (!form.value.address.street || !form.value.address.city) {
+    error.value = 'Please complete the shipping address.';
+    return;
+  }
+  
+  error.value = null;
+  confirmTitle.value = 'Confirm Purchase';
+  confirmMessage.value = `Are you sure you want to place this order? Total amount is ${formatCurrency(totalAmount.value)}.`;
+  showConfirmModal.value = true;
+};
+
 const submitOrder = async () => {
+  showConfirmModal.value = false;
   loading.value = true;
   error.value = null;
 
-  // Basic validation
-  if (!form.value.address.street || !form.value.address.city) {
-    error.value = 'Please complete the shipping address.';
-    loading.value = false;
-    return;
-  }
-
   try {
-    // Process each item in cart as a separate order
-    const promises = marketplaceStore.cart.map(item => {
-      return marketplaceStore.createOrder({
-        rice_product_id: item.id,
-        quantity: item.quantity,
-        delivery_address: form.value.address,
-        delivery_method: form.value.delivery_method,
-        payment_method: form.value.payment_method,
-        notes: form.value.notes
-      });
+    // Use bulk checkout action
+    await marketplaceStore.checkout({
+      delivery_address: form.value.address,
+      delivery_method: form.value.delivery_method,
+      payment_method: form.value.payment_method,
+      notes: form.value.notes
     });
 
-    await Promise.all(promises);
-
-    // Success - Only clear cart here after all orders succeed
-    marketplaceStore.clearCart();
+    // Success - Cart is already cleared by the store action
     
     // Show success message or redirect
-    router.push('/marketplace/orders'); // Corrected route to match likely user expectation or existing route
+    router.push('/marketplace/orders');
     
   } catch (err) {
     console.error('Order submission failed:', err);
-    error.value = err.response?.data?.message || 'Failed to place one or more orders. Please try again.';
-    // Note: If some orders succeeded and others failed, the cart is not cleared. 
-    // Ideally we would remove only the successful items, but for now this prevents data loss.
+    error.value = err.response?.data?.message || 'Checkout failed. Please try again.';
   } finally {
     loading.value = false;
   }

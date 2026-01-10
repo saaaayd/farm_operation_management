@@ -269,6 +269,26 @@
       </div>
     </div>
       </div>
+    
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div 
+        v-if="toast.show" 
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-lg border"
+        :class="{
+          'bg-green-50 border-green-200 text-green-800': toast.type === 'success',
+          'bg-red-50 border-red-200 text-red-800': toast.type === 'error'
+        }"
+      >
+        <svg v-if="toast.type === 'success'" class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <svg v-else class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-medium">{{ toast.message }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -307,6 +327,20 @@ const product = ref({
 const reviews = ref([])
 const relatedProducts = ref([])
 
+// Toast notification state
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'success'
+});
+
+const showToast = (message, type = 'success') => {
+  toast.value = { show: true, message, type };
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 3000);
+};
+
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
@@ -327,10 +361,14 @@ import { useMarketplaceStore } from '@/stores/marketplace';
 
 const marketplaceStore = useMarketplaceStore();
 
-const addToCart = () => {
-  marketplaceStore.addToCart(product.value, quantity.value);
-  // Optional: Add a toast/notification here
-  // alert('Added into cart'); 
+const addToCart = async () => {
+  try {
+    await marketplaceStore.addToCart(product.value, quantity.value);
+    showToast(`Added ${quantity.value} ${product.value.unit} of ${product.value.name} to cart!`, 'success');
+  } catch (err) {
+    console.error('Failed to add to cart:', err);
+    showToast(err.message || 'Failed to add item to cart. Please try again.', 'error');
+  } 
 }
 
 const contactSeller = () => {
@@ -404,5 +442,15 @@ const loadProductData = async (id) => {
 .product-detail-page {
   min-height: 100vh;
   background-color: #f8fafc;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
 }
 </style>

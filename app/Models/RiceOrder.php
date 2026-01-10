@@ -176,8 +176,8 @@ class RiceOrder extends Model
             'farmer_notes' => $farmerNotes,
         ]);
 
-        // Reserve the quantity in the product
-        $this->riceProduct->reserveQuantity($this->quantity);
+        // Note: Quantity is now reserved immediately upon order creation/store.
+        // So we don't need to reserve it here again.
     }
 
     /**
@@ -185,8 +185,9 @@ class RiceOrder extends Model
      */
     public function cancel($reason = null)
     {
-        // Release reserved quantity if order was confirmed
-        if (in_array($this->status, [self::STATUS_CONFIRMED, self::STATUS_PROCESSING])) {
+        // Release reserved quantity if order was pending, confirmed or processing
+        // Now including PENDING because we reserve on creation.
+        if (in_array($this->status, [self::STATUS_PENDING, self::STATUS_CONFIRMED, self::STATUS_PROCESSING])) {
             $this->riceProduct->releaseQuantity($this->quantity);
         }
 

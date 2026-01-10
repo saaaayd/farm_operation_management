@@ -80,7 +80,8 @@ class MarketplaceService
 
             // Create order items
             foreach ($orderData['items'] as $itemData) {
-                $inventoryItem = InventoryItem::find($itemData['id']);
+                // Use lockForUpdate to prevent race conditions during stock check and decrement
+                $inventoryItem = InventoryItem::lockForUpdate()->find($itemData['id']);
 
                 // Check if inventory item exists
                 if (!$inventoryItem) {

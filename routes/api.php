@@ -338,9 +338,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/crop-yield', [\App\Http\Controllers\Reports\ReportController::class, 'getCropYieldReport']);
         Route::get('/crop-yield/filter-options', [\App\Http\Controllers\Reports\ReportController::class, 'getCropYieldFilterOptions']);
         Route::get('/weather', [\App\Http\Controllers\Reports\ReportController::class, 'getWeatherReport']);
-        Route::get('/labor-cost', [\App\Http\Controllers\Labor\WageController::class, 'index']);
+        Route::get('/labor-cost', [\App\Http\Controllers\Reports\ReportController::class, 'generateLaborReport']);
         Route::get('/weather-analysis', [\App\Http\Controllers\Weather\WeatherController::class, 'dashboard']);
-        Route::get('/inventory-usage', [\App\Http\Controllers\Inventory\InventoryItemController::class, 'index']);
+        Route::get('/inventory-usage', [\App\Http\Controllers\Reports\ReportController::class, 'generateInventoryReport']);
 
         // CSV Export routes
         Route::get('/export/expenses', [\App\Http\Controllers\Reports\ReportController::class, 'exportExpensesCsv']);

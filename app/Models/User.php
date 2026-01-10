@@ -118,6 +118,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the rice products for this farmer
+     */
+    public function riceProducts()
+    {
+        return $this->hasMany(RiceProduct::class, 'farmer_id');
+    }
+
+    /**
+     * Get the rice orders for this buyer
+     */
+    public function buyerRiceOrders()
+    {
+        return $this->hasMany(RiceOrder::class, 'buyer_id');
+    }
+
+    /**
      * Get activity logs for this user
      */
     public function activityLogs()

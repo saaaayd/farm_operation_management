@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 class AuthController extends Controller
 {
     /**
@@ -40,12 +41,7 @@ class AuthController extends Controller
         // --- USE THE ROLE FROM THE REQUEST ---
         $role = $request->role;
 
-        // (Optional) Keep your "one farmer" logic if you want
-        if ($role === 'farmer' && User::where('role', 'farmer')->exists()) {
-            return response()->json([
-                'message' => 'A farmer account already exists.'
-            ], 422);
-        }
+        // (Optional) Removed "one farmer" restriction to allow multiple farmers/sellers
 
         // Generate verification code
         $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -243,10 +239,7 @@ class AuthController extends Controller
 
         // Delete old profile picture if exists
         if ($user->profile_picture) {
-            $oldPath = public_path('storage/' . $user->profile_picture);
-            if (file_exists($oldPath)) {
-                unlink($oldPath);
-            }
+            Storage::disk('public')->delete($user->profile_picture);
         }
 
         // Store new profile picture
@@ -279,9 +272,8 @@ class AuthController extends Controller
         }
 
         // Delete file from storage
-        $filePath = public_path('storage/' . $user->profile_picture);
-        if (file_exists($filePath)) {
-            unlink($filePath);
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
         }
 
         $user->update([

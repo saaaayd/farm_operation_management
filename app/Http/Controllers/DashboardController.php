@@ -72,20 +72,23 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Weather data for user's fields
-        $weatherData = [];
-        foreach ($fields as $field) {
-            $latestWeather = WeatherLog::where('field_id', $field->id)
-                ->orderBy('recorded_at', 'desc')
-                ->first();
+        // Efficiently fetch latest weather for all fields in one query
+        $fields->load([
+            'weatherLogs' => function ($query) {
+                $query->latest('recorded_at')->take(1);
+            }
+        ]);
 
+        $weatherData = $fields->map(function ($field) {
+            $latestWeather = $field->weatherLogs->first();
             if ($latestWeather) {
-                $weatherData[] = [
+                return [
                     'field' => $field,
                     'weather' => $latestWeather
                 ];
             }
-        }
+            return null;
+        })->filter()->values();
 
         // Monthly expenses
         $monthlyExpenses = Expense::whereIn('planting_id', $plantingIds)

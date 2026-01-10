@@ -303,6 +303,17 @@ export const riceMarketplaceAPI = {
   sendOrderMessage: (id, payload) => api.post(`/rice-marketplace/orders/${id}/messages`, payload),
 };
 
+// Cart API
+export const cartAPI = {
+  get: () => api.get('/cart'),
+  add: (itemData) => api.post('/cart', itemData), // Fixed: Backend expects POST /cart
+  update: (itemId, itemData) => api.put(`/cart/${itemId}`, itemData),
+  remove: (itemId) => api.delete(`/cart/${itemId}`),
+  clear: () => api.delete('/cart'), // Fixed: Backend expects DELETE /cart
+  checkout: (checkoutData) => api.post('/cart/checkout', checkoutData),
+  count: () => api.get('/cart/count'),
+};
+
 // Legacy Marketplace API (for backward compatibility)
 export const marketplaceAPI = {
   getProducts: (filters = {}) => api.get('/marketplace/products', { params: filters }),

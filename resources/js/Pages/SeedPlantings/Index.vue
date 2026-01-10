@@ -88,7 +88,7 @@
               </div>
               
               <!-- Menu/Actions Placeholder or simple delete -->
-              <button @click="deletePlanting(planting)" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50">
+              <button @click.stop="confirmDelete(planting)" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50">
                  <TrashIcon class="h-4 w-4" />
               </button>
             </div>
@@ -126,7 +126,7 @@
           <!-- Card Footer (Actions) -->
           <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end" v-if="planting.status === 'sown' || planting.status === 'germinating'">
              <button
-               @click="updateStatus(planting, 'ready')"
+               @click="confirmUpdateStatus(planting, 'ready')"
                class="w-full inline-flex justify-center items-center px-4 py-2 border border-blue-200 shadow-sm text-sm font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
              >
                <CheckCircleIcon class="-ml-1 mr-2 h-4 w-4" />
@@ -140,6 +140,16 @@
         </div>
       </div>
     </div>
+      <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      :title="modalConfig.title"
+      :message="modalConfig.message"
+      :confirm-text="modalConfig.confirmText"
+      :type="modalConfig.type"
+      @close="showConfirmModal = false"
+      @confirm="handleConfirm"
+    />
   </div>
 </template>
 
@@ -156,9 +166,19 @@ import {
   ScaleIcon,
   CheckCircleIcon
 } from '@heroicons/vue/24/outline';
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue';
 
 const seedPlantings = ref([]);
 const loading = ref(true);
+
+const showConfirmModal = ref(false)
+const pendingAction = ref(null)
+const modalConfig = ref({
+  title: '',
+  message: '',
+  confirmText: 'Confirm',
+  type: 'danger'
+})
 
 const fetchSeedPlantings = async () => {
   try {
@@ -171,29 +191,48 @@ const fetchSeedPlantings = async () => {
   }
 };
 
-const updateStatus = async (planting, status) => {
-  if (!confirm(`Mark this planting as ${status}?`)) return;
-  
-  try {
-    await axios.put(`/api/seed-plantings/${planting.id}`, { status });
-    await fetchSeedPlantings();
-  } catch (error) {
-    console.error('Error updating status:', error);
-    alert('Failed to update status');
+const confirmUpdateStatus = (planting, status) => {
+  pendingAction.value = { type: 'update', planting, status }
+  modalConfig.value = {
+    title: 'Update Status',
+    message: `Mark this planting as ${status}?`,
+    confirmText: 'Update',
+    type: 'primary' // or 'info' depending on your modal styles, but primary usually implies safety or normal action
   }
-};
+  showConfirmModal.value = true
+}
 
-const deletePlanting = async (planting) => {
-  if (!confirm('Are you sure you want to delete this record?')) return;
-  
-  try {
-    await axios.delete(`/api/seed-plantings/${planting.id}`);
-    await fetchSeedPlantings();
-  } catch (error) {
-    console.error('Error deleting planting:', error);
-    alert('Failed to delete record');
+const confirmDelete = (planting) => {
+  pendingAction.value = { type: 'delete', planting }
+  modalConfig.value = {
+    title: 'Delete Sowing',
+    message: 'Are you sure you want to delete this record?',
+    confirmText: 'Delete',
+    type: 'danger'
   }
-};
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  showConfirmModal.value = false
+  const action = pendingAction.value
+  if (!action) return
+
+  try {
+    if (action.type === 'update') {
+      await axios.put(`/api/seed-plantings/${action.planting.id}`, { status: action.status });
+      await fetchSeedPlantings();
+    } else if (action.type === 'delete') {
+      await axios.delete(`/api/seed-plantings/${action.planting.id}`);
+      await fetchSeedPlantings();
+    }
+  } catch (error) {
+    console.error(`Error performing ${action.type}:`, error);
+    alert(`Failed to ${action.type === 'delete' ? 'delete record' : 'update status'}`);
+  } finally {
+    pendingAction.value = null
+  }
+}
 
 const getStatusClass = (status) => {
   const classes = {

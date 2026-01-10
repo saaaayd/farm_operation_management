@@ -377,11 +377,17 @@ const addToCart = (product) => {
   showQuantityModal.value = true;
 };
 
-const confirmAddToCart = () => {
+const confirmAddToCart = async () => {
   if (selectedProduct.value && selectedQuantity.value > 0) {
-    marketplaceStore.addToCart(selectedProduct.value, selectedQuantity.value);
-    showQuantityModal.value = false;
-    showToast(`Added ${selectedQuantity.value} ${selectedProduct.value.unit || 'kg'} of ${selectedProduct.value.name} to cart!`, 'success');
+    try {
+      // Use await to handle potential asynchronous store actions (e.g. backend sync)
+      await marketplaceStore.addToCart(selectedProduct.value, selectedQuantity.value);
+      showQuantityModal.value = false;
+      showToast(`Added ${selectedQuantity.value} ${selectedProduct.value.unit || 'kg'} of ${selectedProduct.value.name} to cart!`, 'success');
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+      showToast(err.message || 'Failed to add item to cart. Please try again.', 'error');
+    }
   }
 };
 

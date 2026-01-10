@@ -93,7 +93,7 @@
                   </svg>
                </button>
                <button
-                  @click="deleteGroup(group)"
+                  @click="confirmDelete(group)"
                   class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   title="Delete"
                 >
@@ -163,6 +163,18 @@
         </div>
       </div>
     </div>
+
+    
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Group"
+      :message="`Are you sure you want to delete ${groupToDelete?.name}? This action cannot be undone.`"
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deleteGroup"
+    />
   </div>
 
 </template>
@@ -171,6 +183,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
 
@@ -180,6 +193,10 @@ const groups = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
+
+// Confirmation State
+const showConfirmModal = ref(false)
+const groupToDelete = ref(null)
 
 const form = reactive({
   name: '',
@@ -239,15 +256,22 @@ const submitForm = async () => {
     }
 }
 
-const deleteGroup = async (group) => {
-    if (confirm(`Are you sure you want to delete "${group.name}"?`)) {
-        try {
-            await axios.delete(`/api/laborers/groups/${group.id}`)
-            fetchGroups()
-        } catch (err) {
-            console.error('Failed to delete group:', err)
-            alert('Failed to delete group.')
-        }
+const confirmDelete = (group) => {
+    groupToDelete.value = group
+    showConfirmModal.value = true
+}
+
+const deleteGroup = async () => {
+    if (!groupToDelete.value) return
+    showConfirmModal.value = false
+    
+    try {
+        await axios.delete(`/api/laborers/groups/${groupToDelete.value.id}`)
+        fetchGroups()
+        groupToDelete.value = null
+    } catch (err) {
+        console.error('Failed to delete group:', err)
+        alert('Failed to delete group.')
     }
 }
 

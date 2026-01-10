@@ -131,6 +131,7 @@
           </div>
 
 
+        </div>
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
           <!-- Favorite Button -->
@@ -298,7 +299,8 @@
           </div>
         </div>
       </div>
-    </main>
+  
+    </div>
 
     <!-- Loading State -->
     <div v-else-if="loading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -460,6 +462,7 @@
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

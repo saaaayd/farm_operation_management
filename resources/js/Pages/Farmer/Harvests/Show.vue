@@ -162,7 +162,7 @@
                 🛒 Create Marketplace Product
               </button>
               <button
-                @click="deleteHarvest"
+                @click="confirmDeleteHarvest"
                 class="w-full text-left px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg text-sm font-medium text-red-600"
               >
                 🗑️ Delete Harvest
@@ -172,6 +172,16 @@
         </div>
       </div>
     </div>
+      <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      title="Delete Harvest"
+      message="Are you sure you want to delete this harvest? This cannot be undone."
+      confirm-text="Delete"
+      type="danger"
+      @close="showConfirmModal = false"
+      @confirm="deleteHarvest"
+    />
   </div>
 </template>
 
@@ -179,6 +189,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -187,6 +198,7 @@ const farmStore = useFarmStore()
 const loading = ref(true)
 const error = ref(null)
 const harvest = ref(null)
+const showConfirmModal = ref(false)
 
 const loadHarvest = async () => {
   loading.value = true
@@ -223,8 +235,12 @@ const createProduct = () => {
   router.push('/marketplace/product/create')
 }
 
+const confirmDeleteHarvest = () => {
+  showConfirmModal.value = true
+}
+
 const deleteHarvest = async () => {
-  if (!confirm('Are you sure you want to delete this harvest? This cannot be undone.')) return
+  showConfirmModal.value = false
   try {
     await farmStore.deleteHarvest(harvest.value.id)
     router.push('/harvests')
