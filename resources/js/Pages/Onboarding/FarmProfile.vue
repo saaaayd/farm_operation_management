@@ -184,112 +184,27 @@
           </p>
         </div>
         
-        <div>
-          <label for="soil_type" class="block text-sm font-semibold text-gray-700 mb-2">Primary Soil Type *</label>
-          <select
-          id="soil_type"
-          v-model="form.soil_type"
-          required
-          class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
-          >
-          <option value="">Select soil type</option>
-          <option value="clay">Clay</option>
-          <option value="loam">Loam</option>
-          <option value="sandy">Sandy</option>
-          <option value="silt">Silt</option>
-          <option value="clay_loam">Clay Loam</option>
-          <option value="sandy_loam">Sandy Loam</option>
-          <option value="silty_clay">Silty Clay</option>
-          <option value="silty_loam">Silty Loam</option>
-        </select>
+            <div>
+              <label for="soil_type" class="block text-sm font-semibold text-gray-700 mb-2">Primary Soil Type *</label>
+              <select
+              id="soil_type"
+              v-model="form.soil_type"
+              required
+              class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
+              >
+              <option value="">Select soil type</option>
+              <option value="clay">Clay</option>
+              <option value="loam">Loam</option>
+              <option value="sandy">Sandy</option>
+              <option value="silt">Silt</option>
+              <option value="clay_loam">Clay Loam</option>
+              <option value="sandy_loam">Sandy Loam</option>
+              <option value="silty_clay">Silty Clay</option>
+              <option value="silty_loam">Silty Loam</option>
+            </select>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="mt-6">
-      <label for="soil_ph" class="block text-sm font-semibold text-gray-700 mb-2">Soil pH Level</label>
-      <input
-      id="soil_ph"
-      v-model="form.soil_ph"
-      type="number"
-      step="0.1"
-      min="3.0"
-      max="10.0"
-      class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-      placeholder="6.5"
-      />
-      <p class="mt-2 text-xs text-gray-500">Optimal pH for rice: 5.5 - 7.0</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-      <div>
-        <label for="organic_matter_content" class="block text-sm font-semibold text-gray-700 mb-2">Organic Matter Content (%)</label>
-        <input
-        id="organic_matter_content"
-        v-model="form.organic_matter_content"
-        type="number"
-        step="0.1"
-        min="0"
-        max="20"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-        placeholder="2.5"
-        />
-      </div>
-
-      <div>
-        <label for="nitrogen_level" class="block text-sm font-semibold text-gray-700 mb-2">Nitrogen Level (ppm)</label>
-        <input
-        id="nitrogen_level"
-        v-model="form.nitrogen_level"
-        type="number"
-        step="0.1"
-        min="0"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-        placeholder="20"
-        />
-      </div>
-
-      <div>
-        <label for="phosphorus_level" class="block text-sm font-semibold text-gray-700 mb-2">Phosphorus Level (ppm)</label>
-        <input
-        id="phosphorus_level"
-        v-model="form.phosphorus_level"
-        type="number"
-        step="0.1"
-        min="0"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-        placeholder="15"
-        />
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      <div>
-        <label for="potassium_level" class="block text-sm font-semibold text-gray-700 mb-2">Potassium Level (ppm)</label>
-        <input
-        id="potassium_level"
-        v-model="form.potassium_level"
-        type="number"
-        step="0.1"
-        min="0"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-        placeholder="25"
-        />
-      </div>
-
-      <div>
-        <label for="elevation" class="block text-sm font-semibold text-gray-700 mb-2">Field Elevation (meters above sea level)</label>
-        <input
-        id="elevation"
-        v-model="form.elevation"
-        type="number"
-        step="0.1"
-        min="0"
-        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-        placeholder="100"
-        />
-      </div>
-    </div>
-  </div>
 
   <!-- Water Management -->
   <div class="border-b border-gray-200 pb-8">
@@ -473,12 +388,6 @@ const form = reactive({
   
   // Soil Information
   soil_type: '',
-  soil_ph: '',
-  organic_matter_content: '',
-  nitrogen_level: '',
-  phosphorus_level: '',
-  potassium_level: '',
-  elevation: '',
   
   // Water Management
   water_source: '',
@@ -552,12 +461,6 @@ const submitProfile = async () => {
       
       // Soil Information
       soil_type: form.soil_type,
-      soil_ph: form.soil_ph || null,
-      organic_matter_content: form.organic_matter_content || null,
-      nitrogen_level: form.nitrogen_level || null,
-      phosphorus_level: form.phosphorus_level || null,
-      potassium_level: form.potassium_level || null,
-      elevation: form.elevation || null,
       
       // Water Management
       water_source: form.water_source,

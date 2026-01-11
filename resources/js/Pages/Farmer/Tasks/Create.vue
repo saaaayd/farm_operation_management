@@ -1,184 +1,38 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="min-h-screen bg-gray-50/50">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Schedule Farm Task</h1>
-            <p class="text-sm text-gray-500">
-              Plan upcoming farm work and keep your team aligned.
-            </p>
-          </div>
-          <router-link
-            to="/tasks"
-            class="text-sm text-gray-600 hover:text-gray-800"
-          >
-            Back to tasks
-          </router-link>
-        </div>
-      </div>
-    </header>
-
-    <main class="px-4 sm:px-6 lg:px-8 py-8">
-      <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow border border-gray-100">
-        <div class="px-6 py-5 border-b border-gray-100">
-          <h2 class="text-lg font-semibold text-gray-900">Task details</h2>
-          <p class="text-sm text-gray-500 mt-1">
-            Specify what needs to be done, when, and which planting it supports.
-          </p>
-        </div>
-
-        <form @submit.prevent="submitTask" class="px-6 py-6 space-y-8">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="form-label">Task Type *</label>
-              <select
-                v-model="form.task_type"
-                class="form-input"
-                required
-              >
-                <option value="">Select task type</option>
-                <option
-                  v-for="option in taskTypeOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-              <p v-if="errors.task_type" class="form-error">{{ errors.task_type[0] }}</p>
-            </div>
-
-            <div class="space-y-2">
-              <label class="form-label">Linked Planting *</label>
-              <template v-if="plantings.length">
-                <select
-                  v-model="form.planting_id"
-                  class="form-input"
-                  required
-                >
-                  <option value="">Select planting</option>
-                  <option
-                    v-for="planting in plantings"
-                    :key="planting.id"
-                    :value="planting.id"
-                  >
-                    {{ formatPlantingOption(planting) }}
-                  </option>
-                </select>
-                <p v-if="errors.planting_id" class="form-error">{{ errors.planting_id[0] }}</p>
-              </template>
-              <template v-else>
-                <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-600">
-                  No active plantings found. Create one to schedule work:
-                  <router-link
-                    to="/plantings/create"
-                    class="ml-2 inline-flex items-center text-green-600 hover:text-green-700 font-medium"
-                  >
-                    Create planting
-                  </router-link>
-                </div>
-              </template>
-            </div>
-
-            <div class="space-y-2">
-              <label class="form-label">Due Date *</label>
-              <input
-                v-model="form.due_date"
-                type="date"
-                class="form-input"
-                required
-              />
-              <p v-if="errors.due_date" class="form-error">{{ errors.due_date[0] }}</p>
-            </div>
-
-            <div class="space-y-4">
-              <label class="form-label">Assignment (optional)</label>
-              
-              <!-- Assignment Type Toggle -->
-              <div class="flex gap-4 mb-2">
-                  <label class="inline-flex items-center">
-                    <input type="radio" v-model="form.assignment_type" value="individual" class="form-radio text-green-600">
-                    <span class="ml-2">Individual Laborer</span>
-                  </label>
-                  <label class="inline-flex items-center">
-                    <input type="radio" v-model="form.assignment_type" value="group" class="form-radio text-green-600">
-                    <span class="ml-2">Laborer Group</span>
-                  </label>
-              </div>
-
-              <!-- Individual Assignment -->
-              <div v-if="form.assignment_type === 'individual'" class="space-y-2">
-                  <select
-                    v-model="form.assigned_to"
-                    class="form-input"
-                    :disabled="loadingLaborers"
-                  >
-                    <option value="">Select laborer</option>
-                    <option
-                      v-for="laborer in laborers"
-                      :key="laborer.id"
-                      :value="laborer.id"
-                    >
-                      {{ laborer.name }}{{ laborer.phone ? ` (${laborer.phone})` : '' }}
-                    </option>
-                  </select>
-                  <p v-if="loadingLaborers" class="text-xs text-gray-400">Loading laborers...</p>
-                  <p v-else-if="laborers.length === 0" class="text-xs text-gray-400">No laborers available.</p>
-              </div>
-
-              <!-- Group Assignment -->
-              <div v-else-if="form.assignment_type === 'group'" class="space-y-2">
-                   <select
-                    v-model="form.laborer_group_id"
-                    class="form-input"
-                    :disabled="loadingLaborers"
-                  >
-                    <option value="">Select group</option>
-                    <option
-                      v-for="group in groups"
-                      :key="group.id"
-                      :value="group.id"
-                    >
-                      {{ group.name }} ({{ group.laborers_count }} members)
-                    </option>
-                  </select>
-                  <p v-if="loadingLaborers" class="text-xs text-gray-400">Loading groups...</p>
-                  <p v-else-if="groups.length === 0" class="text-xs text-gray-400">
-                      No groups available. 
-                      <router-link to="/laborers/groups" class="text-blue-600 hover:underline">Create a group</router-link>
-                  </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <label class="form-label">Description *</label>
-            <textarea
-              v-model="form.description"
-              rows="5"
-              class="form-input"
-              placeholder="Example: Apply nitrogen fertilizer (50kg/ha) after irrigation. Ensure field is drained before entry."
-              required
-            ></textarea>
-            <p v-if="errors.description" class="form-error">{{ errors.description[0] }}</p>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-4 border-t border-gray-100">
+          <div class="flex items-center gap-4">
             <router-link
               to="/tasks"
-              class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              class="p-2 -ml-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </router-link>
+            <div>
+              <h1 class="text-xl font-bold text-gray-900">New Task</h1>
+              <p class="text-sm text-gray-500">Schedule operations</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <router-link
+              to="/tasks"
+              class="hidden sm:inline-flex px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </router-link>
             <button
-              type="submit"
+              @click="submitTask"
               :disabled="submitting"
-              class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 shadow-sm hover:shadow transition-all"
             >
               <svg
                 v-if="submitting"
-                class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -186,11 +40,194 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {{ submitting ? 'Saving...' : 'Create Task' }}
+              {{ submitting ? 'Scheduling...' : 'Schedule Task' }}
             </button>
           </div>
-        </form>
+        </div>
       </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <form @submit.prevent="submitTask" class="space-y-6">
+        
+        <!-- Top Grid: General Info & Timing -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Card 1: Core Details -->
+          <div class="lg:col-span-2 space-y-6">
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+               <div class="p-6 border-b border-gray-100 bg-gray-50/30 flex items-center gap-3">
+                 <div class="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center text-green-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                 </div>
+                 <h2 class="font-semibold text-gray-900">Task Information</h2>
+               </div>
+               
+               <div class="p-6 space-y-6">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                       <label class="form-label">Operation Type</label>
+                       <select v-model="form.task_type" class="form-input" required>
+                         <option value="" disabled>Select operation...</option>
+                         <option v-for="option in taskTypeOptions" :key="option.value" :value="option.value">
+                           {{ option.label }}
+                         </option>
+                       </select>
+                       <p v-if="errors.task_type" class="form-error">{{ errors.task_type[0] }}</p>
+                    </div>
+
+                    <div class="space-y-2">
+                       <label class="form-label">Due Date</label>
+                       <input v-model="form.due_date" type="date" class="form-input" required />
+                       <p v-if="errors.due_date" class="form-error">{{ errors.due_date[0] }}</p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="form-label">Target Planting</label>
+                    <div class="relative">
+                      <select v-model="form.planting_id" class="form-input appearance-none" required>
+                        <option value="" disabled>Select active planting...</option>
+                        <option v-for="planting in plantings" :key="planting.id" :value="planting.id">
+                           {{ formatPlantingOption(planting) }}
+                        </option>
+                      </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                      </div>
+                    </div>
+                     <p v-if="errors.planting_id" class="form-error">{{ errors.planting_id[0] }}</p>
+                     <div v-if="!plantings.length" class="mt-2 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
+                        No active plantings. <router-link to="/plantings/create" class="underline font-medium">Create one now</router-link>.
+                     </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="form-label">Description & Instructions</label>
+                    <textarea 
+                      v-model="form.description" 
+                      rows="4" 
+                      class="form-input resize-none" 
+                      placeholder="Describe the task details, safety precautions, and specific requirements..."
+                      required
+                    ></textarea>
+                    <p v-if="errors.description" class="form-error">{{ errors.description[0] }}</p>
+                  </div>
+               </div>
+            </section>
+          </div>
+
+          <!-- Card 2: Assignment & Payment (Side Panel) -->
+          <div class="space-y-6">
+             <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 bg-gray-50/30 flex items-center gap-3">
+                   <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                   </div>
+                   <h2 class="font-semibold text-gray-900">Assignment</h2>
+                </div>
+
+                <div class="p-5 space-y-5">
+                   <!-- Assignment Type Tabs -->
+                   <div class="flex p-1 bg-gray-100 rounded-lg">
+                      <button 
+                        type="button"
+                        @click="form.assignment_type = 'individual'"
+                        class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all shadow-sm"
+                        :class="form.assignment_type === 'individual' ? 'bg-white text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                      >
+                        Individual
+                      </button>
+                      <button 
+                        type="button"
+                        @click="form.assignment_type = 'group'"
+                        class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all shadow-sm"
+                        :class="form.assignment_type === 'group' ? 'bg-white text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                      >
+                        Group
+                      </button>
+                   </div>
+
+                   <div v-if="form.assignment_type === 'individual'">
+                      <label class="form-label mb-2">Assign Laborer</label>
+                      <select v-model="form.assigned_to" class="form-input" :disabled="loadingLaborers">
+                        <option value="">Unassigned</option>
+                        <option v-for="laborer in laborers" :key="laborer.id" :value="laborer.id">
+                           {{ laborer.name }}
+                        </option>
+                      </select>
+                   </div>
+                   
+                   <div v-if="form.assignment_type === 'group'">
+                      <label class="form-label mb-2">Assign Group</label>
+                      <select v-model="form.laborer_group_id" class="form-input" :disabled="loadingLaborers">
+                        <option value="">Unassigned</option>
+                        <option v-for="group in groups" :key="group.id" :value="group.id">
+                           {{ group.name }} ({{ group.laborers_count }})
+                        </option>
+                      </select>
+                   </div>
+                   
+                   <p v-if="loadingLaborers" class="text-xs text-center text-gray-400">Updating roster...</p>
+                </div>
+             </section>
+
+             <!-- Payment Structure Card -->
+             <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 bg-gray-50/30 flex items-center gap-3">
+                   <div class="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                   </div>
+                   <h2 class="font-semibold text-gray-900">Payment</h2>
+                </div>
+
+                 <div class="p-5 space-y-4">
+                  <!-- Payment Type Radio -->
+                  <div class="space-y-3">
+                     <label class="flex items-center p-3 border rounded-lg cursor-pointer transition-all hover:bg-gray-50" :class="form.payment_type === 'wage' ? 'border-green-500 bg-green-50/30 ring-1 ring-green-500' : 'border-gray-200'">
+                        <input type="radio" v-model="form.payment_type" value="wage" class="form-radio text-green-600 h-4 w-4">
+                        <div class="ml-3">
+                           <span class="block text-sm font-medium text-gray-900">Standard Wage</span>
+                           <span class="block text-xs text-gray-500">Pay by day or task rate</span>
+                        </div>
+                     </label>
+                     
+                     <label class="flex items-center p-3 border rounded-lg cursor-pointer transition-all hover:bg-gray-50" :class="form.payment_type === 'share' ? 'border-green-500 bg-green-50/30 ring-1 ring-green-500' : 'border-gray-200'">
+                        <input type="radio" v-model="form.payment_type" value="share" class="form-radio text-green-600 h-4 w-4">
+                        <div class="ml-3">
+                           <span class="block text-sm font-medium text-gray-900">Produce Share</span>
+                           <span class="block text-xs text-gray-500">Percentage of harvest yield</span>
+                        </div>
+                     </label>
+                  </div>
+
+                  <!-- Share Percentage Input -->
+                  <transition enter-active-class="transition ease-out duration-200" leave-active-class="transition ease-in duration-150" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
+                     <div v-if="form.payment_type === 'share'" class="pt-2">
+                        <label class="form-label mb-2">Harvester's Cut (%)</label>
+                        <div class="relative">
+                           <input
+                            v-model="form.revenue_share_percentage"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            class="form-input pr-8"
+                            placeholder="e.g. 10"
+                           />
+                           <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 font-medium">
+                              %
+                           </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Will be deducted from harvest quantity.</p>
+                     </div>
+                  </transition>
+                 </div>
+             </section>
+
+          </div>
+        </div>
+
+      </form>
     </main>
   </div>
 </template>
@@ -218,21 +255,26 @@ const form = reactive({
   description: '',
   assigned_to: '',
   laborer_group_id: '',
-  assignment_type: 'individual' // 'individual' or 'group'
+  assignment_type: 'individual', // 'individual' or 'group'
+  payment_type: 'wage', // 'wage' or 'share'
+  revenue_share_percentage: ''
 })
 
-const plantings = computed(() => farmStore.plantings || [])
+const plantings = computed(() => {
+  return (farmStore.plantings || []).filter(p => {
+    return p.status !== 'harvested' && p.status !== 'failed' && p.status !== 'cancelled'
+  })
+})
 const taskTypeOptions = computed(() =>
   buildTaskTypeOptions(farmStore.tasks || [], { includeBase: true })
 )
 
 const formatPlantingOption = (planting) => {
   const crop = planting.crop_type || 'Planting'
-  const field = planting.field?.name ? ` • ${planting.field.name}` : ''
-  const due = planting.expected_harvest_date
-    ? ` • Harvest ${new Date(planting.expected_harvest_date).toLocaleDateString()}`
-    : ''
-  return `${crop}${field}${due}`
+  const fieldName = planting.field?.name || `Field #${planting.field_id}`
+  const variety = planting.rice_variety?.name ? `(${planting.rice_variety.name})` : ''
+  
+  return `${crop} ${variety} • ${fieldName}`
 }
 
 function formatDateForInput(date) {
@@ -273,6 +315,8 @@ const submitTask = async () => {
       planting_id: plantingId,
       due_date: form.due_date,
       description: form.description.trim(),
+      payment_type: form.payment_type,
+      revenue_share_percentage: form.payment_type === 'share' ? form.revenue_share_percentage : null,
     }
 
     // Handle Assignment
@@ -349,27 +393,30 @@ onMounted(async () => {
   font-size: 0.875rem;
   font-weight: 500;
   color: #374151;
+  margin-bottom: 0.25rem;
 }
 
 .form-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background-color: #ffffff;
   border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   font-size: 0.875rem;
+  transition: all 0.2s;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 1px #10b981;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
 }
 
 .form-error {
-  margin-top: 0.25rem;
+  margin-top: 0.375rem;
   font-size: 0.75rem;
   color: #dc2626;
+  font-weight: 500;
 }
 </style>
-

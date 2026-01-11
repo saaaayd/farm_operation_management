@@ -16,12 +16,15 @@ class Task extends Model
         'status',
         'assigned_to',
         'laborer_group_id',
+        'payment_type',
+        'revenue_share_percentage',
     ];
 
     protected $casts = [
         'due_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'revenue_share_percentage' => 'decimal:2',
     ];
 
     /**
@@ -33,6 +36,12 @@ class Task extends Model
     const TYPE_PEST_CONTROL = 'pest_control';
     const TYPE_HARVESTING = 'harvesting';
     const TYPE_MAINTENANCE = 'maintenance';
+
+    /**
+     * Payment type constants
+     */
+    const PAYMENT_TYPE_WAGE = 'wage';
+    const PAYMENT_TYPE_SHARE = 'share';
 
     /**
      * Status constants

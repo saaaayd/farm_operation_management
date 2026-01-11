@@ -97,10 +97,6 @@
                   </option>
                 </optgroup>
                 <optgroup label="Other Crops">
-                  <option value="corn">Corn</option>
-                  <option value="wheat">Wheat</option>
-                  <option value="soybeans">Soybeans</option>
-                  <option value="vegetables">Vegetables</option>
                   <option value="other">Other (specify in notes)</option>
                 </optgroup>
               </select>
@@ -136,6 +132,19 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div v-if="isLocationLocked" class="col-span-1 md:col-span-3">
+               <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                 <div>
+                    <h3 class="font-medium text-gray-900">Default Location: Managok</h3>
+                    <p class="text-sm text-gray-500">Barangay Managok, City of Malaybalay, Province of Bukidnon</p>
+                 </div>
+                 <button type="button" @click="toggleLocationLock" class="mt-2 sm:mt-0 text-sm font-medium text-emerald-600 hover:text-emerald-700 underline">
+                    Field is outside Managok? Unlock location
+                 </button>
+               </div>
+            </div>
+
+            <template v-else>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Province *</label>
               <select
@@ -180,6 +189,12 @@
                 </option>
               </select>
             </div>
+            <div class="col-span-1 md:col-span-3 flex justify-end -mt-4">
+                 <button type="button" @click="toggleLocationLock" class="text-xs text-gray-500 hover:text-gray-700">
+                    Reset to Managok default
+                 </button>
+            </div>
+            </template>
           </div>
 
           <div v-if="form.location.address" class="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4">
@@ -276,57 +291,9 @@
                 </option>
               </select>
             </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Soil pH</label>
-              <input
-                v-model.number="form.soil_ph"
-                type="number"
-                step="0.1"
-                min="3"
-                max="10"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                placeholder="6.5"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Organic Matter (%)</label>
-              <input
-                v-model.number="form.organic_matter_content"
-                type="number"
-                step="0.1"
-                min="0"
-                max="20"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                placeholder="2.5"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Elevation (m)</label>
-              <input
-                v-model.number="form.elevation"
-                type="number"
-                step="0.1"
-                min="0"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                placeholder="100"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div v-for="nutrient in nutrientInputs" :key="nutrient.id">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">{{ nutrient.label }} (ppm)</label>
-              <input
-                v-model.number="form[nutrient.model]"
-                type="number"
-                step="0.1"
-                min="0"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                :placeholder="nutrient.placeholder"
-              />
-            </div>
           </div>
         </section>
+
 
         <!-- Water & Infrastructure -->
         <section class="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 space-y-6">
@@ -467,10 +434,6 @@
                   </option>
                 </optgroup>
                 <optgroup label="Other Crops">
-                  <option value="corn">Corn</option>
-                  <option value="wheat">Wheat</option>
-                  <option value="soybeans">Soybeans</option>
-                  <option value="vegetables">Vegetables</option>
                   <option value="fallow">Fallow (no crop)</option>
                   <option value="other">Other (specify in notes)</option>
                 </optgroup>
@@ -526,6 +489,14 @@ const marketplaceStore = useMarketplaceStore()
 const loading = ref(false)
 const error = ref('')
 
+onMounted(() => {
+  if (isLocationLocked.value) {
+    setStaticAddress()
+  }
+  loadProvinces()
+  initMap()
+})
+
 const provinces = ref([])
 const cities = ref([])
 const barangays = ref([])
@@ -533,6 +504,26 @@ const barangays = ref([])
 const mapContainer = ref(null)
 let map = null
 let marker = null
+
+// Location locking logic
+const isLocationLocked = ref(true)
+
+const toggleLocationLock = () => {
+  isLocationLocked.value = !isLocationLocked.value
+  if (isLocationLocked.value) {
+    // Reset to defaults if re-locking
+    form.location.provinceCode = ''
+    form.location.cityCode = ''
+    form.location.barangayCode = ''
+    setStaticAddress()
+  }
+}
+
+const setStaticAddress = () => {
+  form.location.address = 'Managok, City of Malaybalay, Bukidnon'
+  // Trigger geocoding for Managok to center map
+  geocodeLocation('Managok', 'City of Malaybalay', 'Bukidnon')
+}
 
 const soilTypes = [
   { value: 'clay', label: 'Clay' },
@@ -595,11 +586,7 @@ const croppingSeasonOptions = [
 // Use rice varieties from the marketplace store (same as planting form)
 const riceVarieties = computed(() => marketplaceStore.riceVarieties || [])
 
-const nutrientInputs = [
-  { id: 'nitrogen', label: 'Nitrogen', model: 'nitrogen_level', placeholder: '20' },
-  { id: 'phosphorus', label: 'Phosphorus', model: 'phosphorus_level', placeholder: '15' },
-  { id: 'potassium', label: 'Potassium', model: 'potassium_level', placeholder: '25' },
-]
+
 
 const form = reactive({
   name: '',
@@ -608,12 +595,7 @@ const form = reactive({
   size: '',
   current_crop: '',
   soil_type: '',
-  soil_ph: '',
-  organic_matter_content: '',
-  nitrogen_level: '',
-  phosphorus_level: '',
-  potassium_level: '',
-  elevation: '',
+
   water_source: '',
   irrigation_type: '',
   water_access: '',
@@ -635,12 +617,16 @@ const form = reactive({
 })
 
 const completionScore = computed(() => {
+  const locationValid = isLocationLocked.value || (
+    form.location.provinceCode &&
+    form.location.cityCode &&
+    form.location.barangayCode
+  )
+
   const essentials = [
     form.name,
     form.size,
-    form.location.provinceCode,
-    form.location.cityCode,
-    form.location.barangayCode,
+    locationValid,
     form.location.lat,
     form.location.lon,
     form.soil_type,
@@ -763,34 +749,46 @@ const parseNumber = (value) => {
 }
 
 const submitField = async () => {
-  if (!form.name || !form.size || !form.soil_type || !form.location.provinceCode || !form.location.cityCode || !form.location.barangayCode || form.location.lat === '' || form.location.lon === '') {
+  // Validate location
+  const locationValid = isLocationLocked.value || (
+    form.location.provinceCode && form.location.cityCode && form.location.barangayCode
+  )
+
+  if (!form.name || !form.size || !form.soil_type || !locationValid || form.location.lat === '' || form.location.lon === '') {
     error.value = 'Please complete all required fields before saving.'
     return
   }
   
-  // Ensure address is set from location selections
+  // Ensure address is set
   if (!form.location.address) {
-    setAddress()
+     if (isLocationLocked.value) {
+       setStaticAddress()
+     } else {
+       setAddress()
+     }
   }
 
   error.value = ''
   loading.value = true
 
-  const provinceName = provinces.value.find(p => p.code === form.location.provinceCode)?.name || null
-  const cityName = cities.value.find(c => c.code === form.location.cityCode)?.name || null
-  const barangayName = barangays.value.find(b => b.code === form.location.barangayCode)?.name || null
+  let provinceName, cityName, barangayName
+
+  if (isLocationLocked.value) {
+    provinceName = 'Bukidnon'
+    cityName = 'City of Malaybalay'
+    barangayName = 'Managok'
+  } else {
+    provinceName = provinces.value.find(p => p.code === form.location.provinceCode)?.name || null
+    cityName = cities.value.find(c => c.code === form.location.cityCode)?.name || null
+    barangayName = barangays.value.find(b => b.code === form.location.barangayCode)?.name || null
+  }
 
   const payload = {
     name: form.name,
     description: form.description || null,
     size: parseNumber(form.size),
     soil_type: form.soil_type,
-    soil_ph: parseNumber(form.soil_ph),
-    organic_matter_content: parseNumber(form.organic_matter_content),
-    nitrogen_level: parseNumber(form.nitrogen_level),
-    phosphorus_level: parseNumber(form.phosphorus_level),
-    potassium_level: parseNumber(form.potassium_level),
-    elevation: parseNumber(form.elevation),
+
     water_source: form.water_source || null,
     irrigation_type: form.irrigation_type || null,
     water_access: form.water_access || null,
@@ -854,7 +852,7 @@ const initMap = () => {
   }
 
   function createMap() {
-    // Initialize map centered on Philippines
+    // Initialize map centered on Philippines or Managok if locked
     map = L.map(mapContainer.value).setView([defaultLat, defaultLon], 6)
 
     // Add OpenStreetMap tiles

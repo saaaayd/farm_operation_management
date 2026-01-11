@@ -19,13 +19,13 @@ class HarvestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $query = Harvest::whereHas('planting.field', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
-        
+
         $harvests = $query->with(['planting.field', 'planting.riceVariety'])->get();
-        
+
         return response()->json([
             'harvests' => $harvests
         ]);
@@ -40,11 +40,13 @@ class HarvestController extends Controller
             'planting_id' => 'required|exists:plantings,id',
             'harvest_date' => 'required|date',
             'quantity' => 'required|numeric|min:0',
-            'unit' => 'required|string|in:kg,grams,pounds,bushels,tons',
+            'unit' => 'required|string|in:kg,grams,pounds,bushels,tons,sacks',
             'quality_grade' => 'nullable|string|in:A,B,C,D',
             'price_per_unit' => 'nullable|numeric|min:0',
             'total_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'harvester_share' => 'nullable|numeric|min:0',
+            'harvester_share_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -57,7 +59,7 @@ class HarvestController extends Controller
         // Check if user owns the planting's field
         $planting = Planting::with(['field', 'riceVariety'])->findOrFail($request->planting_id);
         $user = $request->user();
-        
+
         if ($planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access to planting'
@@ -86,6 +88,8 @@ class HarvestController extends Controller
                 'price_per_unit' => $request->price_per_unit,
                 'total_value' => $request->total_value,
                 'notes' => $request->notes,
+                'harvester_share' => $request->harvester_share,
+                'harvester_share_percentage' => $request->harvester_share_percentage,
             ]);
 
             // Reload harvest with planting relationship for inventory
@@ -93,6 +97,12 @@ class HarvestController extends Controller
 
             // Add to inventory automatically
             $this->addHarvestToInventory($harvest, $user);
+
+            // Update planting status to harvested
+            $planting->update([
+                'status' => Planting::STATUS_HARVESTED,
+                'actual_harvest_date' => $request->harvest_date,
+            ]);
 
             DB::commit();
 
@@ -112,7 +122,7 @@ class HarvestController extends Controller
     public function show(Request $request, Harvest $harvest): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -132,7 +142,7 @@ class HarvestController extends Controller
     public function update(Request $request, Harvest $harvest): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -142,7 +152,7 @@ class HarvestController extends Controller
         $validator = Validator::make($request->all(), [
             'harvest_date' => 'sometimes|required|date',
             'quantity' => 'sometimes|required|numeric|min:0',
-            'unit' => 'sometimes|required|string|in:kg,grams,pounds,bushels,tons',
+            'unit' => 'sometimes|required|string|in:kg,grams,pounds,bushels,tons,sacks',
             'quality_grade' => 'nullable|string|in:A,B,C,D',
             'price_per_unit' => 'nullable|numeric|min:0',
             'total_value' => 'nullable|numeric|min:0',
@@ -157,15 +167,22 @@ class HarvestController extends Controller
         }
 
         $updateData = $request->only([
-            'harvest_date', 'quantity', 'unit', 'quality_grade',
-            'price_per_unit', 'total_value', 'notes'
+            'harvest_date',
+            'quantity',
+            'unit',
+            'quality_grade',
+            'price_per_unit',
+            'total_value',
+            'notes',
+            'harvester_share',
+            'harvester_share_percentage',
         ]);
-        
+
         // Map quantity to yield if provided for backward compatibility
         if (isset($updateData['quantity'])) {
             $updateData['yield'] = $updateData['quantity'];
         }
-        
+
         // Map quality_grade to quality enum for backward compatibility
         if (isset($updateData['quality_grade'])) {
             $qualityMap = [
@@ -174,11 +191,11 @@ class HarvestController extends Controller
                 'C' => 'average',
                 'D' => 'poor',
             ];
-            $updateData['quality'] = $updateData['quality_grade'] 
-                ? ($qualityMap[$updateData['quality_grade']] ?? 'average') 
+            $updateData['quality'] = $updateData['quality_grade']
+                ? ($qualityMap[$updateData['quality_grade']] ?? 'average')
                 : 'average';
         }
-        
+
         $harvest->update($updateData);
 
         return response()->json([
@@ -193,7 +210,7 @@ class HarvestController extends Controller
     public function destroy(Request $request, Harvest $harvest): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($harvest->planting->field->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
@@ -224,7 +241,7 @@ class HarvestController extends Controller
 
         // Determine the product name from rice variety or crop type
         $productName = $planting->riceVariety?->name ?? $planting->crop_type ?? 'Rice';
-        
+
         // If quality grade is provided, append it to the name
         if ($harvest->quality_grade) {
             $productName .= ' (Grade ' . $harvest->quality_grade . ')';
@@ -249,7 +266,7 @@ class HarvestController extends Controller
 
         // Add the harvested quantity to inventory
         $inventoryItem->addStock($harvest->quantity);
-        
+
         // Update unit price if provided and different
         if ($harvest->price_per_unit && $harvest->price_per_unit != $inventoryItem->unit_price) {
             $inventoryItem->unit_price = $harvest->price_per_unit;

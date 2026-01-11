@@ -64,6 +64,7 @@
           <option value="pesticide">Pesticides</option>
           <option value="equipment">Equipment</option>
           <option value="tools">Tools</option>
+          <option value="produce">Produce</option>
         </select>
       </div>
 

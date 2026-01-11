@@ -350,6 +350,19 @@ export const useFarmStore = defineStore('farm', {
         this.loading = false;
       }
     },
+    async deleteTask(taskId) {
+      this.loading = true;
+      this.error = null;
+      try {
+        await tasksAPI.delete(taskId);
+        this.tasks = this.tasks.filter(t => t.id !== taskId);
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to delete task';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
     async createTask(taskData) {
       this.loading = true;
       this.error = null;
@@ -392,6 +405,16 @@ export const useFarmStore = defineStore('farm', {
         const response = await harvestsAPI.create(harvestData);
         if (response.data && response.data.harvest) {
           this.harvests.push(response.data.harvest);
+
+          // Update the localized planting status if it exists in our store
+          if (response.data.harvest.planting) {
+            const plantingId = response.data.harvest.planting.id;
+            const index = this.plantings.findIndex(p => p.id === plantingId);
+            if (index !== -1) {
+              // Update with the fresh planting data from server which has 'harvested' status
+              this.plantings[index] = response.data.harvest.planting;
+            }
+          }
         }
         return response.data;
       } catch (error) {

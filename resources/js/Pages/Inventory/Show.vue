@@ -270,11 +270,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
 import { useInventoryStore } from '@/stores/inventory'
 import api from '@/services/api'
+import StockAdjustmentModal from './StockAdjustmentModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const inventoryStore = useInventoryStore()
 const loading = computed(() => inventoryStore.loading)
+const showStockModal = ref(false)
 const error = ref('')
 
 const item = ref({

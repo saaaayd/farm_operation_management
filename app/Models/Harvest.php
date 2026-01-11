@@ -18,6 +18,8 @@ class Harvest extends Model
         'price_per_unit',
         'total_value',
         'notes',
+        'harvester_share',
+        'harvester_share_percentage',
     ];
 
     protected $casts = [
@@ -25,6 +27,8 @@ class Harvest extends Model
         'quantity' => 'decimal:2',
         'price_per_unit' => 'decimal:2',
         'total_value' => 'decimal:2',
+        'harvester_share' => 'decimal:2',
+        'harvester_share_percentage' => 'decimal:2',
         'harvest_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

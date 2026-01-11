@@ -72,7 +72,10 @@ class TaskController extends Controller
             'description' => ['required', 'string'],
             'status' => ['nullable', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
+
             'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
+            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE])],
+            'revenue_share_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         if ($validator->fails()) {
@@ -99,7 +102,10 @@ class TaskController extends Controller
             'description' => $request->description,
             'status' => $request->input('status', Task::STATUS_PENDING),
             'assigned_to' => $request->assigned_to,
+
             'laborer_group_id' => $request->laborer_group_id,
+            'payment_type' => $request->input('payment_type', Task::PAYMENT_TYPE_WAGE),
+            'revenue_share_percentage' => $request->revenue_share_percentage,
         ]);
 
         $task->load(['planting.field', 'laborer', 'laborerGroup']);
@@ -152,7 +158,10 @@ class TaskController extends Controller
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'required', 'string', Rule::in($this->statusOptions())],
             'assigned_to' => ['nullable', 'exists:laborers,id'],
+
             'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
+            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE])],
+            'revenue_share_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         if ($validator->fails()) {
@@ -198,6 +207,14 @@ class TaskController extends Controller
 
         if (array_key_exists('laborer_group_id', $requestData)) {
             $data['laborer_group_id'] = $requestData['laborer_group_id'];
+        }
+
+        if ($request->has('payment_type')) {
+            $data['payment_type'] = $request->payment_type;
+        }
+
+        if ($request->has('revenue_share_percentage')) {
+            $data['revenue_share_percentage'] = $request->revenue_share_percentage;
         }
 
         if (!empty($data)) {

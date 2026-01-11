@@ -43,7 +43,22 @@ class DatabaseSeeder extends Seeder
             'mary@farmops.com' => 'mary123',
             'alice@farmops.com' => 'alice123',
             'bob@farmops.com' => 'bob123',
+            'demo@farmops.com' => 'demo123',
         ];
+
+        // Create Demo Farmer for Onboarding (No Farm created yet)
+        $demoFarmer = User::updateOrCreate(
+            ['email' => 'demo@farmops.com'],
+            [
+                'first_name' => 'Demo',
+                'last_name' => 'Farmer',
+                'name' => 'Demo Farmer',
+                'password' => Hash::make($userPasswords['demo@farmops.com']),
+                'role' => 'farmer',
+                'phone' => '+1-555-0000', // Added dummy phone to satisfy DB constraint
+                // Intentionally leaving address/profile incomplete for onboarding demo
+            ]
+        );
 
 
 
@@ -407,141 +422,14 @@ class DatabaseSeeder extends Seeder
             ]);
 
             // Create plantings
-            $planting1 = Planting::updateOrCreate(
-                [
-                    'field_id' => $field1->id,
-                    'crop_type' => 'Corn',
-                ],
-                [
-                    'crop_type' => 'Corn',
-                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
-                    'planting_date' => now()->subDays(45),
-                    'expected_harvest_date' => now()->addDays(75),
-                    'status' => Planting::STATUS_GROWING,
-                    'planting_method' => 'transplanting',
-                    'area_planted' => 12.5,
-                    'season' => 'wet',
-                ]
-            );
-
-            $planting2 = Planting::updateOrCreate(
-                [
-                    'field_id' => $field1->id,
-                    'crop_type' => 'Soybeans',
-                ],
-                [
-                    'crop_type' => 'Soybeans',
-                    'rice_variety_id' => $varietyIR64->id, // Fallback to IR64
-                    'planting_date' => now()->subDays(30),
-                    'expected_harvest_date' => now()->addDays(90),
-                    'status' => Planting::STATUS_GROWING,
-                    'planting_method' => 'direct_seeding',
-                    'area_planted' => 9.8,
-                    'season' => 'wet',
-                ]
-            );
-            $planting3 = Planting::updateOrCreate(
-                [
-                    'field_id' => $field2->id,
-                    'crop_type' => 'Wheat',
-                ],
-                [
-                    'crop_type' => 'Wheat',
-                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
-                    'planting_date' => now()->subDays(60),
-                    'expected_harvest_date' => now()->addDays(30),
-                    'status' => Planting::STATUS_READY,
-                    'planting_method' => 'direct_seeding',
-                    'area_planted' => 15.0,
-                    'season' => 'dry',
-                ]
-            );
-
-            $planting4 = Planting::updateOrCreate(
-                [
-                    'field_id' => $field3->id,
-                    'crop_type' => 'Tomatoes',
-                ],
-                [
-                    'crop_type' => 'Tomatoes',
-                    'rice_variety_id' => $varietyJasmine->id, // Fallback to Jasmine
-                    'planting_date' => now()->subDays(75),
-                    'expected_harvest_date' => now()->subDays(5),
-                    'actual_harvest_date' => now()->subDays(4),
-                    'status' => Planting::STATUS_HARVESTED,
-                    'planting_method' => 'transplanting',
-                    'area_planted' => 10.6,
-                    'season' => 'dry',
-                ]
-            );
+// Non-rice crops removed (Corn, Soybeans)
+// Non-rice crops removed (Wheat, Tomatoes)
 
             // Create tasks
-            Task::updateOrCreate([
-                'planting_id' => $planting1->id,
-                'task_type' => 'watering',
-            ], [
-                'task_type' => 'watering',
-                'due_date' => now()->addDays(2),
-                'description' => 'Water corn field - section A',
-                'status' => 'pending',
-                'assigned_to' => $laborer1->id
-            ]);
-
-            Task::updateOrCreate([
-                'planting_id' => $planting1->id,
-                'task_type' => 'fertilizing',
-            ], [
-                'task_type' => 'fertilizing',
-                'due_date' => now()->addDays(5),
-                'description' => 'Apply nitrogen fertilizer to corn',
-                'status' => 'pending',
-                'assigned_to' => $laborer2->id
-            ]);
-
-            Task::updateOrCreate([
-                'planting_id' => $planting2->id,
-                'task_type' => 'weeding',
-            ], [
-                'task_type' => 'weeding',
-                'due_date' => now()->addDays(1),
-                'description' => 'Remove weeds from soybean rows',
-                'status' => 'pending',
-                'assigned_to' => $laborer1->id
-            ]);
-
-            Task::updateOrCreate([
-                'planting_id' => $planting3->id,
-                'task_type' => 'harvesting',
-            ], [
-                'task_type' => 'harvesting',
-                'due_date' => now()->addDays(3),
-                'description' => 'Harvest wheat - ready for collection',
-                'status' => 'pending',
-                'assigned_to' => $laborer3->id
-            ]);
-
-            Task::updateOrCreate([
-                'planting_id' => $planting4->id,
-                'task_type' => 'harvesting',
-            ], [
-                'task_type' => 'harvesting',
-                'due_date' => now()->subDays(10),
-                'description' => 'Harvest tomatoes - completed',
-                'status' => 'completed',
-                'assigned_to' => $laborer2->id
-            ]);
+// Tasks for non-rice crops removed
 
             // Create inventory items
-            InventoryItem::updateOrCreate([
-                'name' => 'Corn Seeds',
-            ], [
-                'name' => 'Corn Seeds',
-                'category' => 'seeds',
-                'current_stock' => 50.0,
-                'unit_price' => 25.00,
-                'unit' => 'kg',
-                'minimum_stock' => 10.0
-            ]);
+// Corn seeds removed
 
             InventoryItem::updateOrCreate([
                 'name' => 'Nitrogen Fertilizer',
@@ -565,122 +453,14 @@ class DatabaseSeeder extends Seeder
                 'minimum_stock' => 2.0
             ]);
 
-            InventoryItem::updateOrCreate([
-                'name' => 'Fresh Tomatoes',
-            ], [
-                'name' => 'Fresh Tomatoes',
-                'category' => 'produce',
-                'current_stock' => 150.0,
-                'unit_price' => 4.50,
-                'unit' => 'kg',
-                'minimum_stock' => 0.0
-            ]);
-
-            InventoryItem::updateOrCreate([
-                'name' => 'Organic Corn',
-            ], [
-                'name' => 'Organic Corn',
-                'category' => 'produce',
-                'current_stock' => 200.0,
-                'unit_price' => 3.25,
-                'unit' => 'kg',
-                'minimum_stock' => 0.0
-            ]);
+            // Non-rice produce removed
 
             // Create harvests - linked to plantings which link to fields which link to farmer
-            $harvest1 = Harvest::updateOrCreate([
-                'planting_id' => $planting4->id,
-            ], [
-                'yield' => 125.5,
-                'quantity' => 125.5,
-                'harvest_date' => now()->subDays(7),
-                'quality' => 'excellent',
-                'quality_grade' => 'grade_a',
-                'unit' => 'kg',
-                'price_per_unit' => 45.00,
-                'total_value' => 5647.50,
-                'notes' => 'First harvest of the season, excellent quality'
-            ]);
-
-            $harvest2 = Harvest::updateOrCreate([
-                'planting_id' => $planting1->id,
-            ], [
-                'yield' => 200.0,
-                'quantity' => 200.0,
-                'harvest_date' => now()->subDays(14),
-                'quality' => 'good',
-                'quality_grade' => 'grade_a',
-                'unit' => 'kg',
-                'price_per_unit' => 42.00,
-                'total_value' => 8400.00,
-                'notes' => 'Good yield from corn planting'
-            ]);
-
-            $harvest3 = Harvest::updateOrCreate([
-                'planting_id' => $planting2->id,
-            ], [
-                'yield' => 180.0,
-                'quantity' => 180.0,
-                'harvest_date' => now()->subDays(21),
-                'quality' => 'good',
-                'quality_grade' => 'grade_b',
-                'unit' => 'kg',
-                'price_per_unit' => 38.00,
-                'total_value' => 6840.00,
-                'notes' => 'Healthy soybean harvest'
-            ]);
-
-            $harvest4 = Harvest::updateOrCreate([
-                'planting_id' => $planting3->id,
-            ], [
-                'yield' => 150.0,
-                'quantity' => 150.0,
-                'harvest_date' => now()->subDays(30),
-                'quality' => 'excellent',
-                'quality_grade' => 'premium',
-                'unit' => 'kg',
-                'price_per_unit' => 55.00,
-                'total_value' => 8250.00,
-                'notes' => 'Premium wheat harvest, excellent quality'
-            ]);
+// Harvests for non-rice crops removed
 
 
             // Create expenses
-            Expense::updateOrCreate([
-                'description' => 'Corn seeds purchase',
-                'planting_id' => $planting1->id,
-                'user_id' => $farmer1->id,
-            ], [
-                'amount' => 125.00,
-                'category' => 'seeds',
-                'date' => now()->subDays(50),
-                'planting_id' => $planting1->id,
-                'user_id' => $farmer1->id,
-            ]);
-
-            Expense::updateOrCreate([
-                'description' => 'Fertilizer application',
-                'planting_id' => $planting1->id,
-                'user_id' => $farmer1->id,
-            ], [
-                'amount' => 85.00,
-                'category' => 'fertilizer',
-                'date' => now()->subDays(35),
-                'planting_id' => $planting1->id,
-                'user_id' => $farmer1->id,
-            ]);
-
-            Expense::updateOrCreate([
-                'description' => 'Labor costs - weeding',
-                'planting_id' => $planting2->id,
-                'user_id' => $farmer1->id,
-            ], [
-                'amount' => 120.00,
-                'category' => 'labor',
-                'date' => now()->subDays(20),
-                'planting_id' => $planting2->id,
-                'user_id' => $farmer1->id,
-            ]);
+// Expenses for non-rice crops removed
 
             // Create weather logs
             $fields = [$field1, $field2, $field3];

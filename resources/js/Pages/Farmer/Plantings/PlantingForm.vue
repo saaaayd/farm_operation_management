@@ -32,8 +32,13 @@
               :class="{ 'border-red-500': form.errors.field_id }"
             >
               <option value="" disabled>Select a field</option>
-              <option v-for="field in farmStore.fields" :key="field.id" :value="field.id">
-                {{ field.name }} ({{ field.size }} ha)
+              <option 
+                v-for="field in farmStore.fields" 
+                :key="field.id" 
+                :value="field.id"
+                :disabled="field.available_area !== undefined && field.available_area < 0.01"
+              >
+                {{ field.name }} ({{ formatNumber(field.available_area !== undefined ? field.available_area : field.size) }} ha available)
               </option>
             </select>
             <p v-if="form.errors.field_id" class="mt-1 text-xs text-red-600 font-medium">{{ form.errors.field_id }}</p>
@@ -627,7 +632,9 @@ const unitConfig = {
     { value: 'pieces', label: 'Pcs' },
     { value: 'trays', label: 'Trays' },
     { value: 'bundles', label: 'Bundles' },
-    { value: 'seedlings', label: 'Seedlings' }
+    { value: 'seedlings', label: 'Seedlings' },
+    { value: 'sacks', label: 'Sacks' },
+    { value: 'bags', label: 'Bags' }
   ],
   default: [
     { value: 'kg', label: 'kg' },
@@ -708,7 +715,7 @@ watch(() => form.value.data.seed_planting_id, (newId) => {
     form.value.data.rice_variety_id = seedPlanting.rice_variety_id;
     form.value.data.planting_method = 'transplanting';
     // Default unit for nursery
-    form.value.data.seed_unit = 'pieces';
+    form.value.data.seed_unit = seedPlanting.unit || 'pieces';
   }
 });
 

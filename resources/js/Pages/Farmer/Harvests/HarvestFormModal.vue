@@ -177,12 +177,63 @@
               >
                 <option value="kg">Kilograms (kg)</option>
                 <option value="tons">Tons</option>
+                <option value="sacks">Sacks</option>
                 <option value="bushels">Bushels</option>
                 <option value="pounds">Pounds (lbs)</option>
                 <option value="grams">Grams (g)</option>
               </select>
               <p v-if="form.errors.unit" class="mt-1 text-xs text-red-600">{{ form.errors.unit }}</p>
             </div>
+          </div>
+        </section>
+
+        <!-- Harvester Share -->
+        <section class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div class="flex items-center mb-4">
+             <div class="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center mr-3">
+               <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+               </svg>
+             </div>
+             <div>
+               <h3 class="text-lg font-semibold text-gray-900">Harvester Share</h3>
+               <p class="text-xs text-gray-600">Deduct share for hired harvesters</p>
+             </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Share Percentage (%)</label>
+                <div class="relative">
+                   <input
+                     v-model.number="form.data.harvester_share_percentage"
+                     type="number"
+                     min="0"
+                     max="100"
+                     step="0.01"
+                     class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                     placeholder="e.g. 10"
+                   />
+                   <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                     <span class="text-gray-500">%</span>
+                   </div>
+                </div>
+             </div>
+             <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Share Amount ({{ form.data.unit || 'Units' }})</label>
+                <input
+                  v-model.number="form.data.harvester_share"
+                  type="number"
+                  readonly
+                   class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                   placeholder="Calculated amount"
+                />
+             </div>
+             <div>
+                 <label class="block text-sm font-semibold text-gray-700 mb-2">Net Quantity (Owner)</label>
+                 <div class="px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700 font-bold">
+                    {{ (form.data.quantity - (form.data.harvester_share || 0)).toFixed(2) }} {{ form.data.unit }}
+                 </div>
+             </div>
           </div>
         </section>
         
@@ -370,6 +421,8 @@ const getInitialFormData = () => ({
   price_per_unit: props.harvest?.price_per_unit || '',
   total_value: props.harvest?.total_value || '',
   notes: props.harvest?.notes || '',
+  harvester_share: props.harvest?.harvester_share || '',
+  harvester_share_percentage: props.harvest?.harvester_share_percentage || '',
 })
 
 const form = ref({
@@ -407,6 +460,16 @@ watch(() => [form.value.data.quantity, form.value.data.price_per_unit], ([qty, p
   }
 })
 
+// Auto-calculate harvester share
+watch(() => [form.value.data.quantity, form.value.data.harvester_share_percentage], ([qty, pct]) => {
+   if (qty && pct) {
+      const share = (parseFloat(qty) * (parseFloat(pct) / 100));
+      form.value.data.harvester_share = parseFloat(share.toFixed(2));
+   } else {
+      form.value.data.harvester_share = 0;
+   }
+})
+
 const submitForm = async () => {
   form.value.processing = true
   form.value.errors = {}
@@ -419,6 +482,8 @@ const submitForm = async () => {
   if (payload.price_per_unit === '') payload.price_per_unit = null
   if (payload.total_value === '') payload.total_value = null
   if (payload.notes === '') payload.notes = null
+  if (payload.harvester_share === '') payload.harvester_share = null
+  if (payload.harvester_share_percentage === '') payload.harvester_share_percentage = null
   
   // Ensure numeric fields are numbers
   if (payload.quantity) payload.quantity = parseFloat(payload.quantity)

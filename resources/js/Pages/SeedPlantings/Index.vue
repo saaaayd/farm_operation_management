@@ -56,14 +56,17 @@
 
       <!-- Content Grid -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
         <div
           v-for="planting in seedPlantings"
           :key="planting.id"
-          class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col cursor-pointer group"
-          @click="$router.push(`/seed-plantings/${planting.id}`)"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col group"
         >
           <!-- Card Header & Status -->
-          <div class="p-5 border-b border-gray-50 bg-gray-50/50 group-hover:bg-gray-100/50 transition-colors">
+          <div 
+            class="p-5 border-b border-gray-50 bg-gray-50/50 group-hover:bg-gray-100/50 transition-colors cursor-pointer"
+            @click="$router.push(`/seed-plantings/${planting.id}`)"
+          >
             <div class="flex justify-between items-start">
               <div>
                 <div class="flex items-center space-x-2">
@@ -95,7 +98,10 @@
           </div>
 
           <!-- Card Body -->
-          <div class="p-5 flex-1 space-y-4">
+          <div 
+            class="p-5 flex-1 space-y-4 cursor-pointer"
+            @click="$router.push(`/seed-plantings/${planting.id}`)"
+          >
              <!-- Dates Row -->
              <div class="flex items-start justify-between text-sm">
                 <div class="flex flex-col">
@@ -126,7 +132,7 @@
           <!-- Card Footer (Actions) -->
           <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end" v-if="planting.status === 'sown' || planting.status === 'germinating'">
              <button
-               @click="confirmUpdateStatus(planting, 'ready')"
+               @click="confirmUpdateStatus(planting, 'ready', $event)"
                class="w-full inline-flex justify-center items-center px-4 py-2 border border-blue-200 shadow-sm text-sm font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
              >
                <CheckCircleIcon class="-ml-1 mr-2 h-4 w-4" />
@@ -141,15 +147,17 @@
       </div>
     </div>
       <!-- Confirmation Modal -->
-    <ConfirmationModal
-      :show="showConfirmModal"
-      :title="modalConfig.title"
-      :message="modalConfig.message"
-      :confirm-text="modalConfig.confirmText"
-      :type="modalConfig.type"
-      @close="showConfirmModal = false"
-      @confirm="handleConfirm"
-    />
+    <Teleport to="body">
+      <ConfirmationModal
+        :show="showConfirmModal"
+        :title="modalConfig.title"
+        :message="modalConfig.message"
+        :confirm-text="modalConfig.confirmText"
+        :type="modalConfig.type"
+        @close="showConfirmModal = false"
+        @confirm="handleConfirm"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -191,7 +199,8 @@ const fetchSeedPlantings = async () => {
   }
 };
 
-const confirmUpdateStatus = (planting, status) => {
+const confirmUpdateStatus = (planting, status, event) => {
+  if (event) event.stopPropagation();
   pendingAction.value = { type: 'update', planting, status }
   modalConfig.value = {
     title: 'Update Status',

@@ -60,14 +60,14 @@
                 </svg>
               </div>
             </div>
-            <div class="ml-4">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Planted Area</p>
-              <div class="flex items-baseline gap-2">
+            <div class="ml-4 flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-normal">Total Planted Area</p>
+              <div class="flex items-baseline gap-2 flex-wrap">
                 <p class="text-2xl font-bold text-gray-900">{{ totalPlantedArea }} <span class="text-sm font-normal text-gray-600">ha</span></p>
                 <span 
                   v-if="plantedAreaTrend !== 0" 
                   :class="plantedAreaTrend > 0 ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'"
-                  class="text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center"
+                  class="text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center whitespace-nowrap"
                 >
                   <svg v-if="plantedAreaTrend > 0" class="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
@@ -81,13 +81,7 @@
             </div>
           </div>
         </div>
-        <!-- Mini Trend Chart -->
-        <div class="mt-3 h-8 flex items-end gap-0.5">
-          <div v-for="(val, idx) in plantedAreaHistory" :key="idx" 
-            class="flex-1 bg-green-200 rounded-t transition-all duration-300"
-            :style="{ height: `${Math.max(10, (val / Math.max(...plantedAreaHistory)) * 100)}%` }"
-          ></div>
-        </div>
+      
       </div>
       
       <div class="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-blue-100 transition-all duration-200 transform hover:-translate-y-1">

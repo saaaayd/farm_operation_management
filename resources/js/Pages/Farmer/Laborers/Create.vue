@@ -197,10 +197,13 @@
               >
                 <option value="daily">Daily</option>
                 <option value="per_job">Per Job</option>
+                <option value="share">Share</option>
               </select>
             </div>
             <div v-if="form.rate_type !== 'per_job'">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Rate (₱) *</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                {{ form.rate_type === 'share' ? 'Share Percentage (%) *' : 'Rate (₱) *' }}
+              </label>
               <input
                 v-model.number="form.rate"
                 type="number"
@@ -208,7 +211,7 @@
                 min="0"
                 required
                 class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                placeholder="0.00"
+                :placeholder="form.rate_type === 'share' ? 'e.g., 10' : '0.00'"
               />
             </div>
             <div>

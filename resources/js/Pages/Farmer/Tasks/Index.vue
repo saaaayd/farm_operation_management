@@ -237,6 +237,12 @@
                 >
                   View
                 </button>
+                <button 
+                  @click="handleDeleteTask(task)"
+                  class="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm hover:bg-red-200 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
@@ -400,6 +406,17 @@ const handleHarvestSaved = async () => {
 
 const viewTask = (task) => {
   router.push(`/tasks/${task.id}`);
+};
+
+const handleDeleteTask = async (task) => {
+  if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+    try {
+      await farmStore.deleteTask(task.id);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('Failed to delete task. Please try again.');
+    }
+  }
 };
 
 onMounted(async () => {
