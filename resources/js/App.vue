@@ -55,6 +55,9 @@
           </div>
         </div>
       </transition>
+
+      <!-- Global Toast Container -->
+      <ToastContainer />
     </div>
   </ErrorBoundary>
 </template>
@@ -65,6 +68,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import Sidebar from '@/components/Navigation/Sidebar.vue';
 import ErrorBoundary from '@/Components/UI/ErrorBoundary.vue';
+import ToastContainer from '@/Components/UI/ToastContainer.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

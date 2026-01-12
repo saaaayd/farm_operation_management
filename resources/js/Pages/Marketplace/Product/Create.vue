@@ -1,30 +1,28 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-          <div class="flex items-center gap-4">
-            <button
-              @click="router.push('/marketplace/my-products')"
-              class="p-2 -ml-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div>
-              <h1 class="text-xl font-bold text-gray-900">Add Rice Product</h1>
-              <p class="text-xs text-gray-500 mt-0.5">Publish a new product to the marketplace</p>
-            </div>
-          </div>
-          
-
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- Header -->
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            @click="router.push('/marketplace/my-products')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to My Products
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">Add Rice Product</h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+            Publish a new product to the marketplace.
+          </p>
         </div>
       </div>
-    </header>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content -->
+      <div>
       <!-- Error Alert -->
       <div v-if="formError.message" class="mb-6 rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3">
          <svg class="h-5 w-5 text-red-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -379,8 +377,9 @@
           {{ submitting ? 'Publishing...' : 'Publish Product' }}
         </button>
       </div>
-    </main>
+    </div>
   </div>
+</div>
 </template>
 
 <script setup>

@@ -434,6 +434,7 @@ class DatabaseSeeder extends Seeder
             InventoryItem::updateOrCreate([
                 'name' => 'Nitrogen Fertilizer',
             ], [
+                'user_id' => $farmer1->id,
                 'name' => 'Nitrogen Fertilizer',
                 'category' => 'fertilizer',
                 'current_stock' => 8.0,
@@ -445,6 +446,7 @@ class DatabaseSeeder extends Seeder
             InventoryItem::updateOrCreate([
                 'name' => 'Pesticide Spray',
             ], [
+                'user_id' => $farmer1->id,
                 'name' => 'Pesticide Spray',
                 'category' => 'pesticide',
                 'current_stock' => 3.0,

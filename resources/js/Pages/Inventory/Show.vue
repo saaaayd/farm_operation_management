@@ -1,27 +1,35 @@
 <template>
-  <div class="inventory-detail-page">
-    <div class="container mx-auto px-4 py-8">
+  <div class="inventory-detail-page min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
       <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <nav class="text-sm text-gray-500 mb-2">
-            <router-link to="/inventory" class="hover:text-gray-700">Inventory</router-link>
-            <span class="mx-2">/</span>
-            <span class="text-gray-900">{{ item.name }}</span>
-          </nav>
-          <h1 class="text-3xl font-bold text-gray-900">{{ item.name }}</h1>
-          <p class="text-gray-600 mt-2">{{ item.description }}</p>
+          <button
+            type="button"
+            @click="router.push('/inventory')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Inventory
+          </button>
+          <div class="flex items-center gap-3 mt-4">
+            <h1 class="text-3xl font-bold text-gray-900">{{ item.name }}</h1>
+             <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">{{ item.category }}</span>
+          </div>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">{{ item.description }}</p>
         </div>
         <div class="flex space-x-3">
           <button
             @click="editItem"
-            class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
             Edit Item
           </button>
           <button
             @click="adjustStock"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
             Adjust Stock
           </button>
@@ -203,6 +211,19 @@
                 <span class="text-gray-600">Last Updated:</span>
                 <span class="font-medium">{{ formatDate(item.updated_at) }}</span>
               </div>
+              <div v-if="item.expiry_date" class="flex justify-between">
+                <span class="text-gray-600">Expiry Date:</span>
+                <span class="font-medium text-red-600" v-if="new Date(item.expiry_date) < new Date()">{{ formatDate(item.expiry_date) }} (Expired)</span>
+                <span class="font-medium" v-else>{{ formatDate(item.expiry_date) }}</span>
+              </div>
+              <div v-if="item.location" class="flex justify-between">
+                <span class="text-gray-600">Location:</span>
+                <span class="font-medium">{{ item.location }}</span>
+              </div>
+              <div v-if="item.notes" class="pt-2 border-t border-gray-100">
+                <span class="text-gray-600 block text-sm mb-1">Notes:</span>
+                <p class="text-sm text-gray-800">{{ item.notes }}</p>
+              </div>
             </div>
           </div>
 
@@ -320,8 +341,8 @@ const itemMaxStock = computed(() => item.value.max_stock || item.value.maximum_s
 const itemStatus = computed(() => {
   if (item.value.status) return item.value.status
   // Derive status from stock levels
-  const qty = itemQuantity.value
-  const minStock = itemMinStock.value
+  const qty = Number(itemQuantity.value)
+  const minStock = Number(itemMinStock.value)
   if (qty <= 0) return 'out_of_stock'
   if (qty <= minStock) return 'low_stock'
   return 'in_stock'

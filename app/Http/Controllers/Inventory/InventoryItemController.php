@@ -140,36 +140,26 @@ class InventoryItemController extends Controller
     /**
      * Display the specified inventory item
      */
-    public function show(Request $request, InventoryItem $inventoryItem): JsonResponse
+    public function show(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
 
-        if ($inventoryItem->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
         }
 
         return response()->json([
-            'inventory_item' => $inventoryItem
+            'inventory_item' => $item
         ]);
     }
 
-    /**
-     * Update the specified inventory item
-     */
-    public function update(Request $request, InventoryItem $inventoryItem): JsonResponse
+    public function update(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
 
-        Log::info('Inventory update debug', [
-            'request_user_id' => $user->id ?? 'null',
-            'item_id' => $inventoryItem->id,
-            'item_user_id' => $inventoryItem->user_id,
-            'match' => ($inventoryItem->user_id === $user->id) ? 'yes' : 'no'
-        ]);
-
-        if ($inventoryItem->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
@@ -199,7 +189,7 @@ class InventoryItemController extends Controller
         }
 
         // Prepare data for update
-        $data = $request->except(['quantity', 'min_stock']); // Remove legacy keys initially
+        $data = $request->except(['quantity', 'min_stock', 'user_id']); // Remove legacy keys and protect user_id
 
         // Map legacy keys to DB columns if they exist
         if ($request->has('quantity')) {
@@ -219,28 +209,28 @@ class InventoryItemController extends Controller
             };
         }
 
-        $inventoryItem->update($data);
+        $item->update($data);
 
         return response()->json([
             'message' => 'Inventory item updated successfully',
-            'inventory_item' => $inventoryItem
+            'inventory_item' => $item
         ]);
     }
 
     /**
      * Remove the specified inventory item
      */
-    public function destroy(Request $request, InventoryItem $inventoryItem): JsonResponse
+    public function destroy(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
 
-        if ($inventoryItem->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'
             ], 403);
         }
 
-        $inventoryItem->delete();
+        $item->delete();
 
         return response()->json([
             'message' => 'Inventory item deleted successfully'
@@ -315,7 +305,7 @@ class InventoryItemController extends Controller
     public function addStock(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
-        if ($item->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
@@ -404,7 +394,7 @@ class InventoryItemController extends Controller
     public function removeStock(Request $request, InventoryItem $item): JsonResponse
     {
         $user = $request->user();
-        if ($item->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
@@ -459,7 +449,7 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
 
-        if ($item->user_id !== $user->id) {
+        if ($item->user_id != $user->id) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 

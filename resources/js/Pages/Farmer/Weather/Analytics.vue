@@ -1,25 +1,29 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <router-link to="/dashboard" class="text-gray-500 hover:text-gray-700 mr-4">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </router-link>
-            <div>
-              <h1 class="text-xl font-semibold text-gray-900">Weather Analytics</h1>
-              <p class="text-sm text-gray-500">Analyze weather patterns and their impact on rice farming</p>
-            </div>
-          </div>
-          
-          <div class="flex space-x-3">
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- Header -->
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            @click="router.push('/dashboard')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">Weather Analytics</h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+            Analyze weather patterns and their impact on rice farming.
+          </p>
+        </div>
+        
+        <div class="flex items-center gap-3">
             <select 
               v-model="selectedField"
-              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+              class="px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
             >
               <option value="">All Fields</option>
               <option v-for="field in fields" :key="field.id" :value="field.id">
@@ -29,25 +33,28 @@
             <button 
               @click="refreshWeatherData"
               :disabled="loading"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+              class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-colors text-sm"
             >
               <svg 
-                :class="['h-5 w-5 mr-2', { 'animate-spin': loading }]" 
+                v-if="loading"
+                class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" 
                 fill="none" 
-                stroke="currentColor" 
                 viewBox="0 0 24 24"
               >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               Refresh
             </button>
-          </div>
         </div>
       </div>
-    </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Main Content -->
+    <div>
       <!-- Current Weather Overview -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <!-- Current Weather -->
@@ -277,8 +284,9 @@
           <p class="text-sm">No historical weather data available</p>
         </div>
       </div>
-    </main>
+    </div>
   </div>
+</div>
 </template>
 
 <script setup>

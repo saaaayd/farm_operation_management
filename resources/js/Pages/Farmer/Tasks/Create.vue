@@ -1,53 +1,25 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50">
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <router-link
-              to="/tasks"
-              class="p-2 -ml-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </router-link>
-            <div>
-              <h1 class="text-xl font-bold text-gray-900">New Task</h1>
-              <p class="text-sm text-gray-500">Schedule operations</p>
-            </div>
-          </div>
-          
-          <div class="flex items-center gap-3">
-            <router-link
-              to="/tasks"
-              class="hidden sm:inline-flex px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </router-link>
-            <button
-              @click="submitTask"
-              :disabled="submitting"
-              class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 shadow-sm hover:shadow transition-all"
-            >
-              <svg
-                v-if="submitting"
-                class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ submitting ? 'Scheduling...' : 'Schedule Task' }}
-            </button>
-          </div>
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto space-y-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            @click="router.push('/tasks')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Tasks
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">New Task</h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+            Schedule operations and assign laborers.
+          </p>
         </div>
       </div>
-    </header>
 
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <form @submit.prevent="submitTask" class="space-y-6">
         
         <!-- Top Grid: General Info & Timing -->
@@ -227,8 +199,34 @@
           </div>
         </div>
 
+        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-4">
+          <button
+            type="button"
+            @click="router.push('/tasks')"
+            class="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            :disabled="submitting"
+            class="inline-flex items-center justify-center px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+             <svg
+                v-if="submitting"
+                class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            {{ submitting ? 'Scheduling...' : 'Schedule Task' }}
+          </button>
+        </div>
       </form>
-    </main>
+    </div>
   </div>
 </template>
 

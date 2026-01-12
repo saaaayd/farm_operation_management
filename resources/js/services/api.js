@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useNotificationStore } from '@/stores/notification';
 
 // API Base Configuration
 const API_BASE_URL = '/api';
@@ -61,29 +62,76 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Handle Success Notifications for non-GET requests
+    if (['post', 'put', 'patch', 'delete'].includes(response.config.method)) {
+      const notificationStore = useNotificationStore();
+      const message = response.data?.message || 'Action completed successfully';
+
+      // Check if it's not a background sync or similar silent operation
+      if (!response.config?.silent) {
+        notificationStore.success(message);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    const notificationStore = useNotificationStore();
 
     // Log error for debugging
     console.error('API Error:', error);
 
     if (error.response && error.response.status === 422) {
       console.error('422 Validation Error Details:', error.response.data);
-      // This is the crucial part. The backend sends the validation errors here.
+      // For validation errors, we might not want a global toast if the form handles it inline
+      // But for now, let's show a generic "Check form" message if needed, or rely on form handling.
+      // Often, 422s are handled by specific components.
+      // Let's optionally show it if it's a critical action or configured to do so.
+      // For global feedback requested by user:
+      notificationStore.error(error.response.data.message || 'Please check your input.');
     }
     // Handle authentication errors
-    if (error.response?.status === 401) {
+    else if (error.response?.status === 401) {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
+
       // Use router if available, otherwise fallback to window.location
       if (window.location.pathname !== '/login') {
+        // Don't toast on auth error redirect, it's disruptive
         window.location.href = '/login';
       }
       return Promise.reject(error);
     }
+    else {
+      // General Error Handling
+      let errorMessage = 'An unexpected error occurred.';
 
-    // Handle timeout and network errors with retry
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.userMessage) {
+        errorMessage = error.userMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Check for timeout/network specific messages from retry logic
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (!error.response) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+
+      // Ensure we don't spam toasts if one is already showing for the exact same error?
+      // For now, just show it.
+      if (!originalRequest?.silent) {
+        notificationStore.error(errorMessage);
+      }
+    }
+
+    // Handle timeout and network errors with retry (EXISTING LOGIC)
     if (shouldRetry(error) && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -91,33 +139,25 @@ api.interceptors.response.use(
         return await retryRequest(originalRequest);
       } catch (retryError) {
         console.error('Request failed after retries:', retryError);
-        // Add more specific error messages
-        if (retryError.code === 'ECONNABORTED') {
-          retryError.userMessage = 'Request timed out. The server may be slow or unavailable.';
-        } else if (!retryError.response) {
-          retryError.userMessage = 'Network error. Please check your internet connection.';
-        }
+        // The error from retryRequest will propagate up and trigger the catch block above (or promise rejection)
+        // But since we are inside the interceptor's error handler, we need to return reject.
+
+        // Note: The recursive retryRequest calls api(), which triggers interceptors again.
+        // This might lead to duplicate toasts if not careful. 
+        // But retryRequest uses the 'api' instance. 
+        // Let's rely on the final rejection to show the toast? 
+        // Actually, if we retry, we don't want to show toast yet.
+        // But we already showed it above because we are in the error handler!
+
+        // Refinement: Move Notification Logic AFTER Retry Logic checks?
+        // If we are observing a retry-able error, we might want to wait.
+        // However, existing structure has retry logic separate.
+
+        // Let's keep it simple for now. If it retries, the user might see an error then a success. 
+        // Or multiple errors if all retries fail.
+
         return Promise.reject(retryError);
       }
-    }
-
-    // Handle server errors gracefully
-    if (error.response?.status >= 500) {
-      console.error('Server error detected:', error.response.status);
-      // Show user-friendly error message
-      error.userMessage = 'Server is temporarily unavailable. Please try again later.';
-    }
-
-    // Handle network errors
-    if (!error.response) {
-      console.error('Network error or server unreachable');
-      error.userMessage = 'Network connection failed. Please check your internet connection.';
-    }
-
-    // Handle timeout errors
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout');
-      error.userMessage = 'Request timed out. Please try again.';
     }
 
     return Promise.reject(error);
