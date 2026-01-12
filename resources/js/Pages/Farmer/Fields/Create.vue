@@ -81,6 +81,12 @@
                 class="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
                 placeholder="5.50"
               />
+              <p class="mt-1 text-xs text-gray-500">
+                Available: {{ availableFarmArea.toFixed(2) }} ha (Total: {{ totalFarmArea.toFixed(2) }} ha)
+              </p>
+              <p v-if="form.size && parseFloat(form.size) > availableFarmArea" class="mt-1 text-xs text-red-600">
+                Field size cannot exceed available farm area
+              </p>
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -495,6 +501,21 @@ onMounted(() => {
   }
   loadProvinces()
   initMap()
+  farmStore.fetchFarmProfile()
+  farmStore.fetchFields()
+})
+
+const totalFarmArea = computed(() => {
+  return parseFloat(farmStore.farmProfile?.total_area || 0)
+})
+
+const usedFarmArea = computed(() => {
+  if (!farmStore.fields || !Array.isArray(farmStore.fields)) return 0
+  return farmStore.fields.reduce((sum, field) => sum + parseFloat(field.size || 0), 0)
+})
+
+const availableFarmArea = computed(() => {
+  return Math.max(0, totalFarmArea.value - usedFarmArea.value)
 })
 
 const provinces = ref([])
@@ -756,6 +777,11 @@ const submitField = async () => {
 
   if (!form.name || !form.size || !form.soil_type || !locationValid || form.location.lat === '' || form.location.lon === '') {
     error.value = 'Please complete all required fields before saving.'
+    return
+  }
+
+  if (parseFloat(form.size) > availableFarmArea.value) {
+    error.value = `Field size cannot exceed available farm area (${availableFarmArea.value.toFixed(2)} ha).`
     return
   }
   

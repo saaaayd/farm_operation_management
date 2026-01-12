@@ -120,6 +120,42 @@ class InventoryItemController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
+            // Handle initial stock transaction and expense
+            if ($currentStock > 0) {
+                $unitCost = $request->unit_price ?? 0;
+                $totalCost = $currentStock * $unitCost;
+
+                // Log transaction
+                InventoryTransaction::create([
+                    'inventory_item_id' => $inventoryItem->id,
+                    'user_id' => $request->user()->id,
+                    'transaction_type' => 'in',
+                    'quantity' => $currentStock,
+                    'unit_cost' => $unitCost,
+                    'total_cost' => $totalCost,
+                    'reference_type' => 'Initial Stock',
+                    'notes' => 'Initial stock on item creation',
+                    'transaction_date' => now(),
+                ]);
+
+                // Create expense record if cost > 0
+                if ($totalCost > 0) {
+                    $expenseCategory = $this->mapInventoryCategoryToExpenseCategory($category);
+
+                    \App\Models\Expense::create([
+                        'description' => "Initial Stock: {$inventoryItem->name} ({$currentStock} {$inventoryItem->unit})",
+                        'amount' => $totalCost,
+                        'category' => $expenseCategory,
+                        'date' => now(),
+                        'user_id' => $request->user()->id,
+                        'payment_method' => 'cash', // Default to cash for now
+                        'notes' => "Auto-generated from inventory item creation",
+                        'related_entity_type' => \App\Models\Expense::ENTITY_TYPE_INVENTORY_ITEM,
+                        'related_entity_id' => $inventoryItem->id,
+                    ]);
+                }
+            }
+
             return response()->json([
                 'message' => 'Inventory item created successfully',
                 'inventory_item' => $inventoryItem

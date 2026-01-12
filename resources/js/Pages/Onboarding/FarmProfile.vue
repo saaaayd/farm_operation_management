@@ -183,8 +183,29 @@
             Name your primary rice field
           </p>
         </div>
+
+        <div>
+          <label for="field_area" class="block text-sm font-semibold text-gray-700 mb-2">Field Area (hectares) *</label>
+          <input
+            type="number"
+            id="field_area"
+            v-model="form.field_area"
+            step="0.01"
+            min="0"
+            :max="form.total_area"
+            placeholder="0.00"
+            required
+            class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+          />
+          <p v-if="form.field_area && parseFloat(form.field_area) > parseFloat(form.total_area || 0)" class="mt-1 text-xs text-red-600">
+            Field area cannot exceed total farm area
+          </p>
+          <p v-else-if="form.total_area" class="mt-1 text-xs text-gray-500">
+            Current Available Area: {{ (parseFloat(form.total_area) - (parseFloat(form.field_area || 0))).toFixed(2) }} hectares
+          </p>
+        </div>
         
-            <div>
+            <div class="md:col-span-2">
               <label for="soil_type" class="block text-sm font-semibold text-gray-700 mb-2">Primary Soil Type *</label>
               <select
               id="soil_type"
@@ -385,6 +406,7 @@ const form = reactive({
   
   // Field Information
   field_name: '',
+  field_area: '',
   
   // Soil Information
   soil_type: '',
@@ -421,6 +443,7 @@ const submitProfile = async () => {
     'Rice Cultivation Area': form.rice_area,
     'Farm Location': form.address,
     'Field Name': form.field_name,
+    'Field Area': form.field_area,
     'Soil Type': form.soil_type,
     'Water Source': form.water_source,
     'Irrigation Type': form.irrigation_type,
@@ -441,6 +464,11 @@ const submitProfile = async () => {
     error.value = 'Rice cultivation area cannot exceed total farm area.';
     return;
   }
+
+  if (parseFloat(form.field_area) > parseFloat(form.total_area)) {
+    error.value = 'Field area cannot exceed total farm area.';
+    return;
+  }
   
   loading.value = true;
   error.value = '';
@@ -458,6 +486,7 @@ const submitProfile = async () => {
       
       // Field Information
       field_name: form.field_name,
+      field_area: form.field_area,
       
       // Soil Information
       soil_type: form.soil_type,

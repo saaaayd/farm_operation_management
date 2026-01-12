@@ -25,11 +25,11 @@ class ExpenseController extends Controller
         }
 
         if ($request->has('date_from')) {
-            $query->where('date', '>=', $request->date_from);
+            $query->whereDate('date', '>=', $request->date_from);
         }
 
         if ($request->has('date_to')) {
-            $query->where('date', '<=', $request->date_to);
+            $query->whereDate('date', '<=', $request->date_to);
         }
 
         $expenses = $query->orderBy('date', 'desc')->get();

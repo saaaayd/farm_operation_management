@@ -28,6 +28,12 @@
             Edit Item
           </button>
           <button
+            @click="deleteItem"
+            class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            Delete
+          </button>
+          <button
             @click="adjustStock"
             class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
@@ -380,6 +386,18 @@ const formatDate = (date) => {
 
 const editItem = () => {
   router.push(`/inventory/${item.value.id}/edit`)
+}
+
+const deleteItem = async () => {
+  if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) return
+  
+  try {
+    await inventoryStore.deleteItem(item.value.id)
+    router.push('/inventory')
+  } catch (e) {
+    console.error('Failed to delete item', e)
+    error.value = e.userMessage || e.response?.data?.message || 'Failed to delete item'
+  }
 }
 
 const adjustStock = () => {

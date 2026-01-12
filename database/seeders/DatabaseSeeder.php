@@ -104,141 +104,18 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $varietyIR64 = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-IR64'],
-            [
-                'name' => 'IR64',
-                'description' => 'High-yielding, semi-dwarf Indica variety widely planted in SE Asia.',
-                'maturity_days' => 120,
-                'average_yield_per_hectare' => 5.6,
-                'season' => 'wet',
-                'grain_type' => 'long',
-                'resistance_level' => 'medium',
-                'characteristics' => [
-                    'notes' => 'Performs best in irrigated lowland fields with good fertility.',
-                ],
-                'is_active' => true,
-            ]
-        );
+        // Seed Rice Varieties
+        $this->call(RiceVarietySeeder::class);
 
-        $varietyJasmine = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-JASMINE'],
-            [
-                'name' => 'Thai Jasmine',
-                'description' => 'Premium fragrant rice valued for aroma and soft texture.',
-                'maturity_days' => 110,
-                'average_yield_per_hectare' => 4.9,
-                'season' => 'dry',
-                'grain_type' => 'long',
-                'resistance_level' => 'medium',
-                'characteristics' => [
-                    'notes' => 'Requires consistent irrigation and well-drained fields.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietyBasmati = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-BASMATI'],
-            [
-                'name' => 'Basmati 370',
-                'description' => 'Traditional aromatic Basmati with elongated grains.',
-                'maturity_days' => 135,
-                'average_yield_per_hectare' => 4.3,
-                'season' => 'dry',
-                'grain_type' => 'long',
-                'resistance_level' => 'medium',
-                'characteristics' => [
-                    'notes' => 'Prefers cool nights; suited for river-fed plains.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietySticky = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-STICKY'],
-            [
-                'name' => 'Glutinous Sticky Rice',
-                'description' => 'Round-grain sticky rice used for traditional delicacies.',
-                'maturity_days' => 105,
-                'average_yield_per_hectare' => 4.6,
-                'season' => 'wet',
-                'grain_type' => 'short',
-                'resistance_level' => 'high',
-                'characteristics' => [
-                    'notes' => 'Can tolerate temporary flooding; harvest promptly to retain stickiness.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietyBrown = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-BROWN'],
-            [
-                'name' => 'Wholegrain Brown Rice',
-                'description' => 'Nutritious variety harvested and milled for brown rice.',
-                'maturity_days' => 125,
-                'average_yield_per_hectare' => 5.1,
-                'season' => 'wet',
-                'grain_type' => 'medium',
-                'resistance_level' => 'medium',
-                'characteristics' => [
-                    'notes' => 'Responds well to organic fertilisation; ideal for health-conscious markets.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietySwarna = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-SWARNA'],
-            [
-                'name' => 'Swarna',
-                'description' => 'High-yielding variety with strong disease resistance.',
-                'maturity_days' => 130,
-                'average_yield_per_hectare' => 6.3,
-                'season' => 'wet',
-                'grain_type' => 'medium',
-                'resistance_level' => 'high',
-                'characteristics' => [
-                    'notes' => 'Handles flood-prone paddies; staple in South Asian production.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietyRed = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-RED'],
-            [
-                'name' => 'Heirloom Red Cargo',
-                'description' => 'Deep-red wholegrain rice prized for antioxidants.',
-                'maturity_days' => 140,
-                'average_yield_per_hectare' => 3.9,
-                'season' => 'dry',
-                'grain_type' => 'medium',
-                'resistance_level' => 'medium',
-                'characteristics' => [
-                    'notes' => 'Requires careful drying; fetches premium prices in niche markets.',
-                ],
-                'is_active' => true,
-            ]
-        );
-
-        $varietyKoshihikari = RiceVariety::updateOrCreate(
-            ['variety_code' => 'RICE-KOSHI'],
-            [
-                'name' => 'Koshihikari',
-                'description' => 'Short-grain Japanese rice with excellent eating quality.',
-                'maturity_days' => 118,
-                'average_yield_per_hectare' => 5.3,
-                'season' => 'dry',
-                'grain_type' => 'short',
-                'resistance_level' => 'high',
-                'characteristics' => [
-                    'notes' => 'Best grown in cooler climates; top choice for sushi-grade rice.',
-                ],
-                'is_active' => true,
-            ]
-        );
+        // Fetch varieties for use in products
+        $varietyIR64 = RiceVariety::where('variety_code', 'RICE-IR64')->first();
+        $varietyJasmine = RiceVariety::where('variety_code', 'RICE-JASMINE')->first();
+        $varietyBasmati = RiceVariety::where('variety_code', 'RICE-BASMATI')->first();
+        $varietySticky = RiceVariety::where('variety_code', 'RICE-STICKY')->first();
+        $varietyBrown = RiceVariety::where('variety_code', 'RICE-BROWN')->first();
+        $varietySwarna = RiceVariety::where('variety_code', 'RICE-SWARNA')->first();
+        $varietyRed = RiceVariety::where('variety_code', 'RICE-RED')->first();
+        $varietyKoshihikari = RiceVariety::where('variety_code', 'RICE-KOSHI')->first();
 
         $farm1 = Farm::updateOrCreate(
             [

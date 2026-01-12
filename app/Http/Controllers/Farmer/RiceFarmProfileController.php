@@ -29,6 +29,7 @@ class RiceFarmProfileController extends Controller
             'farming_experience' => 'nullable|integer|min:0',
             'farm_description' => 'nullable|string|max:1000',
             'field_name' => 'required|string|max:255',
+            'field_size' => 'required|numeric|min:0|lte:total_area',
 
             // Soil Information
             'soil_type' => 'required|string|in:clay,loam,sandy,silt,clay_loam,sandy_loam,silty_clay,silty_loam',
@@ -100,7 +101,7 @@ class RiceFarmProfileController extends Controller
                     'nitrogen_level' => $request->nitrogen_level,
                     'phosphorus_level' => $request->phosphorus_level,
                     'potassium_level' => $request->potassium_level,
-                    'size' => $request->rice_area,
+                    'size' => $request->field_size ?? $request->rice_area,
                     'water_access' => $request->water_access,
                     'water_source' => $request->water_source,
                     'irrigation_type' => $request->irrigation_type,

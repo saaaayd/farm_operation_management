@@ -219,6 +219,7 @@ export const farmProfileAPI = {
 
       // Field Information
       field_name: data.field_name || 'Main Rice Field',
+      field_size: parseFloat(data.field_area),
 
       // Soil Information
       soil_type: data.soil_type,
