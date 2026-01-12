@@ -151,10 +151,11 @@ class RiceProduct extends Model
      */
     public function scopeAvailableOrPreOrder($query)
     {
-        return $query->where(function ($q) {
-            $q->where('production_status', self::STATUS_AVAILABLE)
-                ->orWhere('production_status', self::STATUS_IN_PRODUCTION);
-        });
+        return $query->where('is_available', true)
+            ->where(function ($q) {
+                $q->where('production_status', self::STATUS_AVAILABLE)
+                    ->orWhere('production_status', self::STATUS_IN_PRODUCTION);
+            });
     }
 
     /**

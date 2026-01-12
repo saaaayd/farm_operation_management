@@ -64,30 +64,37 @@
         <div class="lg:col-span-2 space-y-6">
           <!-- Product Images -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg mb-4">
-              <div class="w-full h-96 bg-gray-200 flex items-center justify-center">
-                <span class="text-gray-500 text-8xl">{{ product.icon }}</span>
+            <!-- Main Image -->
+            <div class="aspect-w-16 aspect-h-9 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-4 overflow-hidden">
+              <div class="w-full h-96 flex items-center justify-center">
+                <img
+                  v-if="product.images && product.images.length > 0"
+                  :src="product.images[selectedImageIndex]"
+                  :alt="product.name"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else class="text-gray-500 text-9xl">🌾</span>
               </div>
             </div>
-            <div class="grid grid-cols-4 gap-2">
-              <div class="aspect-w-1 aspect-h-1 bg-gray-200 rounded cursor-pointer">
-                <div class="w-full h-20 bg-gray-200 flex items-center justify-center">
-                  <span class="text-gray-500 text-2xl">{{ product.icon }}</span>
-                </div>
-              </div>
-              <div class="aspect-w-1 aspect-h-1 bg-gray-200 rounded cursor-pointer">
-                <div class="w-full h-20 bg-gray-200 flex items-center justify-center">
-                  <span class="text-gray-500 text-2xl">{{ product.icon }}</span>
-                </div>
-              </div>
-              <div class="aspect-w-1 aspect-h-1 bg-gray-200 rounded cursor-pointer">
-                <div class="w-full h-20 bg-gray-200 flex items-center justify-center">
-                  <span class="text-gray-500 text-2xl">{{ product.icon }}</span>
-                </div>
-              </div>
-              <div class="aspect-w-1 aspect-h-1 bg-gray-200 rounded cursor-pointer">
-                <div class="w-full h-20 bg-gray-200 flex items-center justify-center">
-                  <span class="text-gray-500 text-2xl">{{ product.icon }}</span>
+            <!-- Thumbnail Gallery -->
+            <div v-if="product.images && product.images.length > 1" class="flex gap-2 overflow-x-auto py-2">
+              <button
+                v-for="(image, index) in product.images"
+                :key="index"
+                @click="selectedImageIndex = index"
+                :class="[
+                  'flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all',
+                  selectedImageIndex === index ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
+                ]"
+              >
+                <img :src="image" :alt="`Product image ${index + 1}`" class="w-full h-full object-cover" />
+              </button>
+            </div>
+            <!-- Placeholder thumbnails when no images -->
+            <div v-else-if="!product.images || product.images.length === 0" class="grid grid-cols-4 gap-2">
+              <div class="aspect-w-1 aspect-h-1 bg-gray-100 rounded">
+                <div class="w-full h-20 bg-gray-100 flex items-center justify-center">
+                  <span class="text-gray-400 text-2xl">🌾</span>
                 </div>
               </div>
             </div>
@@ -303,6 +310,7 @@ const router = useRouter()
 const quantity = ref(1)
 const loading = ref(true)
 const error = ref(null)
+const selectedImageIndex = ref(0)
 
 const product = ref({
   id: null,
@@ -321,7 +329,8 @@ const product = ref({
   delivery_time: '',
   pickup_available: false,
   member_since: '',
-  products_sold: 0
+  products_sold: 0,
+  images: []
 })
 
 const reviews = ref([])
@@ -397,6 +406,9 @@ const loadProductData = async (id) => {
     const data = response.data.product || response.data.data || response.data
     
     // Map API response to component data
+    // Reset image index when loading new product
+    selectedImageIndex.value = 0
+    
     product.value = {
       id: data.id,
       name: data.name || '',
@@ -409,6 +421,7 @@ const loadProductData = async (id) => {
       rating: data.average_rating || data.rating || 0,
       icon: '🌾',
       stock: data.quantity_available || data.quantity || 0,
+      images: data.images || [], // Map the images array from API
       specifications: [
         { name: 'Variety', value: data.rice_variety?.name || 'N/A' },
         { name: 'Quality Grade', value: data.quality_grade || 'N/A' },

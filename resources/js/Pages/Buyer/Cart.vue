@@ -82,12 +82,11 @@
 
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Delivery Method</label>
-              <select v-model="checkoutForm.delivery_method" required class="w-full px-3 py-2 border rounded-lg">
-                <option value="pickup">Pickup</option>
-                <option value="courier">Courier</option>
-                <option value="postal">Postal</option>
-                <option value="truck">Truck</option>
-              </select>
+              <div class="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700">
+                Pickup from Farm
+                <input type="hidden" v-model="checkoutForm.delivery_method" value="pickup">
+              </div>
+              <p class="mt-1 text-xs text-gray-500">Products must be picked up from the farmer's location.</p>
             </div>
 
             <div class="mb-4">
@@ -141,12 +140,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { useMarketplaceStore } from '@/stores/marketplace'
 import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
 const router = useRouter()
-const loading = ref(true)
-const cartItems = ref([])
+const marketplaceStore = useMarketplaceStore()
 const showCheckoutModal = ref(false)
 const checkingOut = ref(false)
 
@@ -165,57 +163,33 @@ const checkoutForm = ref({
   notes: '',
 })
 
-const total = computed(() => {
-  return cartItems.value.reduce((sum, item) => {
-    return sum + (item.quantity * (item.rice_product?.price_per_unit || 0))
-  }, 0)
-})
+// Use store getters and state
+const loading = computed(() => marketplaceStore.loading)
+const cartItems = computed(() => marketplaceStore.cart)
+const total = computed(() => marketplaceStore.cartTotal)
 
-const loadCart = async () => {
-  loading.value = true
-  try {
-    const response = await axios.get('/api/rice-marketplace/cart')
-    cartItems.value = response.data.items || []
-  } catch (error) {
-    console.error('Failed to load cart:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const updateQuantity = (item, delta) => {
+const updateQuantity = async (item, delta) => {
   const newQty = item.quantity + delta
   if (newQty < 1) return
-  item.quantity = newQty
-  saveQuantity(item)
+  await marketplaceStore.updateCartQuantity(item.id, newQty)
 }
 
 const saveQuantity = async (item) => {
-  try {
-    await axios.put(`/api/rice-marketplace/cart/${item.id}`, { quantity: item.quantity })
-  } catch (error) {
-    alert(error.response?.data?.message || 'Failed to update')
-    loadCart()
-  }
+  await marketplaceStore.updateCartQuantity(item.id, item.quantity)
 }
 
 const confirmRemoveItem = (item) => {
   pendingAction.value = () => removeItem(item)
   confirmTitle.value = 'Remove Item'
-  confirmMessage.value = `Are you sure you want to remove "${item.rice_product?.name}" from your cart?`
+  confirmMessage.value = `Are you sure you want to remove "${item.name}" from your cart?`
   confirmButtonText.value = 'Remove'
   confirmType.value = 'danger'
   showConfirmModal.value = true
 }
 
 const removeItem = async (item) => {
-  try {
-    await axios.delete(`/api/rice-marketplace/cart/${item.id}`)
-    cartItems.value = cartItems.value.filter(i => i.id !== item.id)
-    showConfirmModal.value = false
-  } catch (error) {
-    alert('Failed to remove item')
-  }
+  await marketplaceStore.removeFromCart(item.id)
+  showConfirmModal.value = false
 }
 
 const confirmClearCart = () => {
@@ -228,13 +202,8 @@ const confirmClearCart = () => {
 }
 
 const clearCart = async () => {
-  try {
-    await axios.delete('/api/rice-marketplace/cart')
-    cartItems.value = []
-    showConfirmModal.value = false
-  } catch (error) {
-    alert('Failed to clear cart')
-  }
+  await marketplaceStore.clearCart()
+  showConfirmModal.value = false
 }
 
 const confirmCheckout = () => {
@@ -243,23 +212,18 @@ const confirmCheckout = () => {
   confirmMessage.value = `Are you sure you want to place this order? Total amount to pay is ₱${formatNumber(total.value)}.`
   confirmButtonText.value = 'Place Order'
   confirmType.value = 'success'
-  // Close the checkout form modal first? Or keep it open and overlay confirm? 
-  // Let's close checkout modal for cleaner UI, or just overlay. 
-  // Overlaying confirm on top of checkout modal might be weird if not handled with z-index.
-  // Let's hide checkout modal to show confirm modal clearly.
   showCheckoutModal.value = false 
   showConfirmModal.value = true
 }
 
 const processCheckout = async () => {
   checkingOut.value = true
-  showConfirmModal.value = false // Close confirm modal immediately or wait? 
-  // Let's keep modal or show loading there? existing logic used checkingOut ref but didn't show loading overlay.
-  // We'll proceed with logic and redirect.
+  showConfirmModal.value = false 
   
   try {
     const addressParts = checkoutForm.value.delivery_address.split(',').map(s => s.trim())
-    const response = await axios.post('/api/rice-marketplace/cart/checkout', {
+    
+    await marketplaceStore.checkout({
       delivery_address: {
         street: addressParts[0] || checkoutForm.value.delivery_address,
         city: addressParts[1] || '',
@@ -270,13 +234,11 @@ const processCheckout = async () => {
       payment_method: checkoutForm.value.payment_method,
       notes: checkoutForm.value.notes,
     })
-    alert(response.data.message)
+    
+    alert('Order placed successfully!')
     router.push('/buyer/orders')
   } catch (error) {
-    alert(error.response?.data?.message || 'Checkout failed')
-    // If failed and we closed checkout modal, user has to re-enter? 
-    // Ideally we should reopen checkout modal if failed, or kept it open.
-    // For now simple implementation as per plan.
+    alert(marketplaceStore.error || 'Checkout failed')
   } finally {
     checkingOut.value = false
   }
@@ -294,6 +256,6 @@ const formatNumber = (value) => {
 }
 
 onMounted(() => {
-  loadCart()
+  marketplaceStore.fetchCart()
 })
 </script>

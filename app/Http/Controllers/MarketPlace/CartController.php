@@ -44,8 +44,8 @@ class CartController extends Controller
 
         $product = RiceProduct::findOrFail($request->rice_product_id);
 
-        // Check if product is available
-        if ($product->status !== 'available') {
+        // Check if product is available (using correct field names)
+        if (!$product->is_available || !in_array($product->production_status, ['available', 'in_production'])) {
             return response()->json(['message' => 'Product is not available'], 422);
         }
 

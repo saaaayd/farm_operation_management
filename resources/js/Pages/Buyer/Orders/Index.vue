@@ -56,11 +56,8 @@
               <router-link :to="`/buyer/orders/${order.id}`"
                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 text-center"
               >View Details</router-link>
-              <button v-if="order.status === 'shipped'"
-                @click="confirmDelivery(order)"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
-              >Confirm Delivery</button>
-              <button v-if="order.status === 'delivered' && !order.has_review"
+
+              <button v-if="order.status === 'picked_up' && !order.has_review"
                 @click="openReviewModal(order)"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
               >Leave Review</button>
@@ -186,8 +183,8 @@ const tabs = [
   { value: 'all', label: 'All Orders' },
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'delivered', label: 'Delivered' },
+  { value: 'ready_for_pickup', label: 'Ready for Pickup' },
+  { value: 'picked_up', label: 'Picked Up' },
 ]
 
 const filteredOrders = computed(() => {
@@ -204,30 +201,33 @@ const getStatusClass = (status) => {
   const classes = {
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-green-100 text-green-800',
+    ready_for_pickup: 'bg-purple-100 text-purple-800',
+    picked_up: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
     disputed: 'bg-orange-100 text-orange-800',
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-const formatStatus = (status) => status?.charAt(0).toUpperCase() + status?.slice(1)
+const formatStatus = (status) => {
+  if (!status) return ''
+  const labels = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    ready_for_pickup: 'Ready for Pickup',
+    picked_up: 'Picked Up',
+    cancelled: 'Cancelled',
+    disputed: 'Disputed'
+  }
+  return labels[status] || status.charAt(0).toUpperCase() + status.slice(1)
+}
 
 const formatDate = (date) => {
   if (!date) return 'N/A'
   return new Date(date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const confirmDelivery = async (order) => {
-  if (!confirm('Confirm that you have received this order?')) return
-  try {
-    await marketplaceStore.confirmOrderDelivery(order.id)
-    order.status = 'delivered'
-  } catch (err) {
-    alert(err.message || 'Failed to confirm delivery')
-  }
-}
+
 
 const openReviewModal = (order) => {
   reviewOrder.value = order
@@ -271,8 +271,9 @@ const submitReview = async () => {
 
 onMounted(async () => {
   try {
-    const response = await marketplaceStore.fetchBuyerOrders()
-    orders.value = response.orders || []
+    await marketplaceStore.fetchBuyerOrders()
+    // Get orders from store, which properly handles pagination
+    orders.value = marketplaceStore.orders || []
   } catch (err) {
     console.error('Failed to load orders', err)
   } finally {

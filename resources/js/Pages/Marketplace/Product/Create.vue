@@ -1,196 +1,187 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">Add Rice Product</h1>
-            <p class="text-sm text-gray-500 mt-1">
-              Publish a new product with quality details and pricing.
-            </p>
+  <div class="min-h-screen bg-gray-50/50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-4">
+            <button
+              @click="router.push('/marketplace/my-products')"
+              class="p-2 -ml-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-xl font-bold text-gray-900">Add Rice Product</h1>
+              <p class="text-xs text-gray-500 mt-0.5">Publish a new product to the marketplace</p>
+            </div>
           </div>
-          <button
-            @click="router.push('/marketplace/my-products')"
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Cancel
-          </button>
+          
+
         </div>
       </div>
     </header>
 
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <form @submit.prevent="submit" class="divide-y divide-gray-200">
-          <!-- Form Alert -->
-          <div class="p-6">
-            <FormAlert
-              :visible="!!formError.message"
-              :message="formError.message"
-              :fieldErrors="formError.fieldErrors"
-            />
-          </div>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Error Alert -->
+      <div v-if="formError.message" class="mb-6 rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3">
+         <svg class="h-5 w-5 text-red-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+         </svg>
+         <div>
+            <h3 class="text-sm font-medium text-red-800">{{ formError.message }}</h3>
+            <ul v-if="Object.keys(formError.fieldErrors).length" class="mt-2 text-xs text-red-700 list-disc list-inside">
+               <li v-for="(errs, field) in formError.fieldErrors" :key="field">{{ errs[0] }}</li>
+            </ul>
+         </div>
+      </div>
 
-          <!-- Basic Information Section -->
-          <div class="p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column: Main Info -->
+        <div class="lg:col-span-2 space-y-6">
+          
+          <!-- Basic Info Card -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Basic Information
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Product Name <span class="text-red-500">*</span>
-                </label>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Product Name <span class="text-red-500">*</span></label>
                 <input
                   v-model="form.name"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors',
-                    formError.fieldErrors?.name || errors.name
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="e.g. Premium Jasmine Rice"
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-gray-50 focus:bg-white placeholder-gray-400"
+                  placeholder="e.g. Premium Jasmine Rice 50kg"
                 />
-                <p v-if="formError.fieldErrors?.name || errors.name" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.name || errors.name) 
-                      ? (formError.fieldErrors?.name || errors.name)[0] 
-                      : (formError.fieldErrors?.name || errors.name) }}
-                </p>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Rice Variety <span class="text-red-500">*</span>
-                </label>
-                <select
-                  v-model="form.rice_variety_id"
-                  required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.rice_variety_id || errors.rice_variety_id
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                >
-                  <option value="">Select variety</option>
-                  <option
-                    v-for="variety in riceVarieties"
-                    :key="variety.id"
-                    :value="variety.id"
-                  >
-                    {{ variety.name }}
-                  </option>
-                </select>
-                <p v-if="formError.fieldErrors?.rice_variety_id || errors.rice_variety_id" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.rice_variety_id || errors.rice_variety_id) 
-                      ? (formError.fieldErrors?.rice_variety_id || errors.rice_variety_id)[0] 
-                      : (formError.fieldErrors?.rice_variety_id || errors.rice_variety_id) }}
-                </p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Quality Grade <span class="text-red-500">*</span>
-                </label>
-                <select
-                  v-model="form.quality_grade"
-                  required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.quality_grade || errors.quality_grade
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                >
-                  <option
-                    v-for="(label, value) in qualityGrades"
-                    :key="value"
-                    :value="value"
-                  >
-                    {{ label }}
-                  </option>
-                </select>
-                <p v-if="formError.fieldErrors?.quality_grade || errors.quality_grade" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.quality_grade || errors.quality_grade) 
-                      ? (formError.fieldErrors?.quality_grade || errors.quality_grade)[0] 
-                      : (formError.fieldErrors?.quality_grade || errors.quality_grade) }}
-                </p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Linked Harvest
-                </label>
-                <select
-                  v-model="form.harvest_id"
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.harvest_id || errors.harvest_id
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                >
-                  <option value="">Select harvest (optional)</option>
-                  <option
-                    v-for="harvest in harvests"
-                    :key="harvest.id"
-                    :value="harvest.id"
-                  >
-                    {{ formatHarvestOption(harvest) }}
-                  </option>
-                </select>
-                <p v-if="formError.fieldErrors?.harvest_id || errors.harvest_id" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.harvest_id || errors.harvest_id) 
-                      ? (formError.fieldErrors?.harvest_id || errors.harvest_id)[0] 
-                      : (formError.fieldErrors?.harvest_id || errors.harvest_id) }}
-                </p>
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Description <span class="text-red-500">*</span>
-                </label>
+               <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Description <span class="text-red-500">*</span></label>
                 <textarea
                   v-model="form.description"
                   rows="4"
                   required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none',
-                    formError.fieldErrors?.description || errors.description
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="Describe your rice product, including quality, origin, and any special characteristics..."
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-gray-50 focus:bg-white placeholder-gray-400 resize-none"
+                  placeholder="Describe your rice product, detailed quality, texture, and cooking suggestions..."
                 ></textarea>
-                <p v-if="formError.fieldErrors?.description || errors.description" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.description || errors.description) 
-                      ? (formError.fieldErrors?.description || errors.description)[0] 
-                      : (formError.fieldErrors?.description || errors.description) }}
-                </p>
               </div>
             </div>
           </div>
 
-          <!-- Product Images Section -->
-          <div class="p-6 bg-amber-50/50">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-amber-200">
+          <!-- Inventory & Price Card -->
+           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <div class="flex items-center justify-between">
+               <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                 <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                 </svg>
+                 Inventory & Pricing
+               </h2>
+               <div class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">
+                  Auto-sync enabled
+               </div>
+            </div>
+
+            <div class="space-y-4">
+               <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1.5">Link to Harvest (Optional)</label>
+                  <p class="text-xs text-gray-500 mb-2">Select a harvest to auto-fill quantity and quality details.</p>
+                  <select
+                    v-model="form.harvest_id"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                  >
+                    <option value="">-- No Harvest Linked --</option>
+                    <option v-for="harvest in harvests" :key="harvest.id" :value="harvest.id">
+                      {{ formatHarvestOption(harvest) }}
+                    </option>
+                  </select>
+               </div>
+
+               <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Quantity Available <span class="text-red-500">*</span></label>
+                    <input
+                      v-model="form.quantity_available"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-gray-50 focus:bg-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Unit <span class="text-red-500">*</span></label>
+                    <select
+                      v-model="form.unit"
+                      required
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
+                    >
+                      <option v-for="unit in units" :key="unit" :value="unit">
+                        {{ unit.charAt(0).toUpperCase() + unit.slice(1) }}
+                      </option>
+                    </select>
+                  </div>
+               </div>
+
+               <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                   <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                       Price per {{ form.unit.charAt(0).toUpperCase() + form.unit.slice(1) }} (₱) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                       <span class="absolute left-4 top-3.5 text-gray-400">₱</span>
+                       <input
+                         v-model="form.price_per_unit"
+                         type="number"
+                         step="0.01"
+                         min="0"
+                         required
+                         class="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-gray-50 focus:bg-white font-medium text-gray-900"
+                         placeholder="0.00"
+                       />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Min. Order Quantity</label>
+                    <input
+                      v-model="form.minimum_order_quantity"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-gray-50 focus:bg-white"
+                      placeholder="Optional"
+                    />
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          <!-- Images Card -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <svg class="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               Product Images
             </h2>
-            <p class="text-sm text-gray-600 mb-4">Upload photos of your rice to showcase quality to buyers. (Maximum 5 images, 2MB each)</p>
             
-            <!-- Upload Area -->
+             <!-- Upload Area -->
             <div
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
               @drop.prevent="handleDrop"
               :class="[
-                'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
-                isDragging ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'
+                'border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer group',
+                isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
               ]"
               @click="$refs.fileInput.click()"
             >
@@ -202,36 +193,36 @@
                 class="hidden"
                 @change="handleFileSelect"
               />
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p class="mt-2 text-sm text-gray-600">
-                <span class="font-semibold text-green-600">Click to upload</span> or drag and drop
-              </p>
-              <p class="text-xs text-gray-500 mt-1">JPG, JPEG, PNG, WebP up to 2MB each</p>
+              <div class="h-12 w-12 bg-gray-100 text-gray-400 group-hover:bg-purple-100 group-hover:text-purple-500 rounded-full flex items-center justify-center mx-auto transition-colors mb-3">
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                 </svg>
+              </div>
+              <p class="text-sm font-medium text-gray-900 group-hover:text-purple-700">Click to upload images</p>
+              <p class="text-xs text-gray-500 mt-1">or drag and drop here (Max 5 images)</p>
             </div>
 
             <!-- Upload Progress -->
-            <div v-if="uploadingImages" class="mt-4 flex items-center justify-center gap-2">
-              <svg class="animate-spin h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <div v-if="uploadingImages" class="flex items-center justify-center gap-2 py-2">
+              <svg class="animate-spin h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span class="text-sm text-gray-600">Uploading images...</span>
+              <span class="text-sm text-gray-600">Uploading...</span>
             </div>
 
-            <!-- Image Previews -->
-            <div v-if="uploadedImages.length > 0" class="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+             <!-- Image Previews -->
+            <div v-if="uploadedImages.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div
                 v-for="(image, index) in uploadedImages"
                 :key="index"
-                class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200"
+                class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100"
               >
                 <img :src="image" alt="Product image" class="w-full h-full object-cover" />
                 <button
                   type="button"
-                  @click="removeImage(index)"
-                  class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  @click.stop="removeImage(index)"
+                  class="absolute top-1 right-1 p-1 bg-white/90 text-red-600 rounded-full shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -239,301 +230,166 @@
                 </button>
               </div>
             </div>
-
-            <!-- Image Upload Error -->
-            <p v-if="imageError" class="mt-2 text-sm text-red-600">{{ imageError }}</p>
+             <p v-if="imageError" class="text-sm text-red-600 text-center">{{ imageError }}</p>
           </div>
+        </div>
 
-          <!-- Pricing & Quantity Section -->
-          <div class="p-6 bg-green-50/50">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-green-200">
-              Pricing & Quantity
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity Available <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="form.quantity_available"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.quantity_available || errors.quantity_available
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-green-200 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="0.00"
-                />
-                <p v-if="formError.fieldErrors?.quantity_available || errors.quantity_available" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.quantity_available || errors.quantity_available) 
-                      ? (formError.fieldErrors?.quantity_available || errors.quantity_available)[0] 
-                      : (formError.fieldErrors?.quantity_available || errors.quantity_available) }}
-                </p>
+        <!-- Right Column: Meta Info -->
+        <div class="space-y-6">
+           <!-- Classification Card -->
+           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+              <h2 class="text-lg font-bold text-gray-900">Classification</h2>
+              
+              <div class="space-y-4">
+                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Rice Variety <span class="text-red-500">*</span></label>
+                    <select
+                      v-model="form.rice_variety_id"
+                      required
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
+                    >
+                      <option value="">Select Variety</option>
+                      <option v-for="variety in riceVarieties" :key="variety.id" :value="variety.id">
+                        {{ variety.name }}
+                      </option>
+                    </select>
+                 </div>
+                 
+                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Quality Grade <span class="text-red-500">*</span></label>
+                    <select
+                      v-model="form.quality_grade"
+                      required
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
+                    >
+                      <option v-for="(label, value) in qualityGrades" :key="value" :value="value">
+                        {{ label }}
+                      </option>
+                    </select>
+                 </div>
               </div>
+           </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Unit <span class="text-red-500">*</span>
-                </label>
-                <select
-                  v-model="form.unit"
-                  required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.unit || errors.unit
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-green-200 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                >
-                  <option
-                    v-for="unit in units"
-                    :key="unit"
-                    :value="unit"
-                  >
-                    {{ unit.charAt(0).toUpperCase() + unit.slice(1) }}
-                  </option>
-                </select>
-                <p v-if="formError.fieldErrors?.unit || errors.unit" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.unit || errors.unit) 
-                      ? (formError.fieldErrors?.unit || errors.unit)[0] 
-                      : (formError.fieldErrors?.unit || errors.unit) }}
-                </p>
+           <!-- Specs Card -->
+           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+              <h2 class="text-lg font-bold text-gray-900">Specifications</h2>
+              
+              <div class="space-y-4">
+                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Processing</label>
+                    <select
+                      v-model="form.processing_method"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
+                    >
+                       <option value="">Select Method</option>
+                       <option v-for="(label, value) in processingMethods" :key="value" :value="value">
+                         {{ label }}
+                       </option>
+                    </select>
+                 </div>
+
+                 <div class="grid grid-cols-2 gap-3">
+                    <div>
+                       <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Moisture (%)</label>
+                       <input
+                         v-model="form.moisture_content"
+                         type="number"
+                         min="5" max="25" step="0.1"
+                         placeholder="e.g. 14"
+                         class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                       />
+                    </div>
+                    <div>
+                       <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Purity (%)</label>
+                       <input
+                         v-model="form.purity_percentage"
+                         type="number"
+                         min="50" max="100" step="0.1"
+                         placeholder="e.g. 98"
+                         class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                       />
+                    </div>
+                 </div>
+
+                 <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-100 cursor-pointer" @click="form.is_organic = !form.is_organic">
+                    <span class="text-sm font-medium text-green-900">Certified Organic</span>
+                    <div class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" v-model="form.is_organic" class="sr-only peer">
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </div>
+                 </div>
               </div>
+           </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Price per Sack (₱) <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="form.price_per_unit"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.price_per_unit || errors.price_per_unit
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-green-200 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="0.00"
-                />
-                <p v-if="formError.fieldErrors?.price_per_unit || errors.price_per_unit" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.price_per_unit || errors.price_per_unit) 
-                      ? (formError.fieldErrors?.price_per_unit || errors.price_per_unit)[0] 
-                      : (formError.fieldErrors?.price_per_unit || errors.price_per_unit) }}
-                </p>
+           <!-- Extra Info Card -->
+           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+              <h2 class="text-lg font-bold text-gray-900">Additional</h2>
+              
+              <div class="space-y-4">
+                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Certification</label>
+                    <input
+                      v-model="form.certification"
+                      type="text"
+                      placeholder="e.g. ISO 9001"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all bg-gray-50 focus:bg-white"
+                    />
+                 </div>
+                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Storage</label>
+                    <input
+                      v-model="form.storage_conditions"
+                      type="text"
+                      placeholder="e.g. Cool dry place"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all bg-gray-50 focus:bg-white"
+                    />
+                 </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Internal Notes</label>
+                    <textarea
+                      v-model="form.notes"
+                      rows="2"
+                      placeholder="Private notes..."
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all bg-gray-50 focus:bg-white resize-none"
+                    ></textarea>
+                 </div>
               </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Order Quantity
-                </label>
-                <input
-                  v-model="form.minimum_order_quantity"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.minimum_order_quantity || errors.minimum_order_quantity
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-green-200 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="Optional"
-                />
-                <p v-if="formError.fieldErrors?.minimum_order_quantity || errors.minimum_order_quantity" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.minimum_order_quantity || errors.minimum_order_quantity) 
-                      ? (formError.fieldErrors?.minimum_order_quantity || errors.minimum_order_quantity)[0] 
-                      : (formError.fieldErrors?.minimum_order_quantity || errors.minimum_order_quantity) }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quality Specifications Section -->
-          <div class="p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
-              Quality Specifications
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Processing Method
-                </label>
-                <select
-                  v-model="form.processing_method"
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-white',
-                    formError.fieldErrors?.processing_method || errors.processing_method
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                >
-                  <option value="">Select method (optional)</option>
-                  <option
-                    v-for="(label, value) in processingMethods"
-                    :key="value"
-                    :value="value"
-                  >
-                    {{ label }}
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Moisture Content (%)
-                </label>
-                <input
-                  v-model="form.moisture_content"
-                  type="number"
-                  min="5"
-                  max="25"
-                  step="0.1"
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors',
-                    formError.fieldErrors?.moisture_content || errors.moisture_content
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="5-25%"
-                />
-                <p v-if="formError.fieldErrors?.moisture_content || errors.moisture_content" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.moisture_content || errors.moisture_content) 
-                      ? (formError.fieldErrors?.moisture_content || errors.moisture_content)[0] 
-                      : (formError.fieldErrors?.moisture_content || errors.moisture_content) }}
-                </p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Purity Percentage
-                </label>
-                <input
-                  v-model="form.purity_percentage"
-                  type="number"
-                  min="50"
-                  max="100"
-                  step="0.1"
-                  :class="[
-                    'w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors',
-                    formError.fieldErrors?.purity_percentage || errors.purity_percentage
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-green-500 focus:ring-green-500'
-                  ]"
-                  placeholder="50-100%"
-                />
-                <p v-if="formError.fieldErrors?.purity_percentage || errors.purity_percentage" class="mt-1.5 text-xs text-red-600">
-                  {{ Array.isArray(formError.fieldErrors?.purity_percentage || errors.purity_percentage) 
-                      ? (formError.fieldErrors?.purity_percentage || errors.purity_percentage)[0] 
-                      : (formError.fieldErrors?.purity_percentage || errors.purity_percentage) }}
-                </p>
-              </div>
-
-              <div class="flex items-center pt-7">
-                <input
-                  id="is_organic"
-                  v-model="form.is_organic"
-                  type="checkbox"
-                  class="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                />
-                <label for="is_organic" class="ml-3 block text-sm font-medium text-gray-700">
-                  Certified Organic
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Additional Information Section -->
-          <div class="p-6 bg-gray-50/50">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
-              Additional Information
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Storage Conditions
-                </label>
-                <input
-                  v-model="form.storage_conditions"
-                  type="text"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-green-500 focus:ring-green-500 transition-colors"
-                  placeholder="e.g. Cool, dry place"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Certification
-                </label>
-                <input
-                  v-model="form.certification"
-                  type="text"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-green-500 focus:ring-green-500 transition-colors"
-                  placeholder="e.g. ISO, Organic Certified"
-                />
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  v-model="form.notes"
-                  rows="3"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-green-500 focus:ring-green-500 transition-colors resize-none"
-                  placeholder="Any additional notes or special instructions..."
-                ></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Form Actions -->
-          <div class="p-6 bg-gray-50 border-t border-gray-200">
-            <div class="flex justify-end gap-3">
-              <button
-                type="button"
-                @click="router.push('/marketplace/my-products')"
-                class="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                :disabled="submitting"
-                class="inline-flex items-center px-6 py-2.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-              >
-                <svg
-                  v-if="submitting"
-                  class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {{ submitting ? 'Creating Product...' : 'Create Product' }}
-              </button>
-            </div>
-          </div>
-        </form>
+           </div>
+        </div>
+      </div>
+      
+       <!-- Form Actions moved to bottom -->
+      <div class="mt-8 flex items-center justify-end gap-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm sticky bottom-6 z-20">
+         <button
+          type="button"
+          @click="router.push('/marketplace/my-products')"
+          class="px-6 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          @click="submit"
+          :disabled="submitting"
+          class="inline-flex items-center px-6 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed gap-2"
+        >
+          <svg v-if="submitting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ submitting ? 'Publishing...' : 'Publish Product' }}
+        </button>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketplaceStore } from '@/stores/marketplace'
 import { useFarmStore } from '@/stores/farm'
 import FormAlert from '@/Components/UI/FormAlert.vue'
+import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 import { extractFormErrors, resetFormErrors } from '@/utils/form'
 import axios from 'axios'
 
@@ -575,7 +431,7 @@ const form = reactive({
   notes: ''
 })
 
-const units = ['sacks']
+const units = ['kg', 'tons', 'sacks', 'bushels', 'pounds', 'grams']
 const qualityGrades = {
   premium: 'Premium',
   grade_a: 'Grade A',
@@ -595,9 +451,49 @@ const harvests = computed(() => farmStore.harvests || [])
 const formatHarvestOption = (harvest) => {
   const crop = harvest?.planting?.crop_type || 'Harvest'
   const date = harvest?.harvest_date ? new Date(harvest.harvest_date).toLocaleDateString() : 'Undated'
-  const yieldKg = harvest?.yield ? `${Number(harvest.yield).toLocaleString()} kg` : ''
+  const yieldKg = harvest?.quantity ? `${Number(harvest.quantity).toLocaleString()} ${harvest.unit || 'kg'}` : ''
   return `${crop} • ${date}${yieldKg ? ` • ${yieldKg}` : ''}`
 }
+
+// Watch for Harvest selection to auto-fill data
+watch(() => form.harvest_id, (newId) => {
+  if (!newId) return
+
+  const harvest = harvests.value.find(h => h.id === newId)
+  if (harvest) {
+    // 1. Auto-fill Unit
+    if (harvest.unit && units.includes(harvest.unit)) {
+      form.unit = harvest.unit
+    }
+
+    // 2. Auto-fill Quantity (Net Quantity = Gross - Harvester Share)
+    const grossQty = Number(harvest.quantity || 0)
+    const shareQty = Number(harvest.harvester_share || 0)
+    const netQty = Math.max(0, grossQty - shareQty)
+    
+    // Only update if currently empty or if user just switched harvests
+    form.quantity_available = netQty
+
+    // 3. Auto-fill Rice Variety if linked planting has it
+    if (harvest.planting?.rice_variety_id) {
+       form.rice_variety_id = harvest.planting.rice_variety_id
+    }
+    
+    // 4. Auto-fill Quality Grade if available
+    if (harvest.quality_grade) {
+       // Map harvest grades (A, B, C, D) to product grades
+       const gradeMap = {
+          'A': 'premium',
+          'B': 'grade_a',
+          'C': 'grade_b',
+          'D': 'commercial'
+       }
+       if (gradeMap[harvest.quality_grade]) {
+          form.quality_grade = gradeMap[harvest.quality_grade]
+       }
+    }
+  }
+})
 
 // Image upload handlers
 const handleFileSelect = (event) => {

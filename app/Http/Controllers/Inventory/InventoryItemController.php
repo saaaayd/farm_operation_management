@@ -162,6 +162,13 @@ class InventoryItemController extends Controller
     {
         $user = $request->user();
 
+        Log::info('Inventory update debug', [
+            'request_user_id' => $user->id ?? 'null',
+            'item_id' => $inventoryItem->id,
+            'item_user_id' => $inventoryItem->user_id,
+            'match' => ($inventoryItem->user_id === $user->id) ? 'yes' : 'no'
+        ]);
+
         if ($inventoryItem->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Unauthorized access'

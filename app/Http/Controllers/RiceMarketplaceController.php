@@ -237,7 +237,7 @@ class RiceMarketplaceController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:2000',
             'quantity_available' => 'required|numeric|min:0',
-            'unit' => 'required|string|in:kg,tons,bags,sacks',
+            'unit' => 'required|string|in:kg,tons,sacks,bushels,pounds,grams',
             'price_per_unit' => 'required|numeric|min:0',
             'quality_grade' => 'required|string|in:premium,grade_a,grade_b,commercial',
             'moisture_content' => 'nullable|numeric|between:5,25',
@@ -317,6 +317,7 @@ class RiceMarketplaceController extends Controller
                 'name' => 'string|max:255',
                 'description' => 'string|max:2000',
                 'quantity_available' => 'numeric|min:0',
+                'unit' => 'string|in:kg,tons,sacks,bushels,pounds,grams',
                 'price_per_unit' => 'numeric|min:0',
                 'quality_grade' => 'string|in:premium,grade_a,grade_b,commercial',
                 'moisture_content' => 'nullable|numeric|between:5,25',
@@ -411,7 +412,7 @@ class RiceMarketplaceController extends Controller
             'delivery_address.state' => 'required|string|max:100',
             'delivery_address.postal_code' => 'required|string|max:20',
             'delivery_address.country' => 'required|string|max:100',
-            'delivery_method' => 'required|string|in:pickup,courier,postal,truck',
+            'delivery_method' => 'required|string|in:pickup',
             'payment_method' => 'required|string|max:50',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -749,14 +750,9 @@ class RiceMarketplaceController extends Controller
             // Base query for farmer's orders
             $baseQuery = RiceOrder::forFarmer($user->id);
 
-            // Total revenue (from all active/completed orders - not cancelled/pending)
+            // Total revenue (from all paid orders)
             $totalRevenue = (clone $baseQuery)
-                ->whereIn('status', [
-                    RiceOrder::STATUS_CONFIRMED,
-                    RiceOrder::STATUS_PROCESSING,
-                    RiceOrder::STATUS_SHIPPED,
-                    RiceOrder::STATUS_DELIVERED
-                ])
+                ->where('payment_status', RiceOrder::PAYMENT_PAID)
                 ->sum('total_amount');
 
             // Total orders count
@@ -775,12 +771,7 @@ class RiceMarketplaceController extends Controller
             $dailyRevenueMap = RiceOrder::forFarmer($user->id)
                 ->whereDate('order_date', '>=', $startDate)
                 ->whereDate('order_date', '<=', $endDate)
-                ->whereIn('status', [
-                    RiceOrder::STATUS_CONFIRMED,
-                    RiceOrder::STATUS_PROCESSING,
-                    RiceOrder::STATUS_SHIPPED,
-                    RiceOrder::STATUS_DELIVERED
-                ])
+                ->where('payment_status', RiceOrder::PAYMENT_PAID)
                 ->selectRaw('DATE(order_date) as date, SUM(total_amount) as daily_total')
                 ->groupBy('date')
                 ->pluck('daily_total', 'date');
@@ -800,7 +791,8 @@ class RiceMarketplaceController extends Controller
             $confirmedCount = $ordersByStatus[RiceOrder::STATUS_CONFIRMED] ?? 0;
             $processingCount = $ordersByStatus[RiceOrder::STATUS_PROCESSING] ?? 0;
             $shippedCount = $ordersByStatus[RiceOrder::STATUS_SHIPPED] ?? 0;
-            $deliveredCount = $ordersByStatus[RiceOrder::STATUS_DELIVERED] ?? 0;
+            $pickedUpCount = $ordersByStatus[RiceOrder::STATUS_PICKED_UP] ?? 0;
+            $deliveredCount = ($ordersByStatus[RiceOrder::STATUS_DELIVERED] ?? 0) + $pickedUpCount;
             $cancelledCount = $ordersByStatus[RiceOrder::STATUS_CANCELLED] ?? 0;
 
             return response()->json([

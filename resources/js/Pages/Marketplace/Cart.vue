@@ -183,13 +183,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMarketplaceStore } from '@/stores/marketplace';
 import { formatCurrency } from '@/utils/format';
 
 const router = useRouter();
 const marketplaceStore = useMarketplaceStore();
+
+// Fetch cart from backend on mount
+onMounted(async () => {
+  await marketplaceStore.fetchCart();
+});
 
 const shippingCost = computed(() => {
   return marketplaceStore.cartTotal >= 50 ? 0 : 10;

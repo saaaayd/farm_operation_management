@@ -297,7 +297,10 @@ export const riceMarketplaceAPI = {
   getOrders: (filters = {}) => api.get('/rice-marketplace/orders', { params: filters }),
   getOrderById: (id) => api.get(`/rice-marketplace/orders/${id}`),
   createOrder: (orderData) => api.post('/rice-marketplace/orders', orderData),
-  confirmOrder: (id, data = {}) => api.post(`/rice-marketplace/orders/${id}/confirm`, data),
+  confirmOrder: (id, data = {}) => api.post(`/rice-marketplace/orders/${id}/accept`, data),
+  markReadyForPickup: (id) => api.post(`/rice-marketplace/orders/${id}/ready-for-pickup`),
+  confirmPickup: (id) => api.post(`/rice-marketplace/orders/${id}/confirm-pickup`),
+  markOrderAsPaid: (id) => api.post(`/rice-marketplace/orders/${id}/mark-paid`),
   cancelOrder: (id, data) => api.post(`/rice-marketplace/orders/${id}/cancel`, data),
   getOrderMessages: (id) => api.get(`/rice-marketplace/orders/${id}/messages`),
   sendOrderMessage: (id, payload) => api.post(`/rice-marketplace/orders/${id}/messages`, payload),
@@ -305,13 +308,13 @@ export const riceMarketplaceAPI = {
 
 // Cart API
 export const cartAPI = {
-  get: () => api.get('/cart'),
-  add: (itemData) => api.post('/cart', itemData), // Fixed: Backend expects POST /cart
-  update: (itemId, itemData) => api.put(`/cart/${itemId}`, itemData),
-  remove: (itemId) => api.delete(`/cart/${itemId}`),
-  clear: () => api.delete('/cart'), // Fixed: Backend expects DELETE /cart
-  checkout: (checkoutData) => api.post('/cart/checkout', checkoutData),
-  count: () => api.get('/cart/count'),
+  get: () => api.get('/rice-marketplace/cart'),
+  add: (itemData) => api.post('/rice-marketplace/cart', itemData),
+  update: (itemId, itemData) => api.put(`/rice-marketplace/cart/${itemId}`, itemData),
+  remove: (itemId) => api.delete(`/rice-marketplace/cart/${itemId}`),
+  clear: () => api.delete('/rice-marketplace/cart'),
+  checkout: (checkoutData) => api.post('/rice-marketplace/cart/checkout', checkoutData),
+  count: () => api.get('/rice-marketplace/cart/count'),
 };
 
 // Legacy Marketplace API (for backward compatibility)
@@ -437,6 +440,15 @@ export const riceFarmingAPI = {
   advanceStage: (plantingId, stageData) => api.post(`/rice-farming/plantings/${plantingId}/advance-stage`, stageData),
   getRecommendations: (plantingId) => api.get(`/rice-farming/plantings/${plantingId}/recommendations`),
   markStageDelayed: (stageId, delayData) => api.post(`/rice-farming/stages/${stageId}/delay`, delayData),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: (params = {}) => api.get('/notifications', { params }), // supports unread_only=true
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.post(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  delete: (id) => api.delete(`/notifications/${id}`),
 };
 
 export default api;

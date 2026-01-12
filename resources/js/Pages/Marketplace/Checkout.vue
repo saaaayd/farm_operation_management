@@ -71,23 +71,14 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Method</h3>
             <div class="space-y-4">
               <div class="flex items-center">
-                <input id="delivery_courier" name="delivery_method" type="radio" value="courier" v-model="form.delivery_method" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300">
-                <label for="delivery_courier" class="ml-3 block text-sm font-medium text-gray-700">
-                  Courier Delivery (Standard)
-                </label>
-              </div>
-              <div class="flex items-center">
-                <input id="delivery_pickup" name="delivery_method" type="radio" value="pickup" v-model="form.delivery_method" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300">
+                <input id="delivery_pickup" name="delivery_method" type="radio" value="pickup" v-model="form.delivery_method" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300" checked>
                 <label for="delivery_pickup" class="ml-3 block text-sm font-medium text-gray-700">
                   Pickup from Farm
                 </label>
               </div>
-              <div class="flex items-center">
-                <input id="delivery_truck" name="delivery_method" type="radio" value="truck" v-model="form.delivery_method" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300">
-                <label for="delivery_truck" class="ml-3 block text-sm font-medium text-gray-700">
-                  Truck Delivery (Bulk Orders)
-                </label>
-              </div>
+              <p class="text-sm text-gray-500 ml-7">
+                Products must be picked up directly from the farmer's location. Contact the farmer for pickup schedule and location details after placing your order.
+              </p>
             </div>
           </div>
 
@@ -220,13 +211,15 @@ const form = ref({
     postal_code: '',
     country: 'Philippines'
   },
-  delivery_method: 'courier',
+  delivery_method: 'pickup',
   payment_method: 'cod',
   notes: ''
 });
 
 // Pre-fill address from user profile if available
-onMounted(() => {
+onMounted(async () => {
+  await marketplaceStore.fetchCart();
+  
   if (authStore.user && authStore.user.address) {
     const userAddr = authStore.user.address;
     form.value.address = {

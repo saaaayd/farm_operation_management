@@ -71,7 +71,7 @@
                   {{ index + 1 }}
                 </div>
                 <span class="text-xs text-gray-600 text-center">
-                  {{ step.charAt(0).toUpperCase() + step.slice(1) }}
+                  {{ getStepLabel(step) }}
                 </span>
               </div>
             </div>
@@ -287,6 +287,30 @@
                   {{ processing ? 'Processing...' : '✓ Confirm Order' }}
                 </button>
                 <button
+                  v-if="order.status === 'confirmed'"
+                  @click="markReadyForPickup"
+                  :disabled="processing"
+                  class="w-full bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  {{ processing ? 'Processing...' : '📦 Mark Ready for Pickup' }}
+                </button>
+                <button
+                  v-if="order.status === 'ready_for_pickup'"
+                  @click="confirmPickup"
+                  :disabled="processing"
+                  class="w-full bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  {{ processing ? 'Processing...' : '✓ Confirm Pickup' }}
+                </button>
+                <button
+                  v-if="order.payment_status !== 'paid' && isFarmer"
+                  @click="markAsPaid"
+                  :disabled="processing"
+                  class="w-full bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  💵 Mark as Paid
+                </button>
+                <button
                   v-if="order.status === 'pending'"
                   @click="showCancelModal = true"
                   :disabled="processing"
@@ -368,7 +392,7 @@ const error = ref('')
 const isFarmer = computed(() => authStore.user?.role === 'farmer')
 const ordersListRoute = computed(() => (isFarmer.value ? '/marketplace/orders' : '/orders'))
 
-const orderSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
+const orderSteps = ['pending', 'confirmed', 'ready_for_pickup', 'picked_up']
 
 const lineItems = computed(() => {
   if (!order.value?.rice_product) return []
@@ -406,9 +430,8 @@ const getStatusBadgeClass = (status) => {
   const classes = {
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
-    processing: 'bg-purple-100 text-purple-800',
-    shipped: 'bg-indigo-100 text-indigo-800',
-    delivered: 'bg-green-100 text-green-800',
+    ready_for_pickup: 'bg-purple-100 text-purple-800',
+    picked_up: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
@@ -416,7 +439,7 @@ const getStatusBadgeClass = (status) => {
 
 const getCurrentStepIndex = () => {
   if (!order.value?.status) return 0
-  const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
+  const statusOrder = ['pending', 'confirmed', 'ready_for_pickup', 'picked_up']
   const idx = statusOrder.indexOf(order.value.status)
   return idx >= 0 ? idx : 0
 }
@@ -426,6 +449,16 @@ const getStepClass = (index) => {
   if (index < currentStep) return 'bg-green-600 text-white'
   if (index === currentStep) return 'bg-blue-600 text-white'
   return 'bg-gray-200 text-gray-600'
+}
+
+const getStepLabel = (step) => {
+  const labels = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    ready_for_pickup: 'Ready for Pickup',
+    picked_up: 'Picked Up'
+  }
+  return labels[step] || step
 }
 
 const formatDate = (date) => {
@@ -450,7 +483,7 @@ const orderTimeline = computed(() => {
     },
   ]
 
-  if (['confirmed', 'processing', 'shipped', 'delivered'].includes(order.value.status)) {
+  if (['confirmed', 'ready_for_pickup', 'picked_up'].includes(order.value.status)) {
     events.push({
       id: 'confirmed',
       type: 'processing',
@@ -460,22 +493,22 @@ const orderTimeline = computed(() => {
     })
   }
 
-  if (['shipped', 'delivered'].includes(order.value.status)) {
+  if (['ready_for_pickup', 'picked_up'].includes(order.value.status)) {
     events.push({
-      id: 'shipped',
-      type: 'shipped',
-      title: 'Order Shipped',
-      description: 'Order is on the way',
-      date: order.value.actual_delivery_date || order.value.updated_at,
+      id: 'ready',
+      type: 'ready',
+      title: 'Ready for Pickup',
+      description: 'Order is ready to be picked up',
+      date: order.value.updated_at,
     })
   }
 
-  if (order.value.status === 'delivered') {
+  if (order.value.status === 'picked_up') {
     events.push({
-      id: 'delivered',
+      id: 'picked_up',
       type: 'delivered',
-      title: 'Order Delivered',
-      description: 'Buyer received the order',
+      title: 'Order Picked Up',
+      description: 'Buyer picked up the order',
       date: order.value.actual_delivery_date || order.value.updated_at,
     })
   }
@@ -517,6 +550,51 @@ const confirmOrder = async () => {
     alert('Order confirmed successfully')
   } catch (err) {
     alert(err.userMessage || err.response?.data?.message || 'Failed to confirm order')
+  } finally {
+    processing.value = false
+  }
+}
+
+const markReadyForPickup = async () => {
+  if (!confirm('Mark this order as ready for pickup?')) return
+  
+  processing.value = true
+  try {
+    await riceMarketplaceAPI.markReadyForPickup(order.value.id)
+    await loadOrderData(order.value.id)
+    alert('Order marked as ready for pickup')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to update order')
+  } finally {
+    processing.value = false
+  }
+}
+
+const confirmPickup = async () => {
+  if (!confirm('Confirm that the order has been picked up?')) return
+  
+  processing.value = true
+  try {
+    await riceMarketplaceAPI.confirmPickup(order.value.id)
+    await loadOrderData(order.value.id)
+    alert('Order pickup confirmed')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to update order')
+  } finally {
+    processing.value = false
+  }
+}
+
+const markAsPaid = async () => {
+  if (!confirm('Mark this order as paid?')) return
+  
+  processing.value = true
+  try {
+    await riceMarketplaceAPI.markOrderAsPaid(order.value.id)
+    await loadOrderData(order.value.id)
+    alert('Order marked as paid')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to update payment status')
   } finally {
     processing.value = false
   }

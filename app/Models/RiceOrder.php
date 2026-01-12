@@ -59,12 +59,14 @@ class RiceOrder extends Model
      */
     const STATUS_PENDING = 'pending';
     const STATUS_CONFIRMED = 'confirmed';
-    const STATUS_PROCESSING = 'processing';
-    const STATUS_SHIPPED = 'shipped';
-    const STATUS_DELIVERED = 'delivered';
+    const STATUS_READY_FOR_PICKUP = 'ready_for_pickup';
+    const STATUS_PICKED_UP = 'picked_up';  // Equivalent to delivered for pickup orders
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_REFUNDED = 'refunded';
     const STATUS_DISPUTED = 'disputed';
+    const STATUS_PROCESSING = 'processing';
+    const STATUS_SHIPPED = 'shipped';
+    const STATUS_DELIVERED = 'delivered';
 
     /**
      * Payment status constants
@@ -144,7 +146,7 @@ class RiceOrder extends Model
      */
     public function scopeActive($query)
     {
-        return $query->whereNotIn('status', [self::STATUS_CANCELLED, self::STATUS_DELIVERED, self::STATUS_REFUNDED]);
+        return $query->whereNotIn('status', [self::STATUS_CANCELLED, self::STATUS_PICKED_UP, self::STATUS_REFUNDED]);
     }
 
     /**
@@ -185,9 +187,9 @@ class RiceOrder extends Model
      */
     public function cancel($reason = null)
     {
-        // Release reserved quantity if order was pending, confirmed or processing
+        // Release reserved quantity if order was pending, confirmed or ready_for_pickup
         // Now including PENDING because we reserve on creation.
-        if (in_array($this->status, [self::STATUS_PENDING, self::STATUS_CONFIRMED, self::STATUS_PROCESSING])) {
+        if (in_array($this->status, [self::STATUS_PENDING, self::STATUS_CONFIRMED, self::STATUS_READY_FOR_PICKUP])) {
             $this->riceProduct->releaseQuantity($this->quantity);
         }
 
@@ -198,24 +200,25 @@ class RiceOrder extends Model
     }
 
     /**
-     * Mark as shipped
+     * Mark as ready for pickup
      */
-    public function ship($trackingNumber = null)
+    public function markReadyForPickup()
     {
         $this->update([
-            'status' => self::STATUS_SHIPPED,
-            'tracking_number' => $trackingNumber,
+            'status' => self::STATUS_READY_FOR_PICKUP,
+            'auto_confirm_at' => now()->addDays(30),
         ]);
     }
 
     /**
-     * Mark as delivered
+     * Mark as picked up (delivered)
      */
-    public function deliver($actualDeliveryDate = null)
+    public function markPickedUp($actualPickupDate = null)
     {
         $this->update([
-            'status' => self::STATUS_DELIVERED,
-            'actual_delivery_date' => $actualDeliveryDate ?? now(),
+            'status' => self::STATUS_PICKED_UP,
+            'actual_delivery_date' => $actualPickupDate ?? now(),
+            'auto_confirm_at' => null,
         ]);
     }
 
@@ -236,19 +239,19 @@ class RiceOrder extends Model
     }
 
     /**
-     * Check if order can be shipped
+     * Check if order can be marked ready for pickup
      */
-    public function canBeShipped()
+    public function canBeMarkedReady()
     {
         return $this->status === self::STATUS_CONFIRMED;
     }
 
     /**
-     * Check if order can be delivered
+     * Check if order can be marked as picked up
      */
-    public function canBeDelivered()
+    public function canBePickedUp()
     {
-        return $this->status === self::STATUS_SHIPPED;
+        return $this->status === self::STATUS_READY_FOR_PICKUP;
     }
 
     /**
@@ -258,14 +261,12 @@ class RiceOrder extends Model
     {
         switch ($this->status) {
             case self::STATUS_PENDING:
-                return 10;
+                return 25;
             case self::STATUS_CONFIRMED:
-                return 30;
-            case self::STATUS_PROCESSING:
                 return 50;
-            case self::STATUS_SHIPPED:
-                return 80;
-            case self::STATUS_DELIVERED:
+            case self::STATUS_READY_FOR_PICKUP:
+                return 75;
+            case self::STATUS_PICKED_UP:
                 return 100;
             case self::STATUS_CANCELLED:
             case self::STATUS_REFUNDED:
@@ -301,7 +302,7 @@ class RiceOrder extends Model
      */
     public function isOverdue()
     {
-        if ($this->status === self::STATUS_DELIVERED) {
+        if ($this->status === self::STATUS_PICKED_UP) {
             return false;
         }
 
@@ -314,7 +315,7 @@ class RiceOrder extends Model
      */
     public function getDaysUntilDelivery()
     {
-        if ($this->status === self::STATUS_DELIVERED) {
+        if ($this->status === self::STATUS_PICKED_UP) {
             return 0;
         }
 

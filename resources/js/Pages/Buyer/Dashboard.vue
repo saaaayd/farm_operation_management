@@ -100,6 +100,47 @@
         </p>
       </div>
 
+      <!-- Notifications Section -->
+      <div v-if="notifications.length > 0" class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
+        <div class="space-y-3">
+          <div 
+            v-for="notification in notifications" 
+            :key="notification.id"
+            class="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start justify-between"
+          >
+            <div class="flex gap-3">
+              <div class="mt-1">
+                <svg class="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-sm font-medium text-blue-900">{{ notification.title }}</h4>
+                <p class="text-sm text-blue-700 mt-1">{{ notification.message }}</p>
+                <router-link 
+                  v-if="notification.link" 
+                  :to="notification.link"
+                  class="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 underline"
+                  @click="markAsRead(notification)"
+                >
+                  View Details
+                </router-link>
+              </div>
+            </div>
+            <button 
+              @click="markAsRead(notification)"
+              class="text-blue-400 hover:text-blue-600"
+              title="Mark as read"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Featured Products -->
       <div class="mb-10">
         <div class="flex items-center justify-between mb-4">
@@ -228,12 +269,33 @@
       </div>
 
     </div>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div 
+        v-if="toast.show" 
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-lg border"
+        :class="{
+          'bg-green-50 border-green-200 text-green-800': toast.type === 'success',
+          'bg-red-50 border-red-200 text-red-800': toast.type === 'error'
+        }"
+      >
+        <svg v-if="toast.type === 'success'" class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <svg v-else class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-medium">{{ toast.message }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import api, { riceMarketplaceAPI, riceVarietiesAPI, cartAPI, notificationsAPI } from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
 import { useMarketplaceStore } from '@/stores/marketplace';
 import { formatCurrency } from '@/utils/format';
@@ -243,6 +305,39 @@ const authStore = useAuthStore();
 const marketplaceStore = useMarketplaceStore();
 
 const loading = ref(false);
+const notifications = ref([]);
+
+const fetchNotifications = async () => {
+  try {
+    const response = await notificationsAPI.getAll({ unread_only: true });
+    notifications.value = response.data.notifications.data || [];
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+  }
+};
+
+const markAsRead = async (notification) => {
+  try {
+    await notificationsAPI.markAsRead(notification.id);
+    notifications.value = notifications.value.filter(n => n.id !== notification.id);
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+  }
+};
+
+// Toast notification state
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'success'
+});
+
+const showToast = (message, type = 'success') => {
+  toast.value = { show: true, message, type };
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 3000);
+};
 
 const deriveProducts = (source) => {
   if (!source) return [];
@@ -266,9 +361,14 @@ const featuredProducts = computed(() => {
 });
 const recentOrders = computed(() => marketplaceStore.orders);
 
-const addToCart = (product) => {
-  marketplaceStore.addToCart(product, 1);
-  // You could add a toast notification here
+const addToCart = async (product) => {
+  try {
+    await marketplaceStore.addToCart(product, 1);
+    showToast(`Added ${product.name} to cart!`, 'success');
+  } catch (error) {
+    console.error('Failed to add to cart:', error);
+    showToast(error.response?.data?.message || 'Failed to add to cart', 'error');
+  }
 };
 
 const viewProduct = (product) => {
@@ -317,7 +417,8 @@ onMounted(async () => {
   try {
     await Promise.all([
       marketplaceStore.fetchProducts(),
-      marketplaceStore.fetchOrders()
+      marketplaceStore.fetchOrders(),
+      fetchNotifications()
     ]);
   } catch (error) {
     console.error('Failed to load buyer dashboard data:', error);
@@ -326,3 +427,15 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
+}
+</style>

@@ -13,3 +13,9 @@ Schedule::command('pre-orders:send-notifications')
     ->dailyAt('09:00')
     ->timezone('Asia/Manila')
     ->withoutOverlapping();
+
+// Schedule inventory expiry check to run daily at 8 AM
+Schedule::command('inventory:check-expiry')
+    ->dailyAt('08:00')
+    ->timezone('Asia/Manila')
+    ->withoutOverlapping();

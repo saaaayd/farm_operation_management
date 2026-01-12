@@ -118,7 +118,7 @@
               <InputField
                 v-model="form.price_per_unit"
                 type="number"
-                label="Price per Sack (₱)"
+                :label="`Price per ${form.unit.charAt(0).toUpperCase() + form.unit.slice(1)} (₱)`"
                 placeholder="0.00"
                 required
                 min="0"
@@ -374,7 +374,7 @@ const form = reactive({
   notes: ''
 })
 
-const units = ['sacks']
+const units = ['kg', 'tons', 'sacks', 'bushels', 'pounds', 'grams']
 const qualityGrades = {
   premium: 'Premium',
   grade_a: 'Grade A',

@@ -35,7 +35,8 @@ class RiceOrderController extends Controller
             $query->where('order_date', '<=', $request->to_date);
         }
 
-        $orders = $query->orderBy('created_at', 'desc')->get();
+        $perPage = $request->input('per_page', 10);
+        $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json(['orders' => $orders]);
     }
@@ -62,7 +63,8 @@ class RiceOrderController extends Controller
             $query->where('order_date', '<=', $request->to_date);
         }
 
-        $orders = $query->orderBy('created_at', 'desc')->get();
+        $perPage = $request->input('per_page', 10);
+        $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json(['orders' => $orders]);
     }
@@ -95,7 +97,7 @@ class RiceOrderController extends Controller
             'rice_product_id' => 'required|exists:rice_products,id',
             'quantity' => 'required|numeric|min:1',
             'delivery_address' => 'required|array',
-            'delivery_method' => 'required|string|in:pickup,courier,postal,truck',
+            'delivery_method' => 'required|string|in:pickup',
             'payment_method' => 'nullable|string',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -181,6 +183,16 @@ class RiceOrderController extends Controller
 
         $order->confirm($expectedDelivery, $farmerNotes);
 
+        // Notify buyer that order has been accepted
+        \App\Models\Notification::notify(
+            $order->buyer_id,
+            \App\Models\Notification::TYPE_ORDER_STATUS,
+            'Order Accepted',
+            "Your order #{$order->id} has been accepted by the farmer." . ($expectedDelivery ? " Expected delivery: {$expectedDelivery}" : ""),
+            ['order_id' => $order->id],
+            "/orders/{$order->id}"
+        );
+
         return response()->json([
             'message' => 'Order accepted',
             'order' => $order->fresh()
@@ -205,6 +217,16 @@ class RiceOrderController extends Controller
 
         $reason = $request->input('reason', 'Rejected by farmer');
         $order->cancel($reason);
+
+        // Notify buyer that order has been rejected
+        \App\Models\Notification::notify(
+            $order->buyer_id,
+            \App\Models\Notification::TYPE_ORDER_STATUS,
+            'Order Rejected',
+            "Your order #{$order->id} has been rejected by the farmer. Reason: {$reason}",
+            ['order_id' => $order->id],
+            "/orders/{$order->id}"
+        );
 
         return response()->json([
             'message' => 'Order rejected',
@@ -234,6 +256,29 @@ class RiceOrderController extends Controller
         $reason = $request->input('reason', 'Cancelled by ' . ($isBuyer ? 'buyer' : 'farmer'));
         $order->cancel($reason);
 
+        // If cancelled by farmer, notify buyer
+        if ($isFarmer) {
+            \App\Models\Notification::notify(
+                $order->buyer_id,
+                \App\Models\Notification::TYPE_ORDER_STATUS,
+                'Order Cancelled',
+                "Your order #{$order->id} has been cancelled by the farmer. Reason: {$reason}",
+                ['order_id' => $order->id],
+                "/orders/{$order->id}"
+            );
+        }
+        // If cancelled by buyer, notify farmer (optional, but good practice)
+        else if ($isBuyer) {
+            \App\Models\Notification::notify(
+                $order->riceProduct->farmer_id,
+                \App\Models\Notification::TYPE_ORDER_STATUS,
+                'Order Cancelled',
+                "Order #{$order->id} for {$order->riceProduct->name} has been cancelled by the buyer.",
+                ['order_id' => $order->id],
+                "/farmer/orders"
+            );
+        }
+
         return response()->json([
             'message' => 'Order cancelled',
             'order' => $order->fresh()
@@ -241,56 +286,97 @@ class RiceOrderController extends Controller
     }
 
     /**
-     * Farmer marks order as shipped
+     * Farmer marks order as ready for pickup
      */
-    public function ship(Request $request, RiceOrder $order): JsonResponse
+    public function markReadyForPickup(Request $request, RiceOrder $order): JsonResponse
     {
         // Authorization check
         if ($order->riceProduct->farmer_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if (!$order->canBeShipped()) {
+        if (!$order->canBeMarkedReady()) {
             return response()->json([
-                'message' => 'Order cannot be shipped in current state'
+                'message' => 'Order cannot be marked ready in current state'
             ], 422);
         }
 
-        $trackingNumber = $request->input('tracking_number');
+        $order->markReadyForPickup();
 
-        $order->update([
-            'status' => RiceOrder::STATUS_SHIPPED,
-            'tracking_number' => $trackingNumber,
-            'shipped_at' => now(),
-            'auto_confirm_at' => now()->addDays(7),
-        ]);
+        // Notify buyer that order is ready for pickup
+        \App\Models\Notification::notify(
+            $order->buyer_id,
+            \App\Models\Notification::TYPE_ORDER_STATUS,
+            'Order Ready for Pickup',
+            "Your order #{$order->id} is ready for pickup",
+            ['order_id' => $order->id],
+            "/orders/{$order->id}"
+        );
 
         return response()->json([
-            'message' => 'Order marked as shipped',
+            'message' => 'Order marked as ready for pickup',
             'order' => $order->fresh()
         ]);
     }
 
     /**
-     * Buyer confirms delivery
+     * Farmer marks order as paid
      */
-    public function confirmDelivery(RiceOrder $order): JsonResponse
+    public function markAsPaid(RiceOrder $order): JsonResponse
     {
-        // Authorization check - only buyer can confirm
-        if ($order->buyer_id !== Auth::id()) {
+        // Authorization check
+        if ($order->riceProduct->farmer_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($order->status !== RiceOrder::STATUS_SHIPPED) {
+        if ($order->payment_status === RiceOrder::PAYMENT_PAID) {
             return response()->json([
-                'message' => 'Only shipped orders can be confirmed as delivered'
+                'message' => 'Order is already marked as paid'
             ], 422);
         }
 
-        $order->deliver();
+        $order->update([
+            'payment_status' => RiceOrder::PAYMENT_PAID,
+            // If it was COD, we might assume it's now paid via Cash, but keeping original method is safer unless specified
+            // 'payment_method' => 'cash' 
+        ]);
 
         return response()->json([
-            'message' => 'Delivery confirmed',
+            'message' => 'Order marked as paid',
+            'order' => $order->fresh()
+        ]);
+    }
+
+    /**
+     * Farmer confirms pickup (buyer has picked up the order)
+     */
+    public function confirmPickup(RiceOrder $order): JsonResponse
+    {
+        // Authorization check - farmer confirms when buyer picks up
+        if ($order->riceProduct->farmer_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if (!$order->canBePickedUp()) {
+            return response()->json([
+                'message' => 'Order cannot be marked as picked up in current state'
+            ], 422);
+        }
+
+        $order->markPickedUp();
+
+        // Notify buyer that order has been marked as picked up
+        \App\Models\Notification::notify(
+            $order->buyer_id,
+            \App\Models\Notification::TYPE_ORDER_DELIVERED,
+            'Order Picked Up',
+            "Your order #{$order->id} has been marked as picked up",
+            ['order_id' => $order->id],
+            "/orders/{$order->id}"
+        );
+
+        return response()->json([
+            'message' => 'Pickup confirmed',
             'order' => $order->fresh()
         ]);
     }
@@ -305,9 +391,9 @@ class RiceOrderController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($order->status !== RiceOrder::STATUS_SHIPPED) {
+        if ($order->status !== RiceOrder::STATUS_READY_FOR_PICKUP) {
             return response()->json([
-                'message' => 'Only shipped orders can be disputed'
+                'message' => 'Only orders ready for pickup can be disputed'
             ], 422);
         }
 
@@ -362,7 +448,7 @@ class RiceOrderController extends Controller
             ]);
         } else {
             $order->update([
-                'status' => RiceOrder::STATUS_DELIVERED,
+                'status' => RiceOrder::STATUS_PICKED_UP,
                 'actual_delivery_date' => now(),
             ]);
         }

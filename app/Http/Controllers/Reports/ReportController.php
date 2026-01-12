@@ -740,7 +740,7 @@ class ReportController extends Controller
         if ($user->isFarmer()) {
             $riceOrders = \App\Models\RiceOrder::forFarmer($user->id)
                 ->whereBetween('order_date', [$startDate, $endDate])
-                ->whereIn('status', ['confirmed', 'shipped', 'delivered'])
+                ->where('payment_status', \App\Models\RiceOrder::PAYMENT_PAID)
                 ->get();
             $riceOrderRevenue = $riceOrders->sum('total_amount');
         }

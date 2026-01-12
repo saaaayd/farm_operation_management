@@ -29,6 +29,8 @@ class Notification extends Model
     const TYPE_TASK_REMINDER = 'task_reminder';
     const TYPE_WEATHER_ALERT = 'weather_alert';
     const TYPE_REVIEW_RECEIVED = 'review_received';
+    const TYPE_EXPIRY_ALERT = 'expiry_alert';
+    const TYPE_ORDER_DELIVERED = 'order_delivered';
 
     public function user(): BelongsTo
     {

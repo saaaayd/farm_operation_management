@@ -610,9 +610,9 @@ const varietyChartData = computed(() => {
 const totalRevenue = computed(() => {
   // Traditional sales revenue
   const salesTotal = sales.value.reduce((sum, sale) => sum + (Number(sale?.total_amount) || 0), 0);
-  // Marketplace orders revenue (confirmed, shipped, delivered)
+  // Marketplace orders revenue (paid orders)
   const ordersTotal = farmerOrders.value
-    .filter(order => ['confirmed', 'shipped', 'delivered'].includes(order?.status))
+    .filter(order => order?.payment_status === 'paid')
     .reduce((sum, order) => sum + (Number(order?.total_amount) || 0), 0);
   return Number((salesTotal + ordersTotal).toFixed(2));
 });
@@ -638,10 +638,10 @@ const profitMargin = computed(() => {
 
 // Aggregate sales revenue by month
 const salesByMonth = computed(() => aggregateByMonth(sales.value, 'sale_date', 'total_amount'));
-// Aggregate marketplace orders revenue by month (only confirmed, shipped, delivered)
+// Aggregate marketplace orders revenue by month (only paid orders)
 const ordersByMonth = computed(() => {
   const confirmedOrders = farmerOrders.value.filter(order => 
-    ['confirmed', 'shipped', 'delivered'].includes(order?.status)
+    order?.payment_status === 'paid'
   );
   return aggregateByMonth(confirmedOrders, 'order_date', 'total_amount');
 });

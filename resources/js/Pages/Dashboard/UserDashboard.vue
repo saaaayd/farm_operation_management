@@ -458,7 +458,10 @@ const loadDashboardData = async () => {
       sort_order: 'desc',
       per_page: 4 
     });
-    featuredProducts.value = (productsResponse.data.data || productsResponse.data || []).slice(0, 4);
+    // Extract products from response - API returns { products: { data: [...] } } for paginated or { products: [...] }
+    const productsPayload = productsResponse.data?.products;
+    const productsList = productsPayload?.data || productsPayload || [];
+    featuredProducts.value = (Array.isArray(productsList) ? productsList : []).slice(0, 4);
     
     // Load popular rice varieties
     const varietiesResponse = await riceVarietiesAPI.getAll();

@@ -186,9 +186,10 @@
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</dt>
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ laborer.rate_type === 'share' ? 'Share' : 'Rate' }}</dt>
                     <dd class="text-sm font-semibold text-gray-700 mt-0.5 truncate">
                       <span v-if="laborer.rate_type === 'per_job'">Per Job</span>
+                      <span v-else-if="laborer.rate_type === 'share'">{{ laborer.rate }}%</span>
                       <span v-else>₱{{ laborer.rate ? Number(laborer.rate).toFixed(2) : '0.00' }} / day</span>
                     </dd>
                   </div>

@@ -42,6 +42,12 @@
                 <span :class="getStatusClass(order.status)" class="px-2 py-1 rounded-full text-xs font-medium">
                   {{ formatStatus(order.status) }}
                 </span>
+                <span v-if="order.payment_status === 'paid'" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
+                  Paid
+                </span>
+                <span v-else class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
+                  Unpaid
+                </span>
               </div>
               <div class="text-sm text-gray-600 space-y-1">
                 <p>{{ order.quantity }} kg • ₱{{ Number(order.total_amount).toLocaleString() }}</p>
@@ -64,6 +70,13 @@
                 @click="shipOrder(order)"
                 class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
               >Mark as Shipped</button>
+              
+              <!-- Payment Action -->
+              <button v-if="order.payment_status !== 'paid' && order.status !== 'cancelled'"
+                @click="markAsPaid(order)"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+              >Mark as Paid</button>
+
               <!-- View Details -->
               <router-link :to="`/farmer/orders/${order.id}`"
                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
@@ -151,6 +164,21 @@ const shipOrder = async (order) => {
     order.status = 'shipped'
   } catch (err) {
     alert(err.message || 'Failed to ship order')
+  }
+}
+
+const markAsPaid = async (order) => {
+  if (!confirm('Are you sure you want to mark this order as paid?')) return
+  
+  try {
+    const response = await marketplaceStore.markAsPaid(order.id)
+    order.payment_status = 'paid'
+    // Optional: Update local order if response returns updated model
+    if (response && response.order) {
+        Object.assign(order, response.order)
+    }
+  } catch (err) {
+    alert(err.message || 'Failed to mark as paid')
   }
 }
 

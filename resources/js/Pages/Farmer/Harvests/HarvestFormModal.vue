@@ -374,6 +374,10 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  harvest: {
+    type: Object,
+    default: null
+  }
 })
 
 const emit = defineEmits(['close', 'saved'])
@@ -392,6 +396,12 @@ const harvestablePlantings = computed(() => {
   
   const plantings = allPlantings.filter(p => {
     if (!p || !p.id) return false
+    
+    // Always include the planting currently being edited, regardless of status
+    if (props.harvest?.planting_id && p.id === props.harvest.planting_id) {
+      return true
+    }
+
     const status = String(p.status || '').toLowerCase()
     return validStatuses.includes(status)
   })

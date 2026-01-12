@@ -142,9 +142,9 @@
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
-              <option value="delivered">Delivered</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="ready_for_pickup">Ready for Pickup</option>
+              <option value="picked_up">Picked Up</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -211,7 +211,7 @@
                 :class="getStatusBadgeClass(order.status)"
                 class="px-2 py-1 text-xs font-medium rounded-full capitalize"
               >
-                {{ order.status }}
+                {{ formatStatus(order.status) }}
               </span>
             </div>
           </div>
@@ -431,7 +431,7 @@ const filteredOrders = computed(() => {
 })
 
 const paginationSummary = computed(() => {
-  if (!pagination.value) return ''
+  if (!pagination.value || !pagination.value.current_page || !pagination.value.last_page) return ''
   return `Page ${pagination.value.current_page} of ${pagination.value.last_page}`
 })
 
@@ -469,13 +469,25 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
+const formatStatus = (status) => {
+  if (!status) return ''
+  const labels = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    ready_for_pickup: 'Ready for Pickup',
+    picked_up: 'Picked Up',
+    cancelled: 'Cancelled',
+    disputed: 'Disputed'
+  }
+  return labels[status] || status.charAt(0).toUpperCase() + status.slice(1)
+}
+
 const getStatusBadgeClass = (status) => {
   const classes = {
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
-    processing: 'bg-purple-100 text-purple-800',
-    shipped: 'bg-indigo-100 text-indigo-800',
-    delivered: 'bg-green-100 text-green-800',
+    ready_for_pickup: 'bg-purple-100 text-purple-800',
+    picked_up: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800'
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
