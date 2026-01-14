@@ -174,7 +174,7 @@
                                type="number"
                                min="0"
                                step="0.01"
-                               class="form-input pl-7"
+                               class="form-input !pl-8"
                                placeholder="0.00"
                               />
                            </div>
