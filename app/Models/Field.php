@@ -29,6 +29,11 @@ class Field extends Model
         'previous_crop',
         'field_preparation_status',
         'notes',
+        'nickname',
+        'planting_method',
+        'cropping_seasons',
+        'target_yield',
+        'infrastructure_notes',
     ];
 
     protected $casts = [
@@ -42,6 +47,7 @@ class Field extends Model
         'potassium_level' => 'decimal:2',
         'elevation' => 'decimal:2',
         'slope' => 'decimal:2',
+        'target_yield' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -46,6 +46,14 @@ class RiceFarmProfileController extends Controller
             'water_access' => 'required|string|in:excellent,good,moderate,poor,very_poor',
             'drainage_quality' => 'required|string|in:excellent,good,moderate,poor',
 
+            // Cultivation Plans & Notes
+            'nickname' => 'nullable|string|max:255',
+            'planting_method' => 'nullable|string|max:255',
+            'cropping_seasons' => 'nullable|integer|min:1|max:3',
+            'target_yield' => 'nullable|numeric|min:0',
+            'infrastructure_notes' => 'nullable|string|max:1000',
+            'previous_crop' => 'nullable|string|max:255',
+
 
         ]);
 
@@ -108,7 +116,12 @@ class RiceFarmProfileController extends Controller
                     'drainage_quality' => $request->drainage_quality,
                     'elevation' => $request->elevation,
                     'slope' => null, // Can be added later
-                    'previous_crop' => 'rice',
+                    'previous_crop' => $request->previous_crop ?? 'rice',
+                    'nickname' => $request->nickname,
+                    'planting_method' => $request->planting_method,
+                    'cropping_seasons' => $request->cropping_seasons,
+                    'target_yield' => $request->target_yield,
+                    'infrastructure_notes' => $request->infrastructure_notes,
                     'field_preparation_status' => 'needs_assessment',
                     'notes' => $this->generateFieldNotes($request),
                 ]
@@ -326,6 +339,14 @@ class RiceFarmProfileController extends Controller
             'potassium_level' => 'nullable|numeric|min:0',
             'elevation' => 'nullable|numeric|min:0',
 
+            // Cultivation Plans & Notes
+            'nickname' => 'nullable|string|max:255',
+            'planting_method' => 'nullable|string|max:255',
+            'cropping_seasons' => 'nullable|integer|min:1|max:3',
+            'target_yield' => 'nullable|numeric|min:0',
+            'infrastructure_notes' => 'nullable|string|max:1000',
+            'previous_crop' => 'nullable|string|max:255',
+
             // Water Management
             'water_source' => 'nullable|string|in:irrigation_canal,river,well,shallow_well,pond,rainfall,spring',
             'irrigation_type' => 'nullable|string|in:flood,furrow,sprinkler,drip,manual,none',
@@ -404,6 +425,12 @@ class RiceFarmProfileController extends Controller
                         'irrigation_type' => $request->irrigation_type ?? null,
                         'drainage_quality' => $request->drainage_quality ?? null,
                         'elevation' => $request->elevation ?? null,
+                        'previous_crop' => $request->previous_crop ?? null,
+                        'nickname' => $request->nickname ?? null,
+                        'planting_method' => $request->planting_method ?? null,
+                        'cropping_seasons' => $request->cropping_seasons ?? null,
+                        'target_yield' => $request->target_yield ?? null,
+                        'infrastructure_notes' => $request->infrastructure_notes ?? null,
                         'notes' => $request->has('farming_experience')
                             ? $this->generateFieldNotes($request)
                             : null,

@@ -9,6 +9,15 @@
         </div>
         <div class="flex items-center gap-3">
           <button
+             @click="openEditFarmModal"
+             class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            Edit Farm Details
+          </button>
+          <button
             @click="refreshFields"
             :disabled="loading"
             class="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium disabled:opacity-50"
@@ -194,13 +203,22 @@
               </dl>
 
               <!-- Footer -->
-              <div class="mt-auto pt-4 border-t border-gray-200">
+              <div class="mt-auto pt-4 border-t border-gray-200 flex justify-between items-center">
                 <div class="text-xs text-gray-400 flex items-center gap-1">
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Updated {{ formatDate(field.updated_at || field.created_at) }}
                 </div>
+                <button
+                  @click.stop="editField(field.id)"
+                  class="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
+                  title="Edit Field"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </article>
@@ -208,6 +226,12 @@
       </div>
       </div>
     </div>
+    <EditFarmModal
+      :show="showEditFarmModal"
+      :farm="farmProfile"
+      @close="showEditFarmModal = false"
+      @updated="onFarmUpdated"
+    />
   </div>
 </template>
 
@@ -215,21 +239,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
+import EditFarmModal from '@/Components/Farm/EditFarmModal.vue'
 
 const router = useRouter()
 const farmStore = useFarmStore()
 
 const loading = ref(true)
 const error = ref('')
+const showEditFarmModal = ref(false)
 
 const fields = computed(() => farmStore.fields || [])
+const farmProfile = computed(() => farmStore.farmProfile)
+
+const openEditFarmModal = () => {
+  showEditFarmModal.value = true
+}
+
+const onFarmUpdated = async () => {
+  await farmStore.fetchFarmProfile()
+}
 
 const refreshFields = async () => {
   loading.value = true
   error.value = ''
 
   try {
-    await farmStore.fetchFields()
+    await Promise.all([
+      farmStore.fetchFields(),
+      farmStore.fetchFarmProfile()
+    ])
   } catch (err) {
     console.error('Failed to load fields:', err)
     error.value = err.userMessage || err.response?.data?.message || 'Unable to load fields.'
@@ -241,6 +279,10 @@ const refreshFields = async () => {
 const goToFieldSetup = () => {
   // Navigate directly to field creation page
   router.push('/fields/create')
+}
+
+const editField = (id) => {
+  router.push(`/fields/${id}/edit`)
 }
 
 const formatArea = (value) => {

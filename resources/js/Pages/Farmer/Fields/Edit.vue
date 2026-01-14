@@ -13,23 +13,27 @@
             </svg>
             Back to Fields
           </button>
-          <h1 class="mt-4 text-3xl font-bold text-gray-900">Create New Field</h1>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">Edit Field</h1>
           <p class="mt-2 text-base text-gray-600 max-w-2xl">
-            Capture detailed field information so we can tailor planting plans, weather insights, and soil recommendations for this specific parcel.
+            Update detailed field information, soil data, and location-specific settings.
           </p>
         </div>
         <div class="bg-white/90 border border-emerald-100 rounded-2xl px-5 py-4 shadow-md">
           <p class="text-xs uppercase tracking-wide text-gray-500">Field Completeness</p>
           <p class="text-2xl font-semibold text-emerald-600 mt-1">{{ completionScore }}%</p>
-          <p class="text-sm text-gray-500">Add as much detail as possible for better insights.</p>
+          <p class="text-sm text-gray-500">Keep details up to date for accuracy.</p>
         </div>
       </div>
 
       <div v-if="error" class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">
         {{ error }}
       </div>
+      
+      <div v-if="loadingData" class="flex justify-center py-12">
+         <LoadingSpinner class="h-10 w-10 text-emerald-600" />
+      </div>
 
-      <form @submit.prevent="submitField" class="space-y-8">
+      <form v-else @submit.prevent="submitField" class="space-y-8">
         <!-- Field Identity -->
         <section class="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 space-y-6">
           <div class="flex items-center mb-4">
@@ -82,9 +86,9 @@
                 placeholder="5.50"
               />
               <p class="mt-1 text-xs text-gray-500">
-                Available: {{ availableFarmArea.toFixed(2) }} ha (Total: {{ totalFarmArea.toFixed(2) }} ha)
+                Available: {{ availableFarmAreaWithCurrent.toFixed(2) }} ha (Total Farm: {{ totalFarmArea.toFixed(2) }} ha)
               </p>
-              <p v-if="form.size && parseFloat(form.size) > availableFarmArea" class="mt-1 text-xs text-red-600">
+              <p v-if="form.size && parseFloat(form.size) > availableFarmAreaWithCurrent" class="mt-1 text-xs text-red-600">
                 Field size cannot exceed available farm area
               </p>
             </div>
@@ -141,11 +145,11 @@
             <div v-if="isLocationLocked" class="col-span-1 md:col-span-3">
                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                  <div>
-                    <h3 class="font-medium text-gray-900">Default Location: Managok</h3>
-                    <p class="text-sm text-gray-500">Barangay Managok, City of Malaybalay, Province of Bukidnon</p>
+                    <h3 class="font-medium text-gray-900">Using Default/Existing Location</h3>
+                    <p class="text-sm text-gray-500">{{ form.location.address || 'Address not set' }}</p>
                  </div>
                  <button type="button" @click="toggleLocationLock" class="mt-2 sm:mt-0 text-sm font-medium text-emerald-600 hover:text-emerald-700 underline">
-                    Field is outside Managok? Unlock location
+                    Edit Location Details
                  </button>
                </div>
             </div>
@@ -197,7 +201,7 @@
             </div>
             <div class="col-span-1 md:col-span-3 flex justify-end -mt-4">
                  <button type="button" @click="toggleLocationLock" class="text-xs text-gray-500 hover:text-gray-700">
-                    Reset to Managok default
+                    Cancel Location Edit
                  </button>
             </div>
             </template>
@@ -211,12 +215,6 @@
               <div class="flex-1">
                 <p class="text-sm font-semibold text-gray-800 mb-1">Selected Address:</p>
                 <p class="text-sm text-gray-700">{{ form.location.address }}</p>
-                <p class="text-xs text-gray-600 mt-2 flex items-center">
-                  <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Address is automatically generated from your location selections
-                </p>
               </div>
             </div>
           </div>
@@ -225,7 +223,7 @@
             <label class="block text-sm font-semibold text-gray-700 mb-2">
               Field Location on Map *
             </label>
-            <p class="text-xs text-gray-600 mb-3">Click on the map to set the field's center coordinates</p>
+            <p class="text-xs text-gray-600 mb-3">Click on the map to update the field's center coordinates</p>
             <div class="relative">
               <div 
                 ref="mapContainer" 
@@ -249,7 +247,6 @@
                   max="90"
                   @input="updateMapMarker"
                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                  placeholder="Click map or enter"
                 />
               </div>
               <div>
@@ -262,7 +259,6 @@
                   max="180"
                   @input="updateMapMarker"
                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition"
-                  placeholder="Click map or enter"
                 />
               </div>
             </div>
@@ -457,12 +453,29 @@
             ></textarea>
           </div>
         </section>
+        
+        <!-- Danger Zone -->
+        <section class="bg-red-50 shadow-sm rounded-2xl p-8 border border-red-100 flex flex-col md:flex-row items-center justify-between gap-4">
+           <div>
+              <h3 class="text-lg font-semibold text-red-800">Delete Field</h3>
+              <p class="text-sm text-red-600 max-w-xl">
+                 Removing this field will delete all associated data including historical records, soil tests, and tasks. This action cannot be undone.
+              </p>
+           </div>
+           <button
+             type="button"
+             @click="confirmDelete"
+             class="px-5 py-2.5 bg-white border border-red-300 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
+           >
+             Delete Field
+           </button>
+        </section>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-4">
+        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-4 pb-12">
           <button
             type="button"
             @click="router.push('/fields')"
-            class="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+            class="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 mb-4 sm:mb-0"
           >
             Cancel
           </button>
@@ -472,7 +485,7 @@
             class="inline-flex items-center justify-center px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <LoadingSpinner v-if="loading" class="mr-2" />
-            {{ loading ? 'Saving field...' : 'Create Field' }}
+            {{ loading ? 'Saving changes...' : 'Save Changes' }}
           </button>
         </div>
       </form>
@@ -481,82 +494,139 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 import { useFarmStore } from '@/stores/farm'
 import { useMarketplaceStore } from '@/stores/marketplace'
 
 const router = useRouter()
+const route = useRoute()
 const farmStore = useFarmStore()
 const marketplaceStore = useMarketplaceStore()
 
 const loading = ref(false)
+const loadingData = ref(true)
 const error = ref('')
 
-onMounted(() => {
-  if (isLocationLocked.value) {
-    setStaticAddress()
+// Initialize variables for map
+const mapContainer = ref(null)
+let map = null
+let marker = null
+
+const fieldId = route.params.id
+
+onMounted(async () => {
+  try {
+     await Promise.all([
+       loadProvinces(),
+       farmStore.fetchFarmProfile(),
+       farmStore.fetchFields(),
+       marketplaceStore.fetchRiceVarieties()
+     ])
+     
+     // Fetch field details
+     if (fieldId) {
+       // We can iterate fields from store, or fetch individual
+       // farmStore.fetchFields already called, so fields should be there.
+       // But better to fetch specific if API allows, or find in array.
+       const field = farmStore.fields.find(f => Number(f.id) === Number(fieldId))
+       if (field) {
+         populateForm(field)
+       } else {
+         error.value = 'Field not found'
+       }
+     }
+  } catch (err) {
+     console.error("Error loading data", err)
+     error.value = "Failed to load field data" 
+  } finally {
+     loadingData.value = false
+     // Initialize map after data loaded so lat/lon are set
+     setTimeout(() => {
+        initMap()
+     }, 100)
   }
-  loadProvinces()
-  initMap()
-  farmStore.fetchFarmProfile()
-  farmStore.fetchFields()
 })
 
-const totalFarmArea = computed(() => {
-  // Check for nested user_profile structure first (standard API response)
-  const profile = farmStore.farmProfile
-  if (profile?.user_profile?.total_area) {
-    return parseFloat(profile.user_profile.total_area)
+const populateForm = (field) => {
+  form.name = field.name
+  form.nickname = field.nickname || ''
+  form.description = field.notes || field.description || '' // 'notes' is mapped to description/notes
+  form.size = field.size || field.field_size || field.area
+  form.current_crop = field.current_crop || ''
+  form.soil_type = field.soil_type || ''
+  form.water_source = field.water_source || ''
+  form.irrigation_type = field.irrigation_type || ''
+  form.water_access = field.water_access || ''
+  form.drainage_quality = field.drainage_quality || ''
+  form.infrastructure_notes = field.infrastructure_notes || ''
+  form.planting_method = field.planting_method || ''
+  form.cropping_seasons = field.cropping_seasons || ''
+  form.target_yield = field.target_yield || ''
+  form.previous_crop = field.previous_crop || ''
+  form.notes = field.notes || '' // Duplicate mapping? Let's assume notes is generic
+  
+  if (field.location) {
+     if (typeof field.location === 'object') {
+        form.location.lat = parseFloat(field.location.lat || field.location.latitude)
+        form.location.lon = parseFloat(field.location.lon || field.location.longitude)
+        form.location.address = field.location.address || ''
+        
+        // If we have detailed location codes (unlikely unless stored individually)
+        // Usually stored as address string or json.
+        // For now, assume address is just a string and we lock it unless user edits.
+        isLocationLocked.value = true
+     }
+  } else {
+     // Fallback coordinates if available at root
+     if (field.latitude && field.longitude) {
+         form.location.lat = parseFloat(field.latitude)
+         form.location.lon = parseFloat(field.longitude)
+     }
   }
-  // Fallback for flat structure or other variations
-  return parseFloat(profile?.total_area || 0)
+}
+
+const totalFarmArea = computed(() => {
+  return parseFloat(farmStore.farmProfile?.total_area || 0)
 })
 
 const usedFarmArea = computed(() => {
   if (!farmStore.fields || !Array.isArray(farmStore.fields)) return 0
-  return farmStore.fields.reduce((sum, field) => {
-    // Handle various potential property names for field size
-    const size = field.size || field.area || field.field_size || 0
-    return sum + parseFloat(size)
-  }, 0)
+  return farmStore.fields.reduce((sum, field) => sum + parseFloat(field.size || 0), 0)
 })
 
-const availableFarmArea = computed(() => {
-  const total = totalFarmArea.value
-  const used = usedFarmArea.value
-  return Math.max(0, total - used)
+const availableFarmAreaWithCurrent = computed(() => {
+    // Total - (Used - CurrentFieldSize)
+    // We need the *original* size of this field to subtract from used.
+    // Or just calculate used from *other* fields.
+    const otherFields = farmStore.fields.filter(f => Number(f.id) !== Number(fieldId))
+    const usedByOthers = otherFields.reduce((sum, f) => sum + parseFloat(f.size || 0), 0)
+    return Math.max(0, totalFarmArea.value - usedByOthers)
 })
+
 
 const provinces = ref([])
 const cities = ref([])
 const barangays = ref([])
 
-const mapContainer = ref(null)
-let map = null
-let marker = null
 
 // Location locking logic
 const isLocationLocked = ref(true)
 
 const toggleLocationLock = () => {
   isLocationLocked.value = !isLocationLocked.value
-  if (isLocationLocked.value) {
-    // Reset to defaults if re-locking
-    form.location.provinceCode = ''
-    form.location.cityCode = ''
-    form.location.barangayCode = ''
-    setStaticAddress()
+  if (!isLocationLocked.value) {
+     // If unlocking, maybe clear codes to force selection? 
+     // Or try to match address to codes? (Hard without reverse geocoding to codes)
+     // Let's just clear to be safe so user selects fresh.
+     form.location.provinceCode = ''
+     form.location.cityCode = ''
+     form.location.barangayCode = ''
   }
 }
 
-const setStaticAddress = () => {
-  form.location.address = 'Managok, City of Malaybalay, Bukidnon'
-  // Trigger geocoding for Managok to center map
-  geocodeLocation('Managok', 'City of Malaybalay', 'Bukidnon')
-}
 
 const soilTypes = [
   { value: 'clay', label: 'Clay' },
@@ -616,10 +686,7 @@ const croppingSeasonOptions = [
   { value: '3', label: '3 Seasons (Continuous)' },
 ]
 
-// Use rice varieties from the marketplace store (same as planting form)
 const riceVarieties = computed(() => marketplaceStore.riceVarieties || [])
-
-
 
 const form = reactive({
   name: '',
@@ -650,19 +717,11 @@ const form = reactive({
 })
 
 const completionScore = computed(() => {
-  const locationValid = isLocationLocked.value || (
-    form.location.provinceCode &&
-    form.location.cityCode &&
-    form.location.barangayCode
-  )
-
   const essentials = [
     form.name,
     form.size,
-    locationValid,
-    form.location.lat,
-    form.location.lon,
     form.soil_type,
+    form.location.lat,
   ]
   const optional = [
     form.description,
@@ -682,7 +741,6 @@ const loadProvinces = async () => {
     provinces.value = data
   } catch (err) {
     console.error('Failed to load provinces', err)
-    error.value = 'Failed to load provinces. Please refresh the page.'
   }
 }
 
@@ -700,7 +758,6 @@ const fetchCities = async () => {
     cities.value = data
   } catch (err) {
     console.error('Failed to load cities', err)
-    error.value = 'Failed to load cities. Please try again.'
   }
 }
 
@@ -716,7 +773,6 @@ const fetchBarangays = async () => {
     barangays.value = data
   } catch (err) {
     console.error('Failed to load barangays', err)
-    error.value = 'Failed to load barangays. Please try again.'
   }
 }
 
@@ -726,7 +782,6 @@ const setAddress = () => {
   const barangay = barangays.value.find(b => b.code === form.location.barangayCode)?.name || ''
   form.location.address = [barangay, city, province].filter(Boolean).join(', ')
   
-  // Geocode the address and update map
   if (barangay && city && province) {
     geocodeLocation(barangay, city, province)
   }
@@ -734,229 +789,116 @@ const setAddress = () => {
 
 const geocodeLocation = async (barangay, city, province) => {
   try {
-    // Use backend proxy to avoid CORS issues and set proper User-Agent
     const query = `${barangay}, ${city}, ${province}, Philippines`
-    const response = await axios.get('/api/geocode', {
-      params: {
-        q: query,
-      },
-    })
-
-    const data = response.data
+    const { data } = await axios.get('/api/geocode', { params: { q: query } })
 
     if (data && data.length > 0) {
-      const { lat: geocodeLat, lon: geocodeLon } = data[0]
-      const parsedLat = parseFloat(parseFloat(geocodeLat).toFixed(6))
-      const parsedLon = parseFloat(parseFloat(geocodeLon).toFixed(6))
+      const { lat, lon } = data[0]
+      const parsedLat = parseFloat(parseFloat(lat).toFixed(6))
+      const parsedLon = parseFloat(parseFloat(lon).toFixed(6))
       
       form.location.lat = parsedLat
       form.location.lon = parsedLon
       
-      // Update map view with higher zoom for barangay-level
       if (map) {
-        if (marker) {
-          marker.setLatLng([parsedLat, parsedLon])
-        } else {
-          marker = L.marker([parsedLat, parsedLon], {
-            draggable: true,
-          }).addTo(map)
-          marker.on('dragend', (e) => {
-            const { lat, lng } = e.target.getLatLng()
-            form.location.lat = parseFloat(lat.toFixed(6))
-            form.location.lon = parseFloat(lng.toFixed(6))
-          })
-        }
-        map.setView([parsedLat, parsedLon], 15) // Higher zoom for barangay-level location
+         updateMapMarker()
+         map.setView([parsedLat, parsedLon], 15)
       }
     }
   } catch (err) {
-    console.warn('Geocoding failed, user can set location manually on map:', err)
-    // Don't show error to user, they can still use the map
+    console.warn('Geocoding failed', err)
   }
 }
 
-const parseNumber = (value) => {
-  return value === '' || value === null || typeof value === 'undefined'
-    ? null
-    : Number(value)
+const initMap = () => {
+  if (mapContainer.value && !map) {
+    // Default to PH coords or farm location
+    const defaultLat = form.location.lat || 8.157
+    const defaultLon = form.location.lon || 125.128
+    
+    map = L.map(mapContainer.value).setView([defaultLat, defaultLon], 13)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map)
+    
+    // Add marker if location exists
+    if (form.location.lat && form.location.lon) {
+       updateMapMarker()
+    }
+    
+    map.on('click', (e) => {
+       form.location.lat = parseFloat(e.latlng.lat.toFixed(6))
+       form.location.lon = parseFloat(e.latlng.lng.toFixed(6))
+       updateMapMarker()
+    })
+  }
+}
+
+const updateMapMarker = () => {
+  if (!map) return
+  const lat = form.location.lat
+  const lon = form.location.lon
+  if (lat && lon) {
+    if (marker) {
+      marker.setLatLng([lat, lon])
+    } else {
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+      marker.on('dragend', (e) => {
+         const { lat, lng } = e.target.getLatLng()
+         form.location.lat = parseFloat(lat.toFixed(6))
+         form.location.lon = parseFloat(lng.toFixed(6))
+      })
+    }
+    map.flyTo([lat, lon], map.getZoom())
+  }
 }
 
 const submitField = async () => {
-  // Validate location
-  const locationValid = isLocationLocked.value || (
-    form.location.provinceCode && form.location.cityCode && form.location.barangayCode
-  )
-
-  if (!form.name || !form.size || !form.soil_type || !locationValid || form.location.lat === '' || form.location.lon === '') {
-    error.value = 'Please complete all required fields before saving.'
+  if (parseFloat(form.size) > availableFarmAreaWithCurrent.value) {
+    error.value = `Field size cannot exceed available farm area (${availableFarmAreaWithCurrent.value.toFixed(2)} ha).`
     return
-  }
-
-  if (parseFloat(form.size) > availableFarmArea.value) {
-    error.value = `Field size cannot exceed available farm area (${availableFarmArea.value.toFixed(2)} ha).`
-    return
-  }
-  
-  // Ensure address is set
-  if (!form.location.address) {
-     if (isLocationLocked.value) {
-       setStaticAddress()
-     } else {
-       setAddress()
-     }
   }
 
   error.value = ''
   loading.value = true
 
-  let provinceName, cityName, barangayName
-
-  if (isLocationLocked.value) {
-    provinceName = 'Bukidnon'
-    cityName = 'City of Malaybalay'
-    barangayName = 'Managok'
-  } else {
-    provinceName = provinces.value.find(p => p.code === form.location.provinceCode)?.name || null
-    cityName = cities.value.find(c => c.code === form.location.cityCode)?.name || null
-    barangayName = barangays.value.find(b => b.code === form.location.barangayCode)?.name || null
-  }
-
-  const payload = {
-    name: form.name,
-    description: form.description || null,
-    size: parseNumber(form.size),
-    soil_type: form.soil_type,
-
-    water_source: form.water_source || null,
-    irrigation_type: form.irrigation_type || null,
-    water_access: form.water_access || null,
-    drainage_quality: form.drainage_quality || null,
-    planting_method: form.planting_method || null,
-    cropping_seasons: form.cropping_seasons || null,
-    target_yield: parseNumber(form.target_yield),
-    previous_crop: form.previous_crop || null,
-    current_crop: form.current_crop || null,
-    infrastructure_notes: form.infrastructure_notes || null,
-    notes: form.notes || null,
-    location: {
-      address: form.location.address,
-      lat: parseNumber(form.location.lat),
-      lon: parseNumber(form.location.lon),
-      province: provinceName,
-      city: cityName,
-      barangay: barangayName,
-    },
-  }
-
   try {
-    await farmStore.createField(payload)
+    const payload = {
+       ...form,
+       // Flatten location if needed, or backend expects nested 'location'
+       // Controller logic seemed to expect 'location' as string?
+       // Let's check FieldController handling again.
+       // It expects 'location' as value.
+       // If I send object, Laravel might cast to string or JSON.
+       // 'location' => $request->location ?? $request->input('location.address')
+       location: form.location.address,
+       latitude: form.location.lat,
+       longitude: form.location.lon,
+       
+       // Handle other fields
+    }
+    
+    await farmStore.updateField(fieldId, payload)
     router.push('/fields')
   } catch (err) {
-    console.error('Failed to create field', err)
-    error.value = err.response?.data?.message || err.userMessage || 'Failed to create field. Please review the details and try again.'
+    console.error("Submit error", err)
+    error.value = err.response?.data?.message || 'Failed to update field.'
   } finally {
     loading.value = false
   }
 }
 
-const initMap = () => {
-  if (!mapContainer.value) return
-
-  // Default to Philippines center (Manila area)
-  const defaultLat = 14.5995
-  const defaultLon = 120.9842
-
-  // Load Leaflet dynamically
-  if (typeof L === 'undefined') {
-    // Load Leaflet CSS
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='
-    link.crossOrigin = ''
-    document.head.appendChild(link)
-
-    // Load Leaflet JS
-    const script = document.createElement('script')
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-    script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
-    script.crossOrigin = ''
-    script.onload = () => {
-      createMap()
-    }
-    document.head.appendChild(script)
-  } else {
-    createMap()
-  }
-
-  function createMap() {
-    // Initialize map centered on Philippines or Managok if locked
-    map = L.map(mapContainer.value).setView([defaultLat, defaultLon], 6)
-
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map)
-
-    // Add click handler
-    map.on('click', (e) => {
-      const { lat, lng } = e.latlng
-      form.location.lat = parseFloat(lat.toFixed(6))
-      form.location.lon = parseFloat(lng.toFixed(6))
-      updateMarkerPosition()
-    })
-
-    // If coordinates already exist, set marker
-    if (form.location.lat && form.location.lon) {
-      updateMarkerPosition()
-    }
-  }
+const confirmDelete = async () => {
+   if (confirm('Are you sure you want to delete this field? This action cannot be undone.')) {
+      loading.value = true
+      try {
+         await farmStore.deleteField(fieldId)
+         router.push('/fields')
+      } catch (err) {
+         error.value = "Failed to delete field."
+         loading.value = false
+      }
+   }
 }
-
-const updateMarkerPosition = () => {
-  if (!map || !form.location.lat || !form.location.lon) return
-
-  const lat = parseFloat(form.location.lat)
-  const lon = parseFloat(form.location.lon)
-
-  if (marker) {
-    marker.setLatLng([lat, lon])
-  } else {
-    marker = L.marker([lat, lon], {
-      draggable: true,
-    }).addTo(map)
-
-    marker.on('dragend', (e) => {
-      const { lat, lng } = e.target.getLatLng()
-      form.location.lat = parseFloat(lat.toFixed(6))
-      form.location.lon = parseFloat(lng.toFixed(6))
-    })
-  }
-
-  map.setView([lat, lon], 13)
-}
-
-const updateMapMarker = () => {
-  if (form.location.lat && form.location.lon) {
-    updateMarkerPosition()
-  }
-}
-
-onMounted(async () => {
-  loadProvinces()
-  // Fetch rice varieties if not already loaded
-  if (marketplaceStore.riceVarieties.length === 0) {
-    try {
-      await marketplaceStore.fetchRiceVarieties()
-    } catch (err) {
-      console.warn('Failed to load rice varieties:', err)
-    }
-  }
-  // Initialize map after a short delay to ensure DOM is ready
-  setTimeout(() => {
-    initMap()
-  }, 100)
-})
 </script>
-

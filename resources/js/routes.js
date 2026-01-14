@@ -12,6 +12,7 @@ import Profile from '@/Pages/Profile.vue';
 // Farm Management
 import FarmerFieldsIndex from '@/Pages/Farmer/Fields/Index.vue';
 import FarmerFieldsCreate from '@/Pages/Farmer/Fields/Create.vue';
+import FarmerFieldsEdit from '@/Pages/Farmer/Fields/Edit.vue';
 import PlantingsIndex from '@/Pages/Farmer/Plantings/Index.vue';
 import PlantingsCreate from '@/Pages/Farmer/Plantings/Create.vue';
 import PlantingsShow from '@/Pages/Farmer/Plantings/Show.vue';
@@ -122,6 +123,12 @@ const routes = [
     path: '/fields/create',
     name: 'fields-create',
     component: FarmerFieldsCreate,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/fields/:id/edit',
+    name: 'fields-edit',
+    component: FarmerFieldsEdit,
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
   {

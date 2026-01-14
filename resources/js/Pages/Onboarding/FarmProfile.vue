@@ -313,6 +313,81 @@
 </div>
 </div>
 
+    <!-- Cultivation Plans -->
+    <div class="border-b border-gray-200 pb-8">
+      <div class="flex items-center mb-6">
+        <div class="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-.88 0-1.725.358-2.35.995A3.31 3.31 0 008.667 11v1.333H6.667A1.667 1.667 0 005 14v4.333a1.667 1.667 0 001.667 1.667h10.666A1.667 1.667 0 0019 18.333V14a1.667 1.667 0 00-1.667-1.667H15.333V11c0-.88-.358-1.725-.995-2.35A3.31 3.31 0 0012 8z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900">Cultivation Plans</h3>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="planting_method" class="block text-sm font-semibold text-gray-700 mb-2">Planting Method</label>
+          <select
+            id="planting_method"
+            v-model="form.planting_method"
+            class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
+          >
+            <option value="">Select planting method</option>
+            <option v-for="method in plantingMethods" :key="method.value" :value="method.value">
+              {{ method.label }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+           <label for="cropping_seasons" class="block text-sm font-semibold text-gray-700 mb-2">Cropping Seasons per Year</label>
+           <select
+             id="cropping_seasons"
+             v-model="form.cropping_seasons"
+             class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
+           >
+             <option value="">Select seasons</option>
+             <option v-for="season in croppingSeasonOptions" :key="season.value" :value="season.value">
+               {{ season.label }}
+             </option>
+           </select>
+        </div>
+
+        <div>
+           <label for="target_yield" class="block text-sm font-semibold text-gray-700 mb-2">Target Yield (tons/ha)</label>
+           <input
+             id="target_yield"
+             v-model="form.target_yield"
+             type="number"
+             step="0.1"
+             min="0"
+             class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+             placeholder="4.5"
+           />
+        </div>
+
+        <div>
+           <label for="previous_crop" class="block text-sm font-semibold text-gray-700 mb-2">Previous Crop</label>
+           <select
+             id="previous_crop"
+             v-model="form.previous_crop"
+             class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 bg-white"
+           >
+             <option value="">Select previous crop</option>
+             <optgroup label="Rice Varieties">
+               <option v-for="variety in riceVarieties" :key="variety.id" :value="variety.name">
+                 {{ variety.name }}
+               </option>
+             </optgroup>
+             <optgroup label="Other Crops">
+               <option value="fallow">Fallow (no crop)</option>
+               <option value="other">Other (specify in notes)</option>
+             </optgroup>
+           </select>
+        </div>
+      </div>
+    </div>
+
 <!-- Additional Information -->
 <div>
   <div class="flex items-center mb-6">
@@ -382,11 +457,13 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
 import { useAuthStore } from '@/stores/auth';
+import { useMarketplaceStore } from '@/stores/marketplace'; // Import Marketplace Store
 import axios from 'axios';
 
 const router = useRouter();
 const farmStore = useFarmStore();
 const authStore = useAuthStore();
+const marketplaceStore = useMarketplaceStore(); // Initialize Marketplace Store
 
 const loading = ref(false);
 const error = ref('');
@@ -416,6 +493,13 @@ const form = reactive({
   irrigation_type: '',
   water_access: '',
   drainage_quality: '',
+  infrastructure_notes: '',
+  
+  // Cultivation Plans
+  planting_method: '',
+  cropping_seasons: '',
+  target_yield: '',
+  previous_crop: '',
   
   // Rice Varieties and Practices
 
@@ -426,9 +510,26 @@ const form = reactive({
 
 
 // Load provinces on mount - REMOVED (Static Location)
+// Load provinces on mount - REMOVED (Static Location)
 onMounted(async () => {
   // Static location assumed
+  await marketplaceStore.fetchRiceVarieties(); // Fetch varieties for dropdowns
 });
+
+const riceVarieties = computed(() => marketplaceStore.riceVarieties || []);
+
+const plantingMethods = [
+  { value: 'direct_seeding', label: 'Direct Seeding' },
+  { value: 'transplanting', label: 'Transplanting' },
+  { value: 'broadcasting', label: 'Broadcasting' },
+  { value: 'drilling', label: 'Drilling' },
+];
+
+const croppingSeasonOptions = [
+  { value: '1', label: '1 Season (Wet or Dry)' },
+  { value: '2', label: '2 Seasons (Wet & Dry)' },
+  { value: '3', label: '3 Seasons (Continuous)' },
+];
 
 
 
@@ -496,6 +597,13 @@ const submitProfile = async () => {
       irrigation_type: form.irrigation_type,
       water_access: form.water_access,
       drainage_quality: form.drainage_quality,
+      infrastructure_notes: form.infrastructure_notes,
+
+      // Cultivation Plans
+      planting_method: form.planting_method,
+      cropping_seasons: form.cropping_seasons,
+      target_yield: form.target_yield,
+      previous_crop: form.previous_crop,
       
       // Rice Varieties and Practices
 

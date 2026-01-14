@@ -119,6 +119,19 @@ export const useFarmStore = defineStore('farm', {
         this.loading = false;
       }
     },
+    async updateFarmProfile(profileData) {
+      this.loading = true;
+      try {
+        const response = await farmProfileAPI.update(profileData);
+        this.farmProfile = response.data.farmProfile;
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to update farm profile';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
     async fetchFields() {
       this.loading = true;
       this.error = null;

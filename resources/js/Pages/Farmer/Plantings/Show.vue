@@ -1,24 +1,26 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
-          <div class="flex items-center gap-3">
-            <button @click="goBack" class="text-gray-500 hover:text-gray-700">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 class="text-2xl font-semibold text-gray-900">
-                {{ planting ? planting.crop_type : 'Planting Details' }}
-              </h1>
-              <p class="text-sm text-gray-500">
-                {{ planting ? `On Field: ${planting.field?.name}` : 'Loading...' }}
-              </p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3" v-if="planting">
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            @click="goBack"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Plantings
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">
+             {{ planting ? planting.crop_type : 'Planting Details' }}
+          </h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+             {{ planting ? `On Field: ${planting.field?.name}` : 'Loading...' }}
+          </p>
+        </div>
+        <div class="flex items-center gap-3" v-if="planting">
             <button
               @click="goToEdit(planting.id)"
               class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
@@ -32,11 +34,9 @@
               Delete
             </button>
           </div>
-        </div>
       </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
       <div v-if="loading" class="bg-white shadow sm:rounded-lg p-12 text-center">
         <LoadingSpinner text="Loading planting details..." />
       </div>
@@ -146,8 +146,9 @@
           </div>
         </div>
       </div>
-    </main>
-    
+
+    </div>
+
     <!-- Confirmation Modal -->
     <ConfirmationModal
       :show="showConfirmModal"

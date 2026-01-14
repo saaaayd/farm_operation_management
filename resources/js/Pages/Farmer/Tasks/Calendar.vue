@@ -1,42 +1,34 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
-          <div>
-            <div class="flex items-center text-sm text-gray-500 mb-1">
-              <router-link to="/dashboard" class="text-gray-500 hover:text-gray-700 mr-2">
-                Dashboard
-              </router-link>
-              <span>/</span>
-              <router-link to="/tasks" class="ml-2 text-gray-500 hover:text-gray-700">
-                Tasks
-              </router-link>
-            </div>
-            <h1 class="text-2xl font-semibold text-gray-900">Task Calendar</h1>
-            <p class="text-sm text-gray-500">
-              Visualize upcoming farm work and stay on top of deadlines.
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <router-link
-              to="/tasks/create"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
-            >
-              Schedule Task
-            </router-link>
-            <router-link
-              to="/tasks"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Back to List
-            </router-link>
-          </div>
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            @click="router.push('/tasks')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Tasks
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">Task Calendar</h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+            Visualize upcoming farm work and stay on top of deadlines.
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <router-link
+            to="/tasks/create"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+          >
+            Schedule Task
+          </router-link>
         </div>
       </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
       <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
         <div class="flex">
           <div class="flex-shrink-0">
@@ -216,7 +208,8 @@
           </div>
         </div>
       </div>
-    </main>
+
+    </div>
   </div>
 </template>
 

@@ -1,24 +1,28 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white border-b border-gray-200">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p class="text-sm text-gray-500">Task details</p>
-          <h1 class="text-2xl font-semibold text-gray-900">
+          <button
+            type="button"
+            @click="router.push('/tasks')"
+            class="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Tasks
+          </button>
+          <h1 class="mt-4 text-3xl font-bold text-gray-900">
             {{ task ? taskTitle : 'Loading task...' }}
           </h1>
+          <p class="mt-2 text-base text-gray-600 max-w-2xl">
+            Task details
+          </p>
         </div>
-        <router-link
-          to="/tasks"
-          class="text-sm text-gray-600 hover:text-gray-800"
-        >
-          ← Back to tasks
-        </router-link>
       </div>
-    </header>
 
-    <main class="px-4 sm:px-6 lg:px-8 py-8">
-      <div class="max-w-4xl mx-auto space-y-6">
+
         <div
           v-if="loading"
           class="bg-white border border-gray-100 rounded-2xl shadow px-6 py-8 text-center text-gray-500"
@@ -122,7 +126,7 @@
           </section>
         </div>
       </div>
-    </main>
+
   </div>
 </template>
 

@@ -98,6 +98,16 @@ class FieldController extends Controller
                 'soil_type' => 'required|string|max:255',
                 'size' => 'required|numeric|min:0',
                 'irrigation_type' => 'nullable|string|max:255',
+                'water_source' => 'nullable|string|max:255',
+                'water_access' => 'nullable|string|in:excellent,good,moderate,poor,very_poor',
+                'drainage_quality' => 'nullable|string|in:excellent,good,moderate,poor',
+                'nickname' => 'nullable|string|max:255',
+                'planting_method' => 'nullable|string|max:255',
+                'cropping_seasons' => 'nullable|integer|min:1|max:3',
+                'target_yield' => 'nullable|numeric|min:0',
+                'infrastructure_notes' => 'nullable|string|max:1000',
+                'previous_crop' => 'nullable|string|max:255',
+                'notes' => 'nullable|string|max:1000',
             ]);
 
             if ($validator->fails()) {
@@ -132,6 +142,16 @@ class FieldController extends Controller
                 'soil_type' => $request->soil_type,
                 'size' => $request->size,
                 'irrigation_type' => $request->irrigation_type,
+                'water_source' => $request->water_source,
+                'water_access' => $request->water_access ?? 'good',
+                'drainage_quality' => $request->drainage_quality ?? 'good',
+                'nickname' => $request->nickname,
+                'planting_method' => $request->planting_method,
+                'cropping_seasons' => $request->cropping_seasons,
+                'target_yield' => $request->target_yield,
+                'infrastructure_notes' => $request->infrastructure_notes,
+                'previous_crop' => $request->previous_crop,
+                'notes' => $request->notes,
             ]);
 
             return response()->json([
@@ -197,6 +217,16 @@ class FieldController extends Controller
             'soil_type' => 'sometimes|string|max:255',
             'size' => 'sometimes|numeric|min:0',
             'irrigation_type' => 'nullable|string|max:255',
+            'water_source' => 'nullable|string|max:255',
+            'water_access' => 'nullable|string|in:excellent,good,moderate,poor,very_poor',
+            'drainage_quality' => 'nullable|string|in:excellent,good,moderate,poor',
+            'nickname' => 'nullable|string|max:255',
+            'planting_method' => 'nullable|string|max:255',
+            'cropping_seasons' => 'nullable|integer|min:1|max:3',
+            'target_yield' => 'nullable|numeric|min:0',
+            'infrastructure_notes' => 'nullable|string|max:1000',
+            'previous_crop' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -207,7 +237,23 @@ class FieldController extends Controller
         }
 
         // <-- UPDATED THIS
-        $field->update($request->only(['name', 'location', 'soil_type', 'size', 'irrigation_type']));
+        $field->update($request->only([
+            'name',
+            'location',
+            'soil_type',
+            'size',
+            'irrigation_type',
+            'water_source',
+            'water_access',
+            'drainage_quality',
+            'nickname',
+            'planting_method',
+            'cropping_seasons',
+            'target_yield',
+            'infrastructure_notes',
+            'previous_crop',
+            'notes'
+        ]));
 
         return response()->json([
             'message' => 'Field updated successfully',
