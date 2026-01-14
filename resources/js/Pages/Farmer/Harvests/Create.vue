@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-4">
           <div class="flex items-center">
             <router-link to="/dashboard" class="text-gray-500 hover:text-gray-700 mr-4">
@@ -20,7 +20,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <form @submit.prevent="submitHarvest" class="space-y-8">
         <!-- Planting Selection -->
         <div class="bg-white rounded-lg shadow p-6">

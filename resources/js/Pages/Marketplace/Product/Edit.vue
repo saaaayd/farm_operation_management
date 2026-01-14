@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50/50">
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center gap-4">
             <button
@@ -31,7 +31,7 @@
       </div>
     </header>
 
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Loading State -->
       <div v-if="loadingProduct" class="flex flex-col items-center justify-center py-20">
         <LoadingSpinner>Loading product details...</LoadingSpinner>

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto space-y-8">
+    <div class="w-full mx-auto space-y-8">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <button
@@ -162,6 +162,25 @@
                            <span class="block text-xs text-gray-500">Pay by day or task rate</span>
                         </div>
                      </label>
+
+                     <!-- Wage Amount Input -->
+                     <transition enter-active-class="transition ease-out duration-200" leave-active-class="transition ease-in duration-150" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
+                        <div v-if="form.payment_type === 'wage'" class="pt-2">
+                           <label class="form-label mb-2">Wage Amount</label>
+                           <div class="relative">
+                              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-medium">₱</span>
+                              <input
+                               v-model="form.wage_amount"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               class="form-input pl-7"
+                               placeholder="0.00"
+                              />
+                           </div>
+                           <p class="text-xs text-gray-500 mt-2">Defaults to laborer's standard rate.</p>
+                        </div>
+                     </transition>
                      
                      <label class="flex items-center p-3 border rounded-lg cursor-pointer transition-all hover:bg-gray-50" :class="form.payment_type === 'share' ? 'border-green-500 bg-green-50/30 ring-1 ring-green-500' : 'border-gray-200'">
                         <input type="radio" v-model="form.payment_type" value="share" class="form-radio text-green-600 h-4 w-4">
@@ -231,7 +250,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFarmStore } from '@/stores/farm'
 import { buildTaskTypeOptions } from '@/utils/taskTypes'
@@ -255,8 +274,27 @@ const form = reactive({
   laborer_group_id: '',
   assignment_type: 'individual', // 'individual' or 'group'
   payment_type: 'wage', // 'wage' or 'share'
-  revenue_share_percentage: ''
+  revenue_share_percentage: '',
+  wage_amount: ''
 })
+
+// Watch for laborer selection to autofill rates
+watch([() => form.assigned_to, () => form.payment_type], ([newLaborerId, newPaymentType]) => {
+    if (!newLaborerId || form.assignment_type !== 'individual') return
+
+    const laborer = laborers.value.find(l => l.id == newLaborerId)
+    if (!laborer) return
+
+    const rate = parseFloat(laborer.rate) || 0
+
+    if (newPaymentType === 'wage') {
+        form.wage_amount = rate // Autofill wage
+    } else if (newPaymentType === 'share') {
+        form.revenue_share_percentage = rate // Autofill share if rate is treated as percentage
+    }
+})
+
+
 
 const plantings = computed(() => {
   return (farmStore.plantings || []).filter(p => {
@@ -315,6 +353,7 @@ const submitTask = async () => {
       description: form.description.trim(),
       payment_type: form.payment_type,
       revenue_share_percentage: form.payment_type === 'share' ? form.revenue_share_percentage : null,
+      wage_amount: form.payment_type === 'wage' ? form.wage_amount : null,
     }
 
     // Handle Assignment

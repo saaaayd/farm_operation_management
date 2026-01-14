@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
+  <div class="p-6 w-full mx-auto">
     <!-- Header -->
     <div class="mb-8">
       <div class="flex justify-between items-center">

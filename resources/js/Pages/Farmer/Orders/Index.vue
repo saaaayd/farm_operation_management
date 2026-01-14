@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <div class="max-w-6xl mx-auto py-8 px-4">
+    <div class="w-full mx-auto py-8 px-4">
       <!-- Header -->
       <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900">Incoming Orders</h1>

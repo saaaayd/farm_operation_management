@@ -18,6 +18,7 @@ class Task extends Model
         'laborer_group_id',
         'payment_type',
         'revenue_share_percentage',
+        'wage_amount',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class Task extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'revenue_share_percentage' => 'decimal:2',
+        'wage_amount' => 'decimal:2',
     ];
 
     /**

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Header Section -->
       <div class="md:flex md:items-center md:justify-between mb-8">
@@ -24,7 +24,7 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
         <div v-for="n in 3" :key="n" class="bg-white rounded-xl shadow-sm p-6 animate-pulse border border-gray-100">
           <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
           <div class="space-y-3">
@@ -35,7 +35,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="seedPlantings.length === 0" class="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100 border-dashed">
+      <div v-else-if="seedPlantings.length === 0" class="max-w-xl mx-auto text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100 border-dashed">
         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
           <BeakerIcon class="h-8 w-8 text-green-600" />
         </div>
@@ -55,7 +55,7 @@
       </div>
 
       <!-- Content Grid -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
 
         <div
           v-for="planting in seedPlantings"

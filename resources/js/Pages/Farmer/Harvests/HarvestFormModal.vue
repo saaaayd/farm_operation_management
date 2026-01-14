@@ -1,6 +1,6 @@
 <template>
   <Modal :modelValue="show" @update:modelValue="handleModelValueUpdate" @close="closeModal" :withHeader="false">
-    <div class="max-w-3xl mx-auto -mx-6 -my-6">
+    <div class="w-full mx-auto -mx-6 -my-6">
       <!-- Header with close button -->
       <div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-5 flex items-center justify-between shadow-sm">
         <div class="flex items-center">
