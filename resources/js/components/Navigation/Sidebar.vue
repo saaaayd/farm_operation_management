@@ -16,7 +16,7 @@
             </div>
           </div>
           <div class="ml-3">
-            <h1 class="text-white text-lg font-bold tracking-tight">RiceFARM</h1>
+            <h1 class="text-white text-lg font-bold tracking-tight">ANIBUKID</h1>
             <p class="text-green-50 text-xs font-medium">Management System</p>
           </div>
         </div>

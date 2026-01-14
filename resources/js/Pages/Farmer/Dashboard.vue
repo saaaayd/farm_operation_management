@@ -33,7 +33,7 @@
   <!-- Standard Header -->
   <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800">RiceFARM Dashboard</h1>
+      <h1 class="text-3xl font-bold text-gray-800">ANIBUKID Dashboard</h1>
       <p class="text-gray-500 mt-1">Welcome back, <span class="font-semibold text-gray-800">{{ authStore.user?.name }}</span></p>
     </div>
   </div>

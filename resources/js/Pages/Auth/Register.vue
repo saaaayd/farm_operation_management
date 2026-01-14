@@ -8,7 +8,7 @@
           </svg>
         </div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Join RiceFARM
+          Join ANIBUKID
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
           Create your account to manage rice farming operations

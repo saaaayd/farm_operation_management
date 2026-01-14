@@ -9,7 +9,7 @@
     <!-- Fallback for unknown roles -->
     <div v-else class="p-6 w-full mx-auto">
       <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">Welcome to RiceFARM</h1>
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Welcome to ANIBUKID</h1>
         <p class="text-gray-600">Your account role is not recognized. Please contact support.</p>
       </div>
     </div>
