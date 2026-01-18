@@ -14,6 +14,7 @@ class RiceOrder extends Model
         'rice_product_id',
         'quantity',
         'unit_price',
+        'offer_price',
         'total_amount',
         'status',
         'is_pre_order',
@@ -39,6 +40,7 @@ class RiceOrder extends Model
     protected $casts = [
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'offer_price' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'delivery_address' => 'array',
         'order_date' => 'datetime',
@@ -58,6 +60,7 @@ class RiceOrder extends Model
      * Order status constants
      */
     const STATUS_PENDING = 'pending';
+    const STATUS_NEGOTIATING = 'negotiating';
     const STATUS_CONFIRMED = 'confirmed';
     const STATUS_READY_FOR_PICKUP = 'ready_for_pickup';
     const STATUS_PICKED_UP = 'picked_up';  // Equivalent to delivered for pickup orders

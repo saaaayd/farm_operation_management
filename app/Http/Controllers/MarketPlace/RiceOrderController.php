@@ -100,6 +100,7 @@ class RiceOrderController extends Controller
             'delivery_method' => 'required|string|in:pickup',
             'payment_method' => 'nullable|string',
             'notes' => 'nullable|string|max:500',
+            'offer_price' => 'nullable|numeric|min:0.1',
         ]);
 
         if ($validator->fails()) {
@@ -140,7 +141,16 @@ class RiceOrderController extends Controller
                 'buyer_notes' => $request->notes,
                 'order_date' => now(),
                 'is_pre_order' => $product->production_status === 'in_production',
+                'offer_price' => $request->input('offer_price'),
             ]);
+
+            // If offer price is present and less than unit price, set status to negotiating
+            if ($request->filled('offer_price') && (float) $request->input('offer_price') < (float) $unitPrice) {
+                $order->update([
+                    'status' => RiceOrder::STATUS_NEGOTIATING,
+                    'total_amount' => $request->quantity * $request->input('offer_price'),
+                ]);
+            }
 
             $order->load(['riceProduct.farmer']);
 

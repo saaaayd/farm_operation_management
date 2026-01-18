@@ -3,7 +3,9 @@
 namespace Database\Factories;
 
 use App\Models\Field;
+
 use App\Models\User;
+use App\Models\Farm;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,9 +21,11 @@ class FieldFactory extends Factory
     public function definition(): array
     {
         $soilTypes = ['Loamy', 'Clay', 'Sandy', 'Silty', 'Peaty', 'Chalky'];
-        
+
         return [
             'user_id' => User::factory(),
+            'farm_id' => Farm::factory(),
+            'name' => fake()->randomElement(['North Field', 'South Field', 'East Field', 'West Field']) . ' ' . fake()->numerify('##'),
             'location' => [
                 'lat' => fake()->latitude(),
                 'lon' => fake()->longitude(),

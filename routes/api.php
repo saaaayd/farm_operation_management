@@ -275,6 +275,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/orders/{order}/reject', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'reject']);
             Route::post('/orders/{order}/ready-for-pickup', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'markReadyForPickup']);
             Route::post('/orders/{order}/confirm-pickup', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'confirmPickup']);
+            Route::post('/orders/{order}/negotiate', [\App\Http\Controllers\RiceMarketplaceController::class, 'respondToNegotiation']);
             Route::post('/orders/{order}/mark-paid', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'markAsPaid']);
             Route::post('/orders/{order}/resolve', [\App\Http\Controllers\MarketPlace\RiceOrderController::class, 'resolveDispute']);
         });

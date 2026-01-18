@@ -21,12 +21,8 @@ class FarmFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => fake()->company() . ' Farm',
-            'location' => [
-                'lat' => fake()->latitude(),
-                'lon' => fake()->longitude(),
-                'address' => fake()->streetAddress() . ', ' . fake()->city() . ', ' . fake()->stateAbbr()
-            ],
-            'size' => fake()->randomFloat(2, 10, 500),
+            'location' => fake()->streetAddress() . ', ' . fake()->city() . ', ' . fake()->stateAbbr(),
+            'total_area' => fake()->randomFloat(2, 10, 500),
             'description' => fake()->optional()->sentence(),
         ];
     }

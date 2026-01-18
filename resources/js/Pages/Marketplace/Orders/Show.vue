@@ -56,6 +56,20 @@
                 Last updated: {{ formatDate(order.updated_at) }}
               </span>
             </div>
+
+            <!-- Negotiation Status -->
+             <div v-if="order.status === 'negotiating'" class="mb-4 bg-orange-50 p-4 rounded-md border border-orange-200">
+               <h3 class="text-orange-900 font-medium flex items-center">
+                 <span class="text-xl mr-2">🤝</span> Price Negotiation
+               </h3>
+               <p class="text-orange-800 mt-1">
+                 Buyer offered <span class="font-bold">{{ formatCurrency(order.offer_price) }}</span> per unit.
+                 (Original: {{ formatCurrency(order.rice_product.price_per_unit) }})
+               </p>
+               <p v-if="!isFarmer" class="text-sm text-orange-700 mt-2">
+                 Waiting for farmer's response...
+               </p>
+             </div>
             
             <!-- Progress Steps -->
             <div class="flex items-center justify-between">
@@ -310,6 +324,23 @@
                 >
                   💵 Mark as Paid
                 </button>
+                <!--- Negotiation Actions -->
+                <div v-if="order.status === 'negotiating'" class="grid grid-cols-2 gap-2">
+                   <button
+                    @click="acceptNegotiation"
+                    :disabled="processing"
+                    class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+                  >
+                    ✓ Accept Offer
+                  </button>
+                  <button
+                    @click="rejectNegotiation"
+                    :disabled="processing"
+                    class="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                  >
+                    ✕ Reject
+                  </button>
+                </div>
                 <button
                   v-if="order.status === 'pending'"
                   @click="showCancelModal = true"
@@ -379,6 +410,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
 import { riceMarketplaceAPI } from '@/services/api'
+import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -432,7 +464,9 @@ const getStatusBadgeClass = (status) => {
     confirmed: 'bg-blue-100 text-blue-800',
     ready_for_pickup: 'bg-purple-100 text-purple-800',
     picked_up: 'bg-green-100 text-green-800',
+    picked_up: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
+    negotiating: 'bg-orange-100 text-orange-800',
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
@@ -595,6 +629,40 @@ const markAsPaid = async () => {
     alert('Order marked as paid')
   } catch (err) {
     alert(err.userMessage || err.response?.data?.message || 'Failed to update payment status')
+  } finally {
+    processing.value = false
+  }
+}
+
+
+
+const acceptNegotiation = async () => {
+  if (!confirm('Accept this price offer? The order will become Pending.')) return
+  processing.value = true
+  try {
+    await axios.post(`/api/rice-marketplace/orders/${order.value.id}/negotiate`, {
+      action: 'accept'
+    })
+    await loadOrderData(order.value.id)
+    alert('Negotiation accepted!')
+  } catch (err) {
+    alert(err.response?.data?.message || 'Failed to accept negotiation')
+  } finally {
+    processing.value = false
+  }
+}
+
+const rejectNegotiation = async () => {
+  if (!confirm('Reject this offer? The order will be cancelled.')) return
+  processing.value = true
+  try {
+    await axios.post(`/api/rice-marketplace/orders/${order.value.id}/negotiate`, {
+      action: 'reject'
+    })
+    await loadOrderData(order.value.id)
+    alert('Negotiation rejected.')
+  } catch (err) {
+    alert(err.response?.data?.message || 'Failed to reject negotiation')
   } finally {
     processing.value = false
   }

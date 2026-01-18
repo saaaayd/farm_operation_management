@@ -398,111 +398,7 @@ class RiceMarketplaceController extends Controller
         }
     }
 
-    /**
-     * Create an order for rice product (users only)
-     */
-    public function createOrder(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'rice_product_id' => 'required|exists:rice_products,id',
-            'quantity' => 'required|numeric|min:0.1',
-            'delivery_address' => 'required|array',
-            'delivery_address.street' => 'required|string|max:255',
-            'delivery_address.city' => 'required|string|max:100',
-            'delivery_address.state' => 'required|string|max:100',
-            'delivery_address.postal_code' => 'required|string|max:20',
-            'delivery_address.country' => 'required|string|max:100',
-            'delivery_method' => 'required|string|in:pickup',
-            'payment_method' => 'required|string|max:50',
-            'notes' => 'nullable|string|max:500',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $user = auth()->user();
-
-            // Check if user can buy (is a regular user, not farmer)
-            if (!$user->canBuy()) {
-                return response()->json(['message' => 'Only marketplace users can place orders'], 403);
-            }
-
-            $product = RiceProduct::findOrFail($request->rice_product_id);
-
-            // Check if product is available or can be pre-ordered
-            if (!$product->is_available && !$product->canBePreOrdered()) {
-                return response()->json(['message' => 'Product is not available for order'], 400);
-            }
-
-            $isPreOrder = $product->isInProduction();
-
-            // For available products, check quantity
-            if (!$isPreOrder) {
-                // Check if sufficient quantity is available
-                if (!$product->hasSufficientQuantity($request->quantity)) {
-                    return response()->json([
-                        'message' => 'Insufficient quantity available',
-                        'available_quantity' => $product->quantity_available
-                    ], 400);
-                }
-            }
-
-            // Check minimum order quantity
-            if ($product->minimum_order_quantity && $request->quantity < $product->minimum_order_quantity) {
-                return response()->json([
-                    'message' => 'Order quantity is below minimum required',
-                    'minimum_quantity' => $product->minimum_order_quantity
-                ], 400);
-            }
-
-            // Calculate total amount
-            $totalAmount = $request->quantity * $product->price_per_unit;
-
-            // Determine available date for pre-orders
-            $availableDate = $isPreOrder ? $product->available_from : null;
-
-            // Create the order
-            $order = RiceOrder::create([
-                'buyer_id' => $user->id,
-                'rice_product_id' => $product->id,
-                'quantity' => $request->quantity,
-                'unit_price' => $product->price_per_unit,
-                'total_amount' => $totalAmount,
-                'status' => RiceOrder::STATUS_PENDING,
-                'is_pre_order' => $isPreOrder,
-                'available_date' => $availableDate,
-                'delivery_address' => $request->delivery_address,
-                'delivery_method' => $request->delivery_method,
-                'payment_method' => $request->payment_method,
-                'payment_status' => RiceOrder::PAYMENT_PENDING,
-                'notes' => $request->notes,
-                'order_date' => now(),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => $isPreOrder ? 'Pre-order created successfully' : 'Order created successfully',
-                'order' => $order->load(['riceProduct.riceVariety', 'riceProduct.farmer']),
-                'is_pre_order' => $isPreOrder,
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-
-            return response()->json([
-                'message' => 'Failed to create order',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 
     /**
      * Get orders for current user
@@ -686,6 +582,62 @@ class RiceMarketplaceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to cancel order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Respond to negotiation (farmers only)
+     */
+    public function respondToNegotiation(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'action' => 'required|in:accept,reject',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = auth()->user();
+            $order = RiceOrder::with('riceProduct')->findOrFail($id);
+
+            // Check if user is the farmer for this product
+            if (!$user->isFarmer() || $order->riceProduct->farmer_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            // Check if order is negotiating
+            if ($order->status !== RiceOrder::STATUS_NEGOTIATING) {
+                return response()->json(['message' => 'Order is not in negotiation'], 400);
+            }
+
+            if ($request->action === 'accept') {
+                // Accept negotiation: Update unit price and total amount, set status to pending
+                $order->update([
+                    'unit_price' => $order->offer_price,
+                    // Total amount is already updated in createOrder but safe to recalculate or keep as is
+                    'status' => RiceOrder::STATUS_PENDING,
+                    'farmer_notes' => 'Price negotiation accepted.',
+                ]);
+            } else {
+                // Reject negotiation: Cancel order
+                $order->cancel('Price negotiation rejected by farmer.');
+            }
+
+            return response()->json([
+                'message' => 'Negotiation response recorded successfully',
+                'order' => $order->fresh(),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to respond to negotiation',
                 'error' => $e->getMessage()
             ], 500);
         }
