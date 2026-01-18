@@ -36,19 +36,39 @@ class WeatherModuleTest extends TestCase
         $this->mock(WeatherService::class, function ($mock) {
             $mock->shouldReceive('getCurrentWeather')
                 ->andReturn([
-                    'temp' => 30,
-                    'condition' => 'Sunny',
-                    'humidity' => 70
+                    'main' => [
+                        'temp' => 30,
+                        'humidity' => 70
+                    ],
+                    'weather' => [
+                        [
+                            'main' => 'Sunny',
+                            'description' => 'Clear sky',
+                            'icon' => '01d'
+                        ]
+                    ],
+                    'dt' => time()
                 ]);
-            $mock->shouldReceive('getForecast')
+
+            $mock->shouldReceive('updateFieldWeather')
+                ->withAnyArgs()
+                ->andReturn(new \App\Models\WeatherLog());
+            $mock->shouldReceive('formatWeatherLog')
+                ->withAnyArgs()
+                ->andReturn(['temp' => 30]);
+            $mock->shouldReceive('getWeatherAlerts')
+                ->withAnyArgs()
                 ->andReturn([]);
         });
 
         $response = $this->actingAs($this->farmer)
             ->getJson("/api/weather/fields/{$this->field->id}/current");
 
+        if ($response->status() !== 200) {
+            dump($response->json());
+        }
         $response->assertStatus(200)
-            ->assertJsonPath('temp', 30);
+            ->assertJsonPath('weather.temp', 30);
     }
 
     public function test_rice_specific_weather_analytics()

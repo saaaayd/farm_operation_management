@@ -415,14 +415,14 @@ class InventoryItemController extends Controller
             InventoryItem::CATEGORY_FERTILIZER => \App\Models\Expense::CATEGORY_FERTILIZER,
             InventoryItem::CATEGORY_PESTICIDE => \App\Models\Expense::CATEGORY_PESTICIDE,
             InventoryItem::CATEGORY_EQUIPMENT => \App\Models\Expense::CATEGORY_EQUIPMENT,
-            InventoryItem::CATEGORY_PRODUCE => \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE,
+            InventoryItem::CATEGORY_PRODUCE => \App\Models\Expense::CATEGORY_OTHER, // Mapped to safe category
             // String fallbacks for categories that may exist in database but not as constants
-            'feed' => \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE,
+            'feed' => \App\Models\Expense::CATEGORY_OTHER,
             'fuel' => \App\Models\Expense::CATEGORY_UTILITIES,
             'other' => \App\Models\Expense::CATEGORY_OTHER,
         ];
 
-        return $mapping[$inventoryCategory] ?? \App\Models\Expense::CATEGORY_INVENTORY_PURCHASE;
+        return $mapping[$inventoryCategory] ?? \App\Models\Expense::CATEGORY_OTHER;
     }
     /**
      * Remove stock (POST /inventory/{item}/remove-stock)

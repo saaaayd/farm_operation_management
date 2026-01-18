@@ -23,13 +23,18 @@ class RiceAnalyticsTest extends TestCase
         $response = $this->actingAs($farmer)
             ->getJson('/api/analytics/rice-farming?period=12');
 
+        if ($response->status() !== 200) {
+            dump($response->json());
+        }
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'analytics' => [
                     'efficiency_metrics' => [
-                        'water_efficiency',
-                        'labor_efficiency',
-                        'fertilizer_efficiency'
+                        'resource_efficiency' => [
+                            'water_efficiency',
+                            'labor_efficiency',
+                            'fertilizer_efficiency'
+                        ]
                     ]
                 ]
             ]);

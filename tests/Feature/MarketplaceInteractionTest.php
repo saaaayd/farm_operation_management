@@ -68,6 +68,6 @@ class MarketplaceInteractionTest extends TestCase
             ]);
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('product_reviews', ['comment' => 'Great rice!']);
+        $this->assertDatabaseHas('product_reviews', ['review_text' => 'Great rice!']);
     }
 }

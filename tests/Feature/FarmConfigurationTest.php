@@ -27,7 +27,8 @@ class FarmConfigurationTest extends TestCase
 
     public function test_rice_varieties_list()
     {
-        $response = $this->getJson('/api/rice-varieties');
+        $farmer = \App\Models\User::factory()->create(['role' => 'farmer']);
+        $response = $this->actingAs($farmer)->getJson('/api/rice-varieties');
         // Likely public route
         $response->assertStatus(200);
     }

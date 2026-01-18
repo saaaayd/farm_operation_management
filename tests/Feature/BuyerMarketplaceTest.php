@@ -18,7 +18,7 @@ class BuyerMarketplaceTest extends TestCase
 
         $response = $this->actingAs($buyer)
             ->postJson('/api/rice-marketplace/cart', [
-                'product_id' => $product->id,
+                'rice_product_id' => $product->id, // Changed key
                 'quantity' => 2
             ]);
 
@@ -26,7 +26,7 @@ class BuyerMarketplaceTest extends TestCase
 
         // If DB cart exists
         $this->assertDatabaseHas('cart_items', [
-            'user_id' => $buyer->id,
+            'buyer_id' => $buyer->id,
             'rice_product_id' => $product->id,
             'quantity' => 2
         ]);
@@ -42,10 +42,10 @@ class BuyerMarketplaceTest extends TestCase
 
         $response = $this->actingAs($buyer)
             ->postJson('/api/rice-marketplace/favorites', [
-                'product_id' => $product->id
+                'rice_product_id' => $product->id // Changed key
             ]);
 
-        $response->assertStatus(200); // or 201 created
+        $response->assertStatus(201); // Favorites creation usually returns 201
         $this->assertDatabaseHas('favorites', [
             'user_id' => $buyer->id,
             'rice_product_id' => $product->id

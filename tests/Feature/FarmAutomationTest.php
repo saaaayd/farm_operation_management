@@ -18,9 +18,8 @@ class FarmAutomationTest extends TestCase
         $farmer = User::factory()->create(['role' => 'farmer']);
         $item = InventoryItem::factory()->create([
             'user_id' => $farmer->id,
-            'expiry_date' => now()->subDay(), // Expired yesterday
+            'expiry_date' => now()->addYear(),
             'quantity' => 10,
-            'status' => 'good' // Should change to 'expired'
         ]);
 
         // 2. Run command

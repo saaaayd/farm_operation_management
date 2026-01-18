@@ -28,7 +28,11 @@ class HarvestOperationTest extends TestCase
             'field_id' => $field->id,
             'variety' => 'RC160',
             'planting_date' => now()->subMonths(4),
-            'status' => 'harvesting',
+            'status' => 'planted', // Changed from invalid 'harvesting'
+            'rice_variety_id' => \App\Models\RiceVariety::factory()->create()->id,
+            'season' => 'dry',
+            'area_planted' => 2.0,
+            'expected_harvest_date' => now()->addMonths(4), // Added required field
             'method' => 'manual',
             'quantity_planted' => 10
         ]);
@@ -39,7 +43,9 @@ class HarvestOperationTest extends TestCase
         $data = [
             'planting_id' => $this->planting->id,
             'harvest_date' => now()->toDateString(),
-            'yield_quantity' => 5000, // kg
+            'quantity' => 5000, // Changed from yield_quantity
+            'unit' => 'kg', // Added required field
+            'status' => 'completed',
             'notes' => 'Good harvest',
             'create_inventory_record' => true // assuming feature exists
         ];
@@ -51,7 +57,7 @@ class HarvestOperationTest extends TestCase
 
         $this->assertDatabaseHas('harvests', [
             'planting_id' => $this->planting->id,
-            'yield_quantity' => 5000
+            'yield' => 5000 // Column is yield based on Analytics and Model
         ]);
     }
 }

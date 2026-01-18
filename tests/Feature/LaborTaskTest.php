@@ -67,7 +67,9 @@ class LaborTaskTest extends TestCase
             'status' => 'planted',
             'quantity_planted' => 10,
             'rice_variety_id' => RiceVariety::factory()->create()->id,
-            'expected_harvest_date' => now()->addMonths(4)
+            'expected_harvest_date' => now()->addMonths(4),
+            'area_planted' => 1.5,
+            'season' => 'wet'
         ]);
 
         $taskData = [
@@ -77,23 +79,17 @@ class LaborTaskTest extends TestCase
             'priority' => 'high',
             'status' => 'pending',
             'planting_id' => $planting->id,
-            'task_type' => 'planting', // Assuming 'planting' or mapped type
+            'task_type' => 'maintenance', // Changed from invalid 'planting'
             'assigned_laborers' => [$laborer->id],
-            'wage_type' => 'daily', // Assuming valid logic for wage_type/amount mapping in controller
+            'wage_type' => 'daily',
             'wage_amount' => 500
         ];
 
         $response = $this->actingAs($this->farmer)
             ->postJson('/api/tasks', $taskData);
 
-        // If 422 still, it might be task_type enum. Assuming 'planting' is valid or mapped.
-        // If fail, we accept it as verification finding.
-        if ($response->status() !== 201) {
-            // Debug help
-            // dump($response->json());
-        }
         $response->assertStatus(201);
-        $this->assertDatabaseHas('tasks', ['title' => 'Rice Planting']);
+        $this->assertDatabaseHas('tasks', ['description' => 'Plant basics']);
     }
 
     public function test_completing_task_records_expense()
@@ -113,21 +109,20 @@ class LaborTaskTest extends TestCase
             'field_id' => $field->id,
             'planting_date' => now(),
             'rice_variety_id' => RiceVariety::factory()->create()->id,
-            'expected_harvest_date' => now()->addMonths(4)
+            'expected_harvest_date' => now()->addMonths(4),
+            'area_planted' => 1.5,
+            'season' => 'dry'
         ]);
 
         $task = new Task();
-        // Task model doesn't have user_id. It belongs to planting.
         $task->planting_id = $planting->id;
         $task->task_type = 'harvesting';
         $task->description = ' Harvest';
         $task->status = 'pending';
         $task->wage_amount = 1000;
+        $task->due_date = now()->addDays(5); // Added required field
         $task->save();
 
-        // Assign laborer (check if ManyToMany or BelongsTo)
-        // Task: public function laborer() { return $this->belongsTo(Laborer::class, 'assigned_to'); }
-        // So it's single assignment via column 'assigned_to'
         $task->assigned_to = $laborer->id;
         $task->save();
 

@@ -23,18 +23,21 @@ class FieldManagementTest extends TestCase
     {
         $fieldData = [
             'name' => 'Rice Terrace 1',
-            'location' => 'Banaue',
-            'size' => 2.5,
-            'soil_type' => 'Clay Loam',
-            'irrigation_type' => 'Rainfed',
-            'field_coordinates' => [['lat' => 16.9, 'lng' => 121.0], ['lat' => 16.91, 'lng' => 121.01]],
+            'size' => 1.5,
+            'location' => [
+                'lat' => 10.123,
+                'lon' => 120.456,
+                'address' => '123 Farm Road' // Added required field
+            ],
+            'soil_type' => 'loam',
+            'field_coordinates' => [['lat' => 10, 'lng' => 120]],
         ];
 
         $response = $this->actingAs($this->farmer)
             ->postJson('/api/fields', $fieldData);
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.name', 'Rice Terrace 1');
+            ->assertJsonPath('field.name', 'Rice Terrace 1');
 
         $this->assertDatabaseHas('fields', [
             'name' => 'Rice Terrace 1',

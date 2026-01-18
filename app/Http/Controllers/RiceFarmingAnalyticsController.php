@@ -84,13 +84,15 @@ class RiceFarmingAnalyticsController extends Controller
         $yieldByVariety = $plantings->groupBy('rice_variety_id')
             ->map(function ($varietyPlantings) {
                 $variety = $varietyPlantings->first()->riceVariety;
+                $varietyName = $variety ? $variety->name : 'Unknown Variety';
+
                 $totalYield = $varietyPlantings->sum(function ($planting) {
                     return $planting->harvests->sum('yield');
                 });
                 $totalArea = $varietyPlantings->sum('area_planted');
 
                 return [
-                    'variety_name' => $variety->name,
+                    'variety_name' => $varietyName,
                     'total_yield' => $totalYield,
                     'total_area' => $totalArea,
                     'yield_per_hectare' => $totalArea > 0 ? $totalYield / $totalArea : 0,
@@ -151,7 +153,7 @@ class RiceFarmingAnalyticsController extends Controller
         $expenses = Expense::whereHas('planting.field', function ($query) use ($userId) {
             $query->where('user_id', $userId);
         })
-            ->where('expense_date', '>=', $startDate)
+            ->where('date', '>=', $startDate) // Fixed column name
             ->get();
 
         $totalExpenses = $expenses->sum('amount');
@@ -176,7 +178,7 @@ class RiceFarmingAnalyticsController extends Controller
             $monthEnd = $month->copy()->endOfMonth();
 
             $monthRevenue = $riceOrders->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount');
-            $monthExpenses = $expenses->whereBetween('expense_date', [$monthStart, $monthEnd])->sum('amount');
+            $monthExpenses = $expenses->whereBetween('date', [$monthStart, $monthEnd])->sum('amount');
 
             $monthlyFinancials->push([
                 'month' => $month->format('Y-m'),
@@ -264,14 +266,15 @@ class RiceFarmingAnalyticsController extends Controller
             $analytics = $this->weatherService->getRiceWeatherAnalytics($field, 365);
 
             if (!empty($analytics)) {
+                $riceAnalytics = $analytics['rice_analytics'] ?? [];
                 $weatherImpact[] = [
                     'field_id' => $field->id,
                     'field_name' => $field->name,
-                    'weather_suitability_score' => $analytics['rice_analytics']['weather_suitability_score'] ?? 0,
-                    'heat_stress_days' => $analytics['rice_analytics']['heat_stress_days'] ?? 0,
-                    'optimal_growth_days' => $analytics['rice_analytics']['optimal_growth_days'] ?? 0,
-                    'disease_risk_days' => $analytics['rice_analytics']['disease_risk_days'] ?? 0,
-                    'growing_degree_days' => $analytics['rice_analytics']['growing_degree_days'] ?? 0,
+                    'weather_suitability_score' => $riceAnalytics['weather_suitability_score'] ?? 0,
+                    'heat_stress_days' => $riceAnalytics['heat_stress_days'] ?? 0,
+                    'optimal_growth_days' => $riceAnalytics['optimal_growth_days'] ?? 0,
+                    'disease_risk_days' => $riceAnalytics['disease_risk_days'] ?? 0,
+                    'growing_degree_days' => $riceAnalytics['growing_degree_days'] ?? 0,
                 ];
             }
         }
@@ -580,11 +583,15 @@ class RiceFarmingAnalyticsController extends Controller
         $targetCostKg = config('rice_analytics.cost_targets.cost_per_kg', 3.0);
         $targetCostHa = config('rice_analytics.cost_targets.cost_per_hectare', 2000);
 
+        // Prevent division by zero if config is missing or set to 0
+        $targetCostKg = $targetCostKg > 0 ? $targetCostKg : 3.0;
+        $targetCostHa = $targetCostHa > 0 ? $targetCostHa : 2000;
+
         $costPerKgScore = $costPerKg > 0 ? max(0, 100 - (($costPerKg / $targetCostKg) * 100)) : 0;
         $costPerHectareScore = $costPerHectare > 0 ? max(0, 100 - (($costPerHectare / $targetCostHa) * 100)) : 0;
 
         // Weighted average
-        $weights = config('rice_analytics.scoring_weights.cost_efficiency');
+        $weights = config('rice_analytics.scoring_weights.cost_efficiency', ['per_kg' => 0.6, 'per_hectare' => 0.4]);
         $efficiencyScore = ($costPerKgScore * ($weights['per_kg'] ?? 0.6)) + ($costPerHectareScore * ($weights['per_hectare'] ?? 0.4));
 
         return [

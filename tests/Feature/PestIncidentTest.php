@@ -27,14 +27,16 @@ class PestIncidentTest extends TestCase
             'planting_date' => now(),
             'status' => 'planted',
             'quantity_planted' => 100,
-            'expected_harvest_date' => now()->addMonths(4)
+            'expected_harvest_date' => now()->addMonths(4),
+            'area_planted' => 1.5,
+            'season' => 'wet' // Added required field
         ]);
 
         $data = [
             'planting_id' => $planting->id,
             'pest_type' => 'insect',
             'pest_name' => 'Stem Borer',
-            'severity' => 'minor',
+            'severity' => 'low',  // Changed from invalid 'minor'
             'detected_date' => now()->toDateString(),
             'notes' => 'Found multiple clusters'
         ];

@@ -86,8 +86,9 @@ class InventoryTest extends TestCase
         $response = $this->actingAs($this->farmer)
             ->postJson("/api/inventory/{$item->id}/add-stock", [
                 'quantity' => 10,
-                'unit_cost' => 120, // Different cost
-                'create_expense' => true
+                'unit_cost' => 120,
+                'create_expense' => true,
+                'expense_category' => 'other' // Changed to a likely safe value
             ]);
 
         $response->assertStatus(200);
