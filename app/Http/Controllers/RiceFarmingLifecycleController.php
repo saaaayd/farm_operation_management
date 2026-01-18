@@ -25,6 +25,7 @@ class RiceFarmingLifecycleController extends Controller
             'planting_method' => 'required|string|in:direct_seeding,transplanting,broadcasting,drilling',
             'seed_rate' => 'required|numeric|min:0',
             'area_planted' => 'required|numeric|min:0',
+            'season' => 'nullable|string|in:wet,dry', // Add validation
             'notes' => 'nullable|string|max:1000',
             'weather_conditions' => 'nullable|array',
         ]);
@@ -64,8 +65,9 @@ class RiceFarmingLifecycleController extends Controller
                 'planting_method' => $request->planting_method,
                 'seed_rate' => $request->seed_rate,
                 'area_planted' => $request->area_planted,
+                'season' => $request->season ?? 'wet', // Add season
                 'notes' => $request->notes,
-                'weather_conditions' => $request->weather_conditions,
+                // 'weather_conditions' => $request->weather_conditions, // Removed invalid column
             ]);
 
             // Initialize planting stages based on rice growth stages
@@ -96,7 +98,7 @@ class RiceFarmingLifecycleController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'message' => 'Failed to create rice planting',
                 'error' => $e->getMessage()
@@ -211,7 +213,7 @@ class RiceFarmingLifecycleController extends Controller
             $nextStage = $planting->getNextPendingStage();
             if ($nextStage) {
                 $nextStage->markAsStarted();
-                
+
                 // Update planting status based on stage
                 $this->updatePlantingStatusByStage($planting, $nextStage->riceGrowthStage->stage_code);
             } else {
@@ -231,7 +233,7 @@ class RiceFarmingLifecycleController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'message' => 'Failed to advance to next stage',
                 'error' => $e->getMessage()
@@ -343,9 +345,9 @@ class RiceFarmingLifecycleController extends Controller
             }
 
             // Stage-specific timing recommendations
-            $daysSinceStageStart = $currentStage->started_at ? 
+            $daysSinceStageStart = $currentStage->started_at ?
                 $currentStage->started_at->diffInDays(now()) : 0;
-            
+
             $expectedDuration = $stageInfo->typical_duration_days;
             $isOverdue = $currentStage->isOverdue();
 
@@ -391,12 +393,12 @@ class RiceFarmingLifecycleController extends Controller
                 'field',
                 'plantingStages.riceGrowthStage'
             ])
-            ->whereHas('field', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->where('crop_type', 'rice')
-            ->whereIn('status', ['planted', 'growing'])
-            ->get();
+                ->whereHas('field', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->where('crop_type', 'rice')
+                ->whereIn('status', ['planted', 'growing'])
+                ->get();
 
             $overview = [
                 'total_plantings' => $plantings->count(),
@@ -409,11 +411,11 @@ class RiceFarmingLifecycleController extends Controller
 
             foreach ($plantings as $planting) {
                 $currentStage = $planting->getCurrentStage();
-                
+
                 if ($currentStage) {
                     $stageName = $currentStage->riceGrowthStage->name;
                     $overview['by_stage'][$stageName] = ($overview['by_stage'][$stageName] ?? 0) + 1;
-                    
+
                     // Check for critical stages
                     if ($planting->isInCriticalStage()) {
                         $overview['critical_plantings'][] = [
@@ -424,7 +426,7 @@ class RiceFarmingLifecycleController extends Controller
                             'days_since_planting' => $planting->getDaysSincePlanting(),
                         ];
                     }
-                    
+
                     // Check for overdue stages
                     if ($currentStage->isOverdue()) {
                         $overview['overdue_stages'][] = [
@@ -434,7 +436,7 @@ class RiceFarmingLifecycleController extends Controller
                             'days_overdue' => abs($currentStage->getDaysRemaining()),
                         ];
                     }
-                    
+
                     // Get upcoming activities
                     if ($currentStage->riceGrowthStage->key_activities) {
                         foreach ($currentStage->riceGrowthStage->key_activities as $activity) {
@@ -448,7 +450,7 @@ class RiceFarmingLifecycleController extends Controller
                         }
                     }
                 }
-                
+
                 $overview['by_status'][$planting->status] = ($overview['by_status'][$planting->status] ?? 0) + 1;
             }
 
