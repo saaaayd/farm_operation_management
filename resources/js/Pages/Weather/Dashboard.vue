@@ -62,7 +62,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall.toFixed(1) }} mm</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Number(currentWeather.rainfall || 0).toFixed(1) }} mm</div>
               <div class="text-sm text-gray-600">Rainfall (24h)</div>
             </div>
           </div>
@@ -233,7 +233,7 @@
                 </div>
                 <div class="text-sm text-gray-600">
                   <div>Humidity: {{ Math.round(field.humidity) }}%</div>
-                  <div>Rainfall: {{ field.rainfall > 0 ? field.rainfall.toFixed(1) : '0.0' }} mm</div>
+                  <div>Rainfall: {{ Number(field.rainfall || 0) > 0 ? Number(field.rainfall).toFixed(1) : '0.0' }} mm</div>
                 </div>
                 <button
                   @click="viewFieldWeather(field.id)"
@@ -1171,7 +1171,7 @@ const fetchCurrentWeather = async () => {
       fallbackWeather.value = {
         temperature: weatherData.temperature,
         humidity: weatherData.humidity,
-        rainfall: (weatherData.precipitation || 0).toFixed(2),
+        rainfall: Number(weatherData.precipitation || 0).toFixed(2),
         wind_speed: weatherData.wind_speed,
         condition: weatherData.description,
         icon: getWeatherIcon(weatherData.weather_code)

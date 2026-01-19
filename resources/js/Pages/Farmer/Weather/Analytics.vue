@@ -140,7 +140,7 @@
                 </div>
                 <div class="text-right">
                   <div class="text-lg font-semibold text-gray-900">
-                    {{ (day.temperature !== undefined && day.temperature !== null && !isNaN(day.temperature)) ? Math.round(day.temperature) : (day.high !== undefined ? Math.round(day.high) : '--') }}°C
+                    {{ Math.round(day.high) }}° / {{ Math.round(day.low) }}°C
                   </div>
                   <div class="text-sm text-gray-600">
                     {{ Math.round(day.humidity || 0) }}% humidity
@@ -250,7 +250,7 @@
                   Date
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Temperature
+                  Temp (Avg/H/L)
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Humidity
@@ -269,7 +269,7 @@
                   {{ formatDate(record.recorded_at) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ record.temperature }}°C
+                  {{ record.temperature }}°C <span class="text-gray-400 text-xs">({{ record.maxTemp }}/{{ record.minTemp }})</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ record.humidity }}%
@@ -337,19 +337,24 @@ const dailyWeatherHistory = computed(() => {
            rawDate: dateRaw,
            temps: [],
            hums: [],
-           winds: [],
-           conditions: []
+            winds: [],
+            rainfalls: [],
+            conditions: []
         };
      }
      if (record.temperature !== undefined) groups[dateKey].temps.push(Number(record.temperature));
      if (record.humidity !== undefined) groups[dateKey].hums.push(Number(record.humidity));
      if (record.wind_speed !== undefined) groups[dateKey].winds.push(Number(record.wind_speed));
+      if (record.rainfall !== undefined || record.precipitation !== undefined) {
+         groups[dateKey].rainfalls.push(Number(record.rainfall || record.precipitation || 0));
+      }
      if (record.conditions) groups[dateKey].conditions.push(record.conditions);
   });
   
   const results = Object.values(groups).map(g => {
-     const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-     const avgTemp = avg(g.temps);
+      const arr = val => Array.isArray(val) ? val : [];
+      const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+      const avgTemp = avg(g.temps);
      const avgHum = avg(g.hums);
      const avgWind = avg(g.winds);
      const condition = g.conditions[0] || 'Unknown';
@@ -357,11 +362,14 @@ const dailyWeatherHistory = computed(() => {
      return {
         id: g.dateKey,
         recorded_at: g.rawDate,
-        temperature: avgTemp.toFixed(1),
-        humidity: Math.round(avgHum),
-        wind_speed: avgWind.toFixed(1),
-        conditions: condition
-     };
+         temperature: avgTemp.toFixed(1),
+         maxTemp: Math.max(...(g.temps.length ? g.temps : [0])).toFixed(1),
+         minTemp: Math.min(...(g.temps.length ? g.temps : [0])).toFixed(1),
+         humidity: Math.round(avgHum),
+         wind_speed: avgWind.toFixed(1),
+         rainfall: arr(g.rainfalls).reduce((a, b) => a + b, 0), // Sum rainfall for the day
+         conditions: condition
+      };
   });
   
   // Sort Ascending (Oldest to Newest)
@@ -472,10 +480,10 @@ const refreshWeatherData = async () => {
       if (Number.isNaN(numericFieldId)) {
         return;
       }
-      await Promise.all([
+        await Promise.all([
         weatherStore.fetchCurrentWeather(numericFieldId),
         weatherStore.fetchForecast(numericFieldId),
-        weatherStore.fetchWeatherHistory(numericFieldId),
+        weatherStore.fetchWeatherHistory(numericFieldId, 1200),
         weatherStore.fetchWeatherAlerts(numericFieldId)
       ]);
     }

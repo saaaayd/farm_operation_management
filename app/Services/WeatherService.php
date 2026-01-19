@@ -23,120 +23,125 @@ class WeatherService
     }
 
     /**
-     * Get current weather for a location
+     * Get current weather for a location using Open-Meteo (consistent with seeder)
      */
     public function getCurrentWeather(float $lat, float $lon): ?array
     {
-        // Validate API configuration
-        if (empty($this->apiKey)) {
-            Log::error('OpenWeather API key is not configured');
-            throw new WeatherServiceException(
-                'OpenWeather API key is not configured. Please set OPENWEATHER_API_KEY in your .env file.',
-                ['lat' => $lat, 'lon' => $lon]
-            );
-        }
-
-        if (empty($this->baseUrl)) {
-            Log::error('OpenWeather base URL is not configured');
-            throw new WeatherServiceException(
-                'OpenWeather base URL is not configured. Please set OPENWEATHER_BASE_URL in your .env file.',
-                ['lat' => $lat, 'lon' => $lon]
-            );
-        }
-
         try {
-            $response = Http::get("{$this->baseUrl}/weather", [
-                'lat' => $lat,
-                'lon' => $lon,
-                'appid' => $this->apiKey,
-                'units' => 'metric'
+            $response = Http::get("https://api.open-meteo.com/v1/forecast", [
+                'latitude' => $lat,
+                'longitude' => $lon,
+                'current' => 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code',
+                'timezone' => 'Asia/Manila'
             ]);
 
             if ($response->successful()) {
-                return $response->json();
+                $data = $response->json();
+                $current = $data['current'];
+
+                // Map to a structure similar to our expectations or normalize it
+                return [
+                    'main' => [
+                        'temp' => $current['temperature_2m'],
+                        'humidity' => $current['relative_humidity_2m'],
+                    ],
+                    'wind' => [
+                        'speed' => $current['wind_speed_10m'] / 3.6, // Open-Meteo is km/h, we usually expect m/s in this pipeline
+                    ],
+                    'rain' => [
+                        '1h' => $current['precipitation'],
+                    ],
+                    'weather' => [
+                        [
+                            'main' => $this->mapWmoCode($current['weather_code']),
+                        ]
+                    ],
+                    'dt' => Carbon::parse($current['time'])->timestamp,
+                ];
             }
 
-            // Handle specific API errors
-            $statusCode = $response->status();
-            $errorBody = $response->json();
-
-            if ($statusCode === 401) {
-                Log::error('OpenWeather API authentication failed', [
-                    'status' => $statusCode,
-                    'response' => $errorBody
-                ]);
-                throw new WeatherServiceException(
-                    'Invalid OpenWeather API key. Please check your OPENWEATHER_API_KEY in .env',
-                    ['lat' => $lat, 'lon' => $lon, 'status' => $statusCode]
-                );
-            }
-
-            if ($statusCode === 429) {
-                Log::error('OpenWeather API rate limit exceeded', [
-                    'status' => $statusCode,
-                    'response' => $errorBody
-                ]);
-                throw new WeatherServiceException(
-                    'OpenWeather API rate limit exceeded. Please try again later.',
-                    ['lat' => $lat, 'lon' => $lon, 'status' => $statusCode]
-                );
-            }
-
-            Log::error('OpenWeatherMap API error', [
-                'status' => $statusCode,
-                'response' => $response->body()
-            ]);
-
-            return null;
-        } catch (WeatherServiceException $e) {
-            // Re-throw our custom exceptions
-            throw $e;
-        } catch (\Exception $e) {
-            Log::error('Weather API request failed', [
-                'error' => $e->getMessage(),
-                'lat' => $lat,
-                'lon' => $lon
-            ]);
-
-            throw new WeatherServiceException(
-                'Failed to fetch weather data: ' . $e->getMessage(),
-                ['lat' => $lat, 'lon' => $lon, 'error' => $e->getMessage()]
-            );
-        }
-    }
-
-    /**
-     * Get weather forecast for a location
-     */
-    public function getForecast(float $lat, float $lon, int $days = 5): ?array
-    {
-        try {
-            // OpenWeatherMap free tier has a maximum of 40 forecasts (5 days)
-            // Request the maximum available to get as many days as possible
-            $maxForecasts = 40; // API limit
-            $requestedForecasts = $days * 8; // 8 forecasts per day (3-hour intervals)
-            $cnt = min($requestedForecasts, $maxForecasts);
-
-            $response = Http::get("{$this->baseUrl}/forecast", [
-                'lat' => $lat,
-                'lon' => $lon,
-                'appid' => $this->apiKey,
-                'units' => 'metric',
-                'cnt' => $cnt
-            ]);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            Log::error('OpenWeatherMap forecast API error', [
+            Log::error('Open-Meteo current weather API error', [
                 'status' => $response->status(),
                 'response' => $response->body()
             ]);
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Weather forecast API request failed', [
+            Log::error('Open-Meteo weather API request failed', [
+                'error' => $e->getMessage(),
+                'lat' => $lat,
+                'lon' => $lon
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Map WMO Weather Codes to our system conditions
+     */
+    private function mapWmoCode(int $code): string
+    {
+        return match (true) {
+            $code === 0 => 'clear',
+            in_array($code, [1, 2, 3]) => 'cloudy',
+            in_array($code, [45, 48]) => 'foggy',
+            in_array($code, [51, 53, 55, 61, 63, 65, 80, 81, 82]) => 'rainy',
+            in_array($code, [71, 73, 75, 77, 85, 86]) => 'snowy',
+            in_array($code, [95, 96, 99]) => 'stormy',
+            default => 'clear',
+        };
+    }
+
+    /**
+     * Get weather forecast for a location using Open-Meteo
+     */
+    public function getForecast(float $lat, float $lon, int $days = 5): ?array
+    {
+        try {
+            $response = Http::get("https://api.open-meteo.com/v1/forecast", [
+                'latitude' => $lat,
+                'longitude' => $lon,
+                'daily' => 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,relative_humidity_2m_max',
+                'timezone' => 'Asia/Manila'
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $daily = $data['daily'];
+
+                // Map to OWM-like structure that frontend expects
+                $list = [];
+                foreach ($daily['time'] as $index => $time) {
+                    $list[] = [
+                        'dt' => Carbon::parse($time)->timestamp,
+                        'main' => [
+                            'temp' => ($daily['temperature_2m_max'][$index] + $daily['temperature_2m_min'][$index]) / 2,
+                            'temp_max' => $daily['temperature_2m_max'][$index],
+                            'temp_min' => $daily['temperature_2m_min'][$index],
+                            'humidity' => $daily['relative_humidity_2m_max'][$index],
+                        ],
+                        'weather' => [
+                            [
+                                'main' => $this->mapWmoCode($daily['weather_code'][$index]),
+                            ]
+                        ],
+                        'dt_txt' => $time . ' 12:00:00', // Mocking midday
+                        'pop' => $daily['precipitation_sum'][$index] > 0 ? 1 : 0,
+                    ];
+                }
+
+                return ['list' => $list];
+            }
+
+            Log::error('Open-Meteo forecast API error', [
+                'status' => $response->status(),
+                'response' => $response->body()
+            ]);
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Open-Meteo forecast API request failed', [
                 'error' => $e->getMessage(),
                 'lat' => $lat,
                 'lon' => $lon
@@ -201,6 +206,28 @@ class WeatherService
             $recordedAt = isset($weatherData['dt'])
                 ? Carbon::createFromTimestamp($weatherData['dt'])
                 : now();
+
+            // Prevent duplicate logs for the same field within the same hour
+            $existingLog = WeatherLog::where('field_id', $field->id)
+                ->whereBetween('recorded_at', [
+                    (clone $recordedAt)->subMinutes(30),
+                    (clone $recordedAt)->addMinutes(30)
+                ])
+                ->first();
+
+            if ($existingLog) {
+                // If it exists, update it instead of creating a new one to keep data fresh but avoid duplicates
+                $existingLog->update([
+                    'temperature' => round($weatherData['main']['temp'], 1),
+                    'humidity' => $weatherData['main']['humidity'],
+                    'wind_speed' => $windSpeed,
+                    'rainfall' => $rainfall,
+                    'conditions' => $this->mapWeatherCondition($weatherData['weather'][0]['main'] ?? 'clear'),
+                ]);
+
+                $field->setRelation('latestWeather', $existingLog);
+                return $existingLog;
+            }
 
             $weatherLog = WeatherLog::create([
                 'field_id' => $field->id,
@@ -479,17 +506,17 @@ class WeatherService
     }
 
     /**
-     * Map OpenWeatherMap weather conditions to our system
+     * Map weather conditions to our system
      */
     private function mapWeatherCondition(string $condition): string
     {
         return match (strtolower($condition)) {
             'clear' => WeatherLog::CONDITION_CLEAR,
-            'clouds' => WeatherLog::CONDITION_CLOUDY,
-            'rain', 'drizzle' => WeatherLog::CONDITION_RAINY,
-            'thunderstorm' => WeatherLog::CONDITION_STORMY,
-            'snow' => WeatherLog::CONDITION_SNOWY,
-            'mist', 'fog', 'haze' => WeatherLog::CONDITION_FOGGY,
+            'clouds', 'cloudy' => WeatherLog::CONDITION_CLOUDY,
+            'rain', 'drizzle', 'rainy' => WeatherLog::CONDITION_RAINY,
+            'thunderstorm', 'stormy' => WeatherLog::CONDITION_STORMY,
+            'snow', 'snowy' => WeatherLog::CONDITION_SNOWY,
+            'mist', 'fog', 'haze', 'foggy' => WeatherLog::CONDITION_FOGGY,
             default => WeatherLog::CONDITION_CLEAR
         };
     }

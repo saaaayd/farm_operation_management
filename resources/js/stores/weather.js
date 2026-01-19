@@ -65,7 +65,9 @@ export const useWeatherStore = defineStore('weather', {
     async fetchWeatherHistory(fieldId, days = 30) {
       this.loading = true;
       try {
-        const response = await axios.get(`/api/weather/fields/${fieldId}/history?days=${days}`);
+        const response = await axios.get(`/api/weather/fields/${fieldId}/history`, {
+          params: { days, per_page: 5000 }
+        });
         // Handle paginated or direct response structure
         if (response.data.weather_logs) {
           this.weatherHistory = response.data.weather_logs.data || response.data.weather_logs;

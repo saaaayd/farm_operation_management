@@ -72,7 +72,7 @@
               </div>
             </div>
             <div class="ml-4">
-              <div class="text-2xl font-bold text-gray-900">{{ currentWeather.rainfall.toFixed(1) }} mm</div>
+              <div class="text-2xl font-bold text-gray-900">{{ Number(currentWeather.rainfall || 0).toFixed(1) }} mm</div>
               <div class="text-sm text-gray-600">Rainfall (24h)</div>
             </div>
           </div>
@@ -145,7 +145,7 @@
                       {{ Math.round(day.low || day.min_temperature || day.temperature || 0) }}°C
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ (day.rainfall || day.precipitation || 0).toFixed(1) }} mm
+                      {{ Number(day.rainfall || day.precipitation || 0).toFixed(1) }} mm
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {{ Math.round(day.humidity || 0) }}%
@@ -690,11 +690,11 @@ const processedWeatherHistory = computed(() => {
       }
     }
     
-    const temp = item.temperature || 0
+    const temp = parseFloat(item.temperature || 0)
     dailyStats[date].temperatures.push(temp)
-    dailyStats[date].humidities.push(item.humidity || 0)
-    dailyStats[date].rainfalls.push(item.rainfall || item.precipitation || 0)
-    dailyStats[date].windSpeeds.push(item.wind_speed || 0)
+    dailyStats[date].humidities.push(parseFloat(item.humidity || 0))
+    dailyStats[date].rainfalls.push(parseFloat(item.rainfall || item.precipitation || 0))
+    dailyStats[date].windSpeeds.push(parseFloat(item.wind_speed || 0))
   })
   
   // Convert to array with min/max/avg
@@ -832,7 +832,7 @@ const rainfallChartData = computed(() => {
     if (!dailyRainfall[date]) {
       dailyRainfall[date] = 0
     }
-    dailyRainfall[date] += item.rainfall || 0
+    dailyRainfall[date] += parseFloat(item.rainfall || item.precipitation || 0)
   })
   
   return {

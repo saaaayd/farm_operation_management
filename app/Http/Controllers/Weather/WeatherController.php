@@ -173,9 +173,9 @@ class WeatherController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'days' => 'integer|min:1|max:365',
+            'days' => 'integer|min:1|max:1200',
             'page' => 'integer|min:1',
-            'per_page' => 'integer|min:1|max:100'
+            'per_page' => 'integer|min:1|max:5000'
         ]);
 
         if ($validator->fails()) {
@@ -185,8 +185,8 @@ class WeatherController extends Controller
             ], 422);
         }
 
-        $days = $request->get('days', 30);
-        $perPage = $request->get('per_page', 20);
+        $days = (int) $request->get('days', 30);
+        $perPage = (int) $request->get('per_page', 5000);
 
         $weatherLogs = WeatherLog::where('field_id', $field->id)
             ->where('recorded_at', '>=', now()->subDays($days))
