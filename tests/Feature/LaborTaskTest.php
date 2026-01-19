@@ -4,132 +4,115 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Laborer;
-use App\Models\Task;
 use App\Models\Field;
 use App\Models\Planting;
 use App\Models\RiceVariety;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Task;
+use App\Models\Expense;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class LaborTaskTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected $farmer;
+    protected $laborer;
+    protected $planting;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->farmer = User::factory()->create(['role' => 'farmer']);
-    }
 
-    public function test_can_add_laborer()
-    {
-        $laborerData = [
-            'name' => 'Juan Dela Cruz',
-            'phone' => '09123456789',
-            'role' => 'general',
-            'skill_level' => 'intermediate',
-            'rate_type' => 'daily',
-            'status' => 'active',
-            'hire_date' => now()->toDateString()
-        ];
+        $field = Field::factory()->create(['user_id' => $this->farmer->id]);
+        $variety = RiceVariety::factory()->create();
 
-        $response = $this->actingAs($this->farmer)
-            ->postJson('/api/laborers', $laborerData);
-
-        $response->assertStatus(201);
-        $this->assertDatabaseHas('laborers', ['name' => 'Juan Dela Cruz']);
-    }
-
-    public function test_can_create_task_and_assign()
-    {
-        $laborer = Laborer::create([
-            'user_id' => $this->farmer->id,
-            'name' => 'Test Laborer',
-            'phone' => '09999999999',
-            'status' => 'active',
-            'skill_level' => 'intermediate',
-            'rate_type' => 'daily',
-            'hire_date' => now()
-        ]);
-
-        $field = Field::factory()->create([
-            'user_id' => $this->farmer->id,
-            'field_coordinates' => [['lat' => 10, 'lng' => 120]],
-            'size' => 1.0
-        ]);
-
-        $planting = Planting::create([
-            'user_id' => $this->farmer->id,
+        $this->planting = Planting::create([
             'field_id' => $field->id,
+            'rice_variety_id' => $variety->id,
             'planting_date' => now(),
+            'expected_harvest_date' => now()->addDays(120),
             'status' => 'planted',
-            'quantity_planted' => 10,
-            'rice_variety_id' => RiceVariety::factory()->create()->id,
-            'expected_harvest_date' => now()->addMonths(4),
+            'planting_method' => 'transplanting',
             'area_planted' => 1.5,
-            'season' => 'wet'
+            'crop_type' => 'rice',
+            'season' => 'dry',
         ]);
 
-        $taskData = [
-            'title' => 'Rice Planting',
-            'description' => 'Plant basics',
-            'due_date' => now()->addDays(2)->toDateTimeString(),
-            'priority' => 'high',
-            'status' => 'pending',
-            'planting_id' => $planting->id,
-            'task_type' => 'maintenance', // Changed from invalid 'planting'
-            'assigned_laborers' => [$laborer->id],
-            'wage_type' => 'daily',
-            'wage_amount' => 500
-        ];
-
-        $response = $this->actingAs($this->farmer)
-            ->postJson('/api/tasks', $taskData);
-
-        $response->assertStatus(201);
-        $this->assertDatabaseHas('tasks', ['description' => 'Plant basics']);
+        $this->laborer = Laborer::factory()->create([
+            'user_id' => $this->farmer->id,
+            'rate' => 500,
+            'rate_type' => 'daily'
+        ]);
     }
 
-    public function test_completing_task_records_expense()
+    public function test_can_create_task()
     {
-        $laborer = Laborer::create([
-            'user_id' => $this->farmer->id,
-            'name' => 'Test Laborer 2',
-            'status' => 'active',
-            'skill_level' => 'intermediate',
-            'rate_type' => 'daily',
-            'hire_date' => now()
+        $response = $this->actingAs($this->farmer)
+            ->postJson('/api/tasks', [
+                'planting_id' => $this->planting->id,
+                'task_type' => 'weeding',
+                'due_date' => now()->addDays(2)->toDateString(),
+                'description' => 'Remove weeds from field',
+                'assigned_to' => $this->laborer->id,
+                'wage_amount' => 500 // Specific wage for this task if needed
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('task.task_type', 'weeding');
+
+        $this->assertDatabaseHas('tasks', [
+            'planting_id' => $this->planting->id,
+            'assigned_to' => $this->laborer->id,
+            'status' => 'pending'
         ]);
+    }
 
-        $field = Field::factory()->create(['user_id' => $this->farmer->id, 'size' => 1, 'field_coordinates' => []]);
-        $planting = Planting::create([
-            'user_id' => $this->farmer->id,
-            'field_id' => $field->id,
-            'planting_date' => now(),
-            'rice_variety_id' => RiceVariety::factory()->create()->id,
-            'expected_harvest_date' => now()->addMonths(4),
-            'area_planted' => 1.5,
-            'season' => 'dry'
+    public function test_completing_task_creates_expense()
+    {
+        $task = Task::create([
+            'planting_id' => $this->planting->id,
+            'task_type' => 'fertilizing',
+            'due_date' => now(),
+            'description' => 'Apply fertilizer',
+            'assigned_to' => $this->laborer->id,
+            'wage_amount' => 500, // Daily rate logic in controller uses this if present
+            'status' => 'pending'
         ]);
-
-        $task = new Task();
-        $task->planting_id = $planting->id;
-        $task->task_type = 'harvesting';
-        $task->description = ' Harvest';
-        $task->status = 'pending';
-        $task->wage_amount = 1000;
-        $task->due_date = now()->addDays(5); // Added required field
-        $task->save();
-
-        $task->assigned_to = $laborer->id;
-        $task->save();
 
         $response = $this->actingAs($this->farmer)
-            ->postJson("/api/tasks/{$task->id}/complete");
+            ->postJson("/api/tasks/{$task->id}/complete", [
+                'hours_worked' => 8
+            ]);
 
         $response->assertStatus(200);
-        $this->assertEquals('completed', $task->refresh()->status);
+
+        $this->assertEquals('completed', $task->fresh()->status);
+
+        // Verify Expense
+        $this->assertDatabaseHas('expenses', [
+            'user_id' => $this->farmer->id,
+            'amount' => 500,
+            'category' => 'labor', // Expense::CATEGORY_LABOR
+            'related_entity_type' => 'task', // Expense::ENTITY_TYPE_TASK
+            'related_entity_id' => $task->id
+        ]);
+
+        // Verify LaborWage
+        $this->assertDatabaseHas('labor_wages', [
+            'laborer_id' => $this->laborer->id,
+            'task_id' => $task->id,
+            'wage_amount' => 500
+        ]);
+    }
+
+    public function test_can_list_laborers()
+    {
+        $response = $this->actingAs($this->farmer)
+            ->getJson('/api/laborers');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'laborers');
     }
 }

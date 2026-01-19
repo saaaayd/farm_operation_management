@@ -4,11 +4,16 @@
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
-          <nav class="text-sm text-gray-500 mb-2">
-            <router-link to="/weather" class="hover:text-gray-700">Weather</router-link>
-            <span class="mx-2">/</span>
-            <span class="text-gray-900">{{ field.name }}</span>
-          </nav>
+          <button
+            type="button"
+            @click="router.push('/weather')"
+            class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors mb-4"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Weather
+          </button>
           <h1 class="text-3xl font-bold text-gray-900">{{ field.name }} Weather</h1>
           <p class="text-gray-600 mt-2">Detailed weather conditions for this field</p>
         </div>

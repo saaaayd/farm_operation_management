@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Field;
 use App\Models\WeatherLog;
+use App\Models\Task;
 use App\Exceptions\WeatherServiceException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -58,7 +59,7 @@ class WeatherService
             // Handle specific API errors
             $statusCode = $response->status();
             $errorBody = $response->json();
-            
+
             if ($statusCode === 401) {
                 Log::error('OpenWeather API authentication failed', [
                     'status' => $statusCode,
@@ -115,7 +116,7 @@ class WeatherService
             $maxForecasts = 40; // API limit
             $requestedForecasts = $days * 8; // 8 forecasts per day (3-hour intervals)
             $cnt = min($requestedForecasts, $maxForecasts);
-            
+
             $response = Http::get("{$this->baseUrl}/forecast", [
                 'lat' => $lat,
                 'lon' => $lon,
@@ -153,7 +154,7 @@ class WeatherService
         // Get coordinates from location or fallback to field_coordinates
         $lat = null;
         $lon = null;
-        
+
         if (isset($field->location['lat']) && isset($field->location['lon'])) {
             $lat = (float) $field->location['lat'];
             $lon = (float) $field->location['lon'];
@@ -162,7 +163,7 @@ class WeatherService
             $lat = (float) $field->field_coordinates['lat'];
             $lon = (float) $field->field_coordinates['lon'];
         }
-        
+
         if ($lat === null || $lon === null) {
             Log::warning('Field location coordinates missing', ['field_id' => $field->id]);
             return null;
@@ -230,7 +231,7 @@ class WeatherService
             'id' => $weatherLog->id,
             'field_id' => $weatherLog->field_id,
             'temperature' => (float) $weatherLog->temperature,
-            'temperature_fahrenheit' => round(($weatherLog->temperature * 9/5) + 32, 1),
+            'temperature_fahrenheit' => round(($weatherLog->temperature * 9 / 5) + 32, 1),
             'humidity' => (float) $weatherLog->humidity,
             'wind_speed' => (float) $weatherLog->wind_speed,
             'rainfall' => (float) ($weatherLog->rainfall ?? 0),
@@ -253,7 +254,7 @@ class WeatherService
             if ($this->updateFieldWeather($field)) {
                 $updated++;
             }
-            
+
             // Add delay to respect API rate limits
             sleep(1);
         }
@@ -315,7 +316,7 @@ class WeatherService
         // Rice growth stage specific alerts
         if ($currentStage) {
             $stageCode = $currentStage->riceGrowthStage->stage_code;
-            
+
             // Flowering stage alerts
             if ($stageCode === 'flowering') {
                 if ($temperature > 30) {
@@ -333,7 +334,7 @@ class WeatherService
                         ]
                     );
                 }
-                
+
                 if ($humidity < 60) {
                     $alerts[] = $this->makeAlert(
                         type: 'low_humidity',
@@ -350,7 +351,7 @@ class WeatherService
                     );
                 }
             }
-            
+
             // Grain filling stage alerts
             if ($stageCode === 'grain_filling') {
                 if ($temperature > 32) {
@@ -442,7 +443,7 @@ class WeatherService
     public function getFieldWeatherStats(Field $field, int $days = 30): array
     {
         $startDate = Carbon::now()->subDays($days);
-        
+
         $weatherLogs = WeatherLog::where('field_id', $field->id)
             ->where('recorded_at', '>=', $startDate)
             ->orderBy('recorded_at')
@@ -473,7 +474,7 @@ class WeatherService
      */
     private function mapWeatherCondition(string $condition): string
     {
-        return match(strtolower($condition)) {
+        return match (strtolower($condition)) {
             'clear' => WeatherLog::CONDITION_CLEAR,
             'clouds' => WeatherLog::CONDITION_CLOUDY,
             'rain', 'drizzle' => WeatherLog::CONDITION_RAINY,
@@ -490,7 +491,7 @@ class WeatherService
     public function getRiceWeatherAnalytics(Field $field, int $days = 30): array
     {
         $startDate = Carbon::now()->subDays($days);
-        
+
         $weatherLogs = WeatherLog::where('field_id', $field->id)
             ->where('recorded_at', '>=', $startDate)
             ->orderBy('recorded_at')
@@ -525,9 +526,72 @@ class WeatherService
                 'current_stage' => $currentPlanting->getCurrentStage()?->riceGrowthStage->name,
                 'stage_weather_suitability' => $this->assessStageWeatherSuitability($currentPlanting, $weatherLogs),
             ];
+
+            // Water Management Impact
+            $waterImpact = $this->assessWaterManagementImpact($currentPlanting);
+            if ($waterImpact) {
+                $riceAnalytics['water_management'] = $waterImpact;
+                // Override soil moisture if we have direct evidence from tasks
+                if (isset($waterImpact['soil_moisture_status'])) {
+                    $riceAnalytics['estimated_soil_moisture'] = $waterImpact['soil_moisture_status'];
+                }
+            }
         }
 
         return array_merge($basicStats, ['rice_analytics' => $riceAnalytics]);
+    }
+
+    /**
+     * Assess impact of recent water management tasks
+     */
+    private function assessWaterManagementImpact($planting): ?array
+    {
+        if (!$planting) {
+            return null;
+        }
+
+        // Look for completed tasks in the last 5 days related to water
+        $recentTasks = Task::where('planting_id', $planting->id)
+            ->where('status', 'completed')
+            ->where('updated_at', '>=', Carbon::now()->subDays(5))
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        if ($recentTasks->isEmpty()) {
+            return null;
+        }
+
+        $impact = [
+            'recent_activity' => null,
+            'soil_moisture_status' => null,
+            'last_action_date' => null,
+        ];
+
+        foreach ($recentTasks as $task) {
+            $name = strtolower($task->task_type . ' ' . $task->description);
+
+            // Check for water/irrigation/flooding
+            if (str_contains($name, 'water') || str_contains($name, 'irrigat') || str_contains($name, 'flood')) {
+                $impact['recent_activity'] = 'Irrigation/Flooding';
+                $impact['soil_moisture_status'] = 'Saturated'; // or High/Optimal depending on context
+                $impact['last_action_date'] = $task->updated_at;
+                break; // Found the most recent significant action
+            }
+
+            // Check for draining/drying
+            if (str_contains($name, 'drain') || str_contains($name, 'dry')) {
+                $impact['recent_activity'] = 'Draining/Drying';
+                $impact['soil_moisture_status'] = 'Dry'; // or Low
+                $impact['last_action_date'] = $task->updated_at;
+                break;
+            }
+        }
+
+        if (!$impact['recent_activity']) {
+            return null;
+        }
+
+        return $impact;
     }
 
     /**
@@ -537,7 +601,7 @@ class WeatherService
     {
         $baseTemp = 10; // Base temperature for rice (°C)
         $maxTemp = 30;  // Maximum effective temperature for rice (°C)
-        
+
         $gdd = 0;
         foreach ($weatherLogs as $log) {
             $effectiveTemp = min($log->temperature, $maxTemp);
@@ -545,7 +609,7 @@ class WeatherService
                 $gdd += ($effectiveTemp - $baseTemp);
             }
         }
-        
+
         return round($gdd, 1);
     }
 
@@ -555,7 +619,7 @@ class WeatherService
     private function calculateOptimalGrowthDays($weatherLogs): int
     {
         return $weatherLogs->filter(function ($log) {
-            return $log->temperature >= 20 && $log->temperature <= 30 
+            return $log->temperature >= 20 && $log->temperature <= 30
                 && $log->humidity >= 60 && $log->humidity <= 80;
         })->count();
     }
@@ -599,7 +663,7 @@ class WeatherService
     private function assessDroughtStressRisk($weatherLogs): string
     {
         $recentLogs = $weatherLogs->sortByDesc('recorded_at')->take(7); // Last 7 days
-        
+
         $lowHumidityDays = $recentLogs->where('humidity', '<', 50)->count();
         $highTempDays = $recentLogs->where('temperature', '>', 32)->count();
         $noRainDays = $recentLogs->whereNotIn('conditions', ['rainy', 'stormy'])->count();
@@ -625,7 +689,7 @@ class WeatherService
 
         $stageCode = $currentStage->riceGrowthStage->stage_code;
         $recentWeather = $weatherLogs->sortByDesc('recorded_at')->take(7);
-        
+
         $recommendations = [];
         $suitabilityScore = 100;
 
@@ -652,7 +716,7 @@ class WeatherService
                 // Critical stage - very sensitive to temperature and humidity
                 $hotDays = $recentWeather->where('temperature', '>', 30)->count();
                 $lowHumidityDays = $recentWeather->where('humidity', '<', 60)->count();
-                
+
                 if ($hotDays > 1) {
                     $suitabilityScore -= 30;
                     $recommendations[] = 'Critical: Maintain 5-10cm water depth during flowering to prevent heat stress.';
@@ -682,7 +746,7 @@ class WeatherService
                 break;
         }
 
-        $suitability = match(true) {
+        $suitability = match (true) {
             $suitabilityScore >= 80 => 'excellent',
             $suitabilityScore >= 60 => 'good',
             $suitabilityScore >= 40 => 'moderate',
@@ -704,9 +768,9 @@ class WeatherService
     {
         $weatherAnalytics = $this->getRiceWeatherAnalytics($field, 7); // Last 7 days
         $alerts = $this->getWeatherAlerts($field);
-        
+
         $recommendations = [];
-        
+
         // Extract recommendations from alerts
         foreach ($alerts as $alert) {
             if (isset($alert['recommendation'])) {
@@ -726,7 +790,7 @@ class WeatherService
         // Add general recommendations based on analytics
         if (isset($weatherAnalytics['rice_analytics'])) {
             $analytics = $weatherAnalytics['rice_analytics'];
-            
+
             if ($analytics['heat_stress_days'] > 2) {
                 $recommendations[] = [
                     'type' => 'general',
@@ -735,7 +799,7 @@ class WeatherService
                     'priority' => 'medium'
                 ];
             }
-            
+
             if ($analytics['weather_suitability_score'] < 60) {
                 $recommendations[] = [
                     'type' => 'general',

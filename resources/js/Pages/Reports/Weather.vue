@@ -4,6 +4,16 @@
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
+          <button
+            type="button"
+            @click="router.push('/weather')"
+            class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors mb-4"
+          >
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Weather
+          </button>
           <h1 class="text-3xl font-bold text-gray-900">Weather Reports</h1>
           <p class="text-gray-600 mt-2">Analyze weather patterns and their impact on your farm</p>
         </div>
@@ -263,15 +273,24 @@
               <div class="space-y-2">
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Growth Stage</span>
-                  <span class="font-medium">Vegetative</span>
+                  <span class="font-medium">{{ weatherImpact.crop_development.growth_stage }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Days to Maturity</span>
-                  <span class="font-medium">45 days</span>
+                  <span class="font-medium">{{ weatherImpact.crop_development.days_to_maturity }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Stress Level</span>
-                  <span class="font-medium text-green-600">Low</span>
+                  <span 
+                    class="font-medium"
+                    :class="{
+                      'text-green-600': weatherImpact.crop_development.stress_level === 'Low',
+                      'text-yellow-600': weatherImpact.crop_development.stress_level === 'Moderate',
+                      'text-red-600': weatherImpact.crop_development.stress_level === 'High'
+                    }"
+                  >
+                    {{ weatherImpact.crop_development.stress_level }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -280,29 +299,36 @@
               <div class="space-y-2">
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Soil Moisture</span>
-                  <span class="font-medium">Optimal</span>
+                  <span class="font-medium">{{ weatherImpact.field_conditions.soil_moisture }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Field Workability</span>
-                  <span class="font-medium">Good</span>
+                  <span class="font-medium">{{ weatherImpact.field_conditions.field_workability }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-600">Disease Risk</span>
-                  <span class="font-medium text-yellow-600">Moderate</span>
+                  <span 
+                    class="font-medium"
+                    :class="{
+                      'text-green-600': weatherImpact.field_conditions.disease_risk === 'Low',
+                      'text-yellow-600': weatherImpact.field_conditions.disease_risk === 'Moderate',
+                      'text-red-600': weatherImpact.field_conditions.disease_risk === 'High'
+                    }"
+                  >
+                    {{ weatherImpact.field_conditions.disease_risk }}
+                  </span>
                 </div>
               </div>
             </div>
             <div>
               <h3 class="font-medium text-gray-900 mb-3">Recommendations</h3>
               <div class="space-y-2">
-                <div class="text-sm text-gray-600">
-                  • Monitor soil moisture levels
+                <div v-for="(rec, index) in weatherImpact.recommendations" :key="index" class="text-sm text-gray-600 flex items-start">
+                  <span class="mr-2">•</span>
+                  <span>{{ rec }}</span>
                 </div>
-                <div class="text-sm text-gray-600">
-                  • Consider fungicide application
-                </div>
-                <div class="text-sm text-gray-600">
-                  • Plan irrigation schedule
+                <div v-if="weatherImpact.recommendations.length === 0" class="text-sm text-gray-500 italic">
+                  No specific recommendations at this time.
                 </div>
               </div>
             </div>
@@ -339,6 +365,20 @@ const gddData = ref({
   week: 0,
   month: 0,
   season: 0
+})
+
+const weatherImpact = ref({
+  crop_development: {
+    growth_stage: 'N/A',
+    days_to_maturity: 'N/A',
+    stress_level: 'Low'
+  },
+  field_conditions: {
+    soil_moisture: 'Unknown',
+    field_workability: 'Unknown',
+    disease_risk: 'Low'
+  },
+  recommendations: []
 })
 
 
@@ -518,6 +558,10 @@ const loadWeatherData = async () => {
     } else {
       dailyHistory.value = []
     }
+
+    if (data.weather_impact_analysis) {
+      weatherImpact.value = data.weather_impact_analysis
+    }
   } catch (error) {
     console.error('Error loading weather data:', error)
     alert('Failed to load weather data')
@@ -526,10 +570,12 @@ const loadWeatherData = async () => {
   }
 }
 
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
 
 onMounted(async () => {
-  const route = useRoute()
   if (route.query.field) {
     selectedField.value = parseInt(route.query.field) || route.query.field
   }

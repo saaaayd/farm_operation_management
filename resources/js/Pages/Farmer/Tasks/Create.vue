@@ -189,7 +189,71 @@
                            <span class="block text-xs text-gray-500">Percentage of harvest yield</span>
                         </div>
                      </label>
+                      
+                     <label class="flex items-center p-3 border rounded-lg cursor-pointer transition-all hover:bg-gray-50" :class="form.payment_type === 'piece_rate' ? 'border-green-500 bg-green-50/30 ring-1 ring-green-500' : 'border-gray-200'">
+                        <input type="radio" v-model="form.payment_type" value="piece_rate" class="form-radio text-green-600 h-4 w-4">
+                        <div class="ml-3">
+                           <span class="block text-sm font-medium text-gray-900">Piece Rate</span>
+                           <span class="block text-xs text-gray-500">Pay per unit (bundle, sack, etc.)</span>
+                        </div>
+                     </label>
                   </div>
+
+                  <!-- Piece Rate Inputs -->
+                  <transition enter-active-class="transition ease-out duration-200" leave-active-class="transition ease-in duration-150" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
+                     <div v-if="form.payment_type === 'piece_rate'" class="pt-2 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                           <div>
+                              <label class="form-label mb-2">Quantity</label>
+                              <input
+                               v-model="form.quantity"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               class="form-input"
+                               placeholder="e.g. 100"
+                              />
+                           </div>
+                           <div>
+                              <label class="form-label mb-2">Unit</label>
+                              <input
+                               v-model="form.unit"
+                               type="text"
+                               class="form-input"
+                               placeholder="bundles"
+                               list="unit-options"
+                              />
+                              <datalist id="unit-options">
+                                <option value="bundles"></option>
+                                <option value="sacks"></option>
+                                <option value="bags"></option>
+                                <option value="seedlings"></option>
+                                <option value="trays"></option>
+                              </datalist>
+                           </div>
+                        </div>
+                        
+                        <div>
+                           <label class="form-label mb-2">Rate per Unit</label>
+                           <div class="relative">
+                              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-medium">₱</span>
+                              <input
+                               v-model="form.unit_price"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               class="form-input !pl-8"
+                               placeholder="0.00"
+                              />
+                           </div>
+                        </div>
+
+                        <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-100 flex justify-between items-center">
+                           <span class="text-sm text-emerald-800 font-medium">Total Cost:</span>
+                           <span class="text-lg font-bold text-emerald-700">₱{{ formatNumber((form.quantity || 0) * (form.unit_price || 0)) }}</span>
+                        </div>
+                     </div>
+                  </transition>
 
                   <!-- Share Percentage Input -->
                   <transition enter-active-class="transition ease-out duration-200" leave-active-class="transition ease-in duration-150" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
@@ -273,10 +337,17 @@ const form = reactive({
   assigned_to: '',
   laborer_group_id: '',
   assignment_type: 'individual', // 'individual' or 'group'
-  payment_type: 'wage', // 'wage' or 'share'
+  payment_type: 'wage', // 'wage', 'share', 'piece_rate'
   revenue_share_percentage: '',
-  wage_amount: ''
+  wage_amount: '',
+  quantity: '',
+  unit: 'bundles',
+  unit_price: ''
 })
+
+const formatNumber = (num) => {
+  return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 // Watch for laborer selection to autofill rates
 watch([() => form.assigned_to, () => form.payment_type], ([newLaborerId, newPaymentType]) => {
@@ -291,6 +362,11 @@ watch([() => form.assigned_to, () => form.payment_type], ([newLaborerId, newPaym
         form.wage_amount = rate // Autofill wage
     } else if (newPaymentType === 'share') {
         form.revenue_share_percentage = rate // Autofill share if rate is treated as percentage
+    } else if (newPaymentType === 'piece_rate') {
+        // Maybe autofill unit_price? Assuming rate might be piece rate
+        // But usually rate is daily. Let's not assume unless specific metadata exists.
+        // Or if the rate is small (e.g. < 50), it might be piece rate? safer not to.
+        // form.unit_price = rate 
     }
 })
 
@@ -354,6 +430,9 @@ const submitTask = async () => {
       payment_type: form.payment_type,
       revenue_share_percentage: form.payment_type === 'share' ? form.revenue_share_percentage : null,
       wage_amount: form.payment_type === 'wage' ? form.wage_amount : null,
+      unit: form.payment_type === 'piece_rate' ? form.unit : null,
+      quantity: form.payment_type === 'piece_rate' ? form.quantity : null,
+      unit_price: form.payment_type === 'piece_rate' ? form.unit_price : null,
     }
 
     // Handle Assignment

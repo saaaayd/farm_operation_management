@@ -1159,6 +1159,92 @@ class ReportController extends Controller
             ];
         }
 
+        // Calculate Weather Impact Analysis
+        $impactAnalysis = [
+            'crop_development' => [
+                'growth_stage' => 'N/A',
+                'days_to_maturity' => 'N/A',
+                'stress_level' => 'Low',
+            ],
+            'field_conditions' => [
+                'soil_moisture' => 'Unknown',
+                'field_workability' => 'Unknown',
+                'disease_risk' => 'Low',
+            ],
+            'recommendations' => [],
+        ];
+
+        // Determine which field to use for impact analysis
+        // Priority: 1. Requested field 2. First field with active planting 3. First field
+        $analysisField = null;
+        if ($request->has('field_id') && $request->field_id) {
+            $analysisField = $fields->firstWhere('id', $request->field_id);
+        } else {
+            // Try to find a field with active planting
+            foreach ($fields as $f) {
+                if ($f->getCurrentRicePlanting()) {
+                    $analysisField = $f;
+                    break;
+                }
+            }
+            // Fallback to first field
+            if (!$analysisField && $fields->isNotEmpty()) {
+                $analysisField = $fields->first();
+            }
+        }
+
+        if ($analysisField) {
+            // Get detailed analytics and recommendations
+            $analytics = $this->weatherService->getRiceWeatherAnalytics($analysisField, $days);
+            $recommendations = $this->weatherService->getRiceFarmingRecommendations($analysisField);
+
+            // Map data to frontend structure
+            if (isset($analytics['rice_analytics'])) {
+                $ra = $analytics['rice_analytics'];
+
+                // Crop Development
+                $currentPlanting = $ra['current_planting'] ?? null;
+                $impactAnalysis['crop_development']['growth_stage'] = $currentPlanting['current_stage'] ?? 'No Active Planting';
+
+                // Estimate days to maturity or days since planting
+                if ($currentPlanting) {
+                    $impactAnalysis['crop_development']['days_to_maturity'] = ($currentPlanting['days_since_planting'] ?? 0) . ' days since planting';
+                    // Derive stress level from suitability score or alerts
+                    $score = $currentPlanting['stage_weather_suitability']['score'] ?? 100;
+                    $impactAnalysis['crop_development']['stress_level'] = $score < 60 ? 'High' : ($score < 80 ? 'Moderate' : 'Low');
+                }
+
+                // Field Conditions
+                // Soil Moisture - Prefer estimated from tasks/analytics, fallback to rainfall map
+                if (isset($ra['estimated_soil_moisture'])) {
+                    $impactAnalysis['field_conditions']['soil_moisture'] = ucfirst($ra['estimated_soil_moisture']);
+                } else {
+                    $impactAnalysis['field_conditions']['soil_moisture'] = $estimatedRainfall > 20 ? 'Saturated' : ($estimatedRainfall > 5 ? 'Optimal' : 'Dry');
+                }
+
+                // Workability
+                $impactAnalysis['field_conditions']['field_workability'] = $ra['flood_risk_days'] > 0 ? 'Poor (Wet)' : 'Good';
+
+                // Disease Risk
+                $impactAnalysis['field_conditions']['disease_risk'] = ($ra['disease_risk_days'] ?? 0) > 2 ? 'High' : (($ra['disease_risk_days'] ?? 0) > 0 ? 'Moderate' : 'Low');
+            }
+
+            // Recommendations
+            // Just take the top 3 recommendations
+            $impactAnalysis['recommendations'] = array_slice(array_map(function ($r) {
+                return $r['recommendation'];
+            }, $recommendations), 0, 3);
+
+            // Fallback recommendations if empty
+            if (empty($impactAnalysis['recommendations'])) {
+                $impactAnalysis['recommendations'] = [
+                    'Monitor daily weather conditions',
+                    'Maintain regular field inspections',
+                    'Ensure proper water management'
+                ];
+            }
+        }
+
         // Daily History (Unified table data)
         $dailyHistory = $weatherData->groupBy(function ($record) {
             return Carbon::parse($record->recorded_at)->format('Y-m-d');
@@ -1202,6 +1288,7 @@ class ReportController extends Controller
                     'season' => round($seasonGDD, 1),
                 ],
                 'weather_events' => $weatherEvents,
+                'weather_impact_analysis' => $impactAnalysis,
             ],
         ]);
     }

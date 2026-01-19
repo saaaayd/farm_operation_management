@@ -321,6 +321,20 @@ export const useFarmStore = defineStore('farm', {
         this.loading = false;
       }
     },
+    async deleteSeedPlanting(id) {
+      this.loading = true;
+      this.error = null;
+      try {
+        await seedPlantingsAPI.delete(id);
+        this.seedPlantings = this.seedPlantings.filter(p => p.id !== id);
+      } catch (error) {
+        console.error('Failed to delete seed planting:', error);
+        this.error = error.userMessage || 'Failed to delete seed planting';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
 
     // --- TASK ACTIONS ---
     async fetchTasks() {

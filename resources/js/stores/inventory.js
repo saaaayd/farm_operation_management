@@ -182,10 +182,14 @@ export const useInventoryStore = defineStore('inventory', {
       }
     },
 
-    async addStock(itemId, quantity) {
+    async addStock(itemId, quantity, unitCost) {
       this.loading = true;
       try {
-        const response = await axios.post(`/api/inventory/${itemId}/add-stock`, { quantity });
+        const payload = { quantity };
+        if (unitCost !== undefined && unitCost !== null && unitCost !== '') {
+          payload.unit_cost = unitCost;
+        }
+        const response = await axios.post(`/api/inventory/${itemId}/add-stock`, payload);
         const index = this.items.findIndex(item => item.id === itemId);
         if (index !== -1) {
           this.items[index] = response.data.inventory_item;

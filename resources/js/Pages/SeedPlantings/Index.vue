@@ -1,281 +1,371 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-8">
-    <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <!-- Header Section -->
-      <div class="md:flex md:items-center md:justify-between mb-8">
-        <div class="flex-1 min-w-0">
-          <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Nursery Management
-          </h2>
-          <p class="mt-1 text-sm text-gray-500">
-            Track your seed sowings and monitor nursery status.
-          </p>
+  <div class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Standard Header -->
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Nursery</h1>
+          <p class="text-gray-500 mt-1">Manage all your seed sowings, from sowing to transplanting.</p>
         </div>
-        <div class="mt-4 flex md:mt-0 md:ml-4">
+        <div class="flex items-center gap-3">
           <button
-            @click="$router.push('/seed-plantings/create')"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-0.5"
+            @click="refreshPlantings"
+            :disabled="loading"
+            class="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium disabled:opacity-50"
           >
-            <PlusIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            <svg
+              :class="['h-5 w-5', { 'animate-spin': loading }]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+          <button
+            @click="goToCreate"
+            class="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
+          >
+            <span class="text-xl leading-none">+</span> New Sowing
+          </button>
+        </div>
+      </div>
+
+      <div>
+      <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">{{ error }}</p>
+            <button
+              @click="refreshPlantings"
+              class="mt-2 text-sm font-medium text-red-700 hover:text-red-800"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row gap-4 items-end" v-if="!loading && (seedPlantings.length > 0 || filters.status || filters.variety)">
+          <div class="flex-1 w-full md:w-auto">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select 
+              v-model="filters.status" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="sown">Sown</option>
+              <option value="germinating">Germinating</option>
+              <option value="ready">Ready to Transplant</option>
+              <option value="transplanted">Transplanted</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          
+          <div class="flex-1 w-full md:w-auto">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Variety</label>
+            <select 
+              v-model="filters.variety" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+            >
+              <option :value="null">All Varieties</option>
+              <option 
+                v-for="option in varietyOptions" 
+                :key="option.key" 
+                :value="option"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="flex items-end">
+            <button 
+              @click="clearFilters"
+              class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          v-for="n in 6"
+          :key="n"
+          class="bg-white rounded-lg shadow p-6 animate-pulse space-y-4"
+        >
+          <div class="h-6 bg-gray-200 rounded"></div>
+          <div class="space-y-2">
+            <div class="h-3 bg-gray-200 rounded"></div>
+            <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-200 rounded w-2/4"></div>
+          </div>
+          <div class="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+
+      <div v-else>
+        <div v-if="filteredPlantings.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
+          <div class="text-5xl mb-4">🌱</div>
+          <h2 class="text-lg font-semibold text-gray-900 mb-2">No sowings found</h2>
+          <p class="text-sm text-gray-600 mb-6">
+            Get started by recording your first seed sowing.
+          </p>
+          <button
+            @click="goToCreate"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+          >
             New Sowing
           </button>
         </div>
-      </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        <div v-for="n in 3" :key="n" class="bg-white rounded-xl shadow-sm p-6 animate-pulse border border-gray-100">
-          <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div class="space-y-3">
-            <div class="h-3 bg-gray-200 rounded"></div>
-            <div class="h-3 bg-gray-200 rounded w-5/6"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="seedPlantings.length === 0" class="max-w-xl mx-auto text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100 border-dashed">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-          <BeakerIcon class="h-8 w-8 text-green-600" />
-        </div>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">No active sowings</h3>
-        <p class="mt-1 text-sm text-gray-500 max-w-sm mx-auto">
-          Get started by recording your first batch of seeds in the nursery.
-        </p>
-        <div class="mt-6">
-          <button
-            @click="$router.push('/seed-plantings/create')"
-            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <article
+            v-for="planting in filteredPlantings"
+            :key="planting.id"
+            class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
           >
-            <PlusIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Start Sowing
-          </button>
-        </div>
-      </div>
-
-      <!-- Content Grid -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-
-        <div
-          v-for="planting in seedPlantings"
-          :key="planting.id"
-          class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col group"
-        >
-          <!-- Card Header & Status -->
-          <div 
-            class="p-5 border-b border-gray-50 bg-gray-50/50 group-hover:bg-gray-100/50 transition-colors cursor-pointer"
-            @click="$router.push(`/seed-plantings/${planting.id}`)"
-          >
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <h3 class="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-green-700 transition-colors" :title="planting.rice_variety?.name">
-                    {{ planting.rice_variety?.name }}
+            <div class="h-full flex flex-col">
+              <div class="flex items-start justify-between mb-4 pt-6 px-6">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">
+                     {{ planting.rice_variety?.name || 'Unknown Variety' }}
                   </h3>
-                   <span v-if="planting.batch_id" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                    <TagIcon class="mr-1 h-3 w-3" />
-                    {{ planting.batch_id }}
-                  </span>
+                  <p class="text-xs text-gray-500" v-if="planting.batch_id">
+                    Batch: {{ planting.batch_id }}
+                  </p>
                 </div>
-                <!-- Status Badge -->
-                 <div class="mt-2">
-                    <span
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                      :class="getStatusClass(planting.status)"
-                    >
-                      <span class="w-1.5 h-1.5 mr-1.5 rounded-full" :class="getStatusDotClass(planting.status)"></span>
-                      {{ formatStatus(planting.status) }}
-                    </span>
-                 </div>
-              </div>
-              
-              <!-- Menu/Actions Placeholder or simple delete -->
-              <button @click.stop="confirmDelete(planting)" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50">
-                 <TrashIcon class="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Card Body -->
-          <div 
-            class="p-5 flex-1 space-y-4 cursor-pointer"
-            @click="$router.push(`/seed-plantings/${planting.id}`)"
-          >
-             <!-- Dates Row -->
-             <div class="flex items-start justify-between text-sm">
-                <div class="flex flex-col">
-                   <span class="text-xs text-gray-500 mb-1 flex items-center">
-                     <CalendarIcon class="w-3 h-3 mr-1" /> Sown
-                   </span>
-                   <span class="font-medium text-gray-700">{{ formatDate(planting.planting_date) }}</span>
-                </div>
-                <div class="flex flex-col text-right" v-if="planting.expected_transplant_date">
-                   <span class="text-xs text-gray-500 mb-1 flex items-center justify-end">
-                      <ClockIcon class="w-3 h-3 mr-1" /> Est. Transplant
-                   </span>
-                   <span class="font-medium text-gray-700">{{ formatDate(planting.expected_transplant_date) }}</span>
-                </div>
-             </div>
-
-             <!-- Quantity Row -->
-             <div>
-                <span class="text-xs text-gray-500 mb-1 flex items-center">
-                  <ScaleIcon class="w-3 h-3 mr-1" /> Quantity
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  :class="statusClass(planting.status)"
+                >
+                  {{ formatStatus(planting.status) }}
                 </span>
-                <div class="text-sm font-medium text-gray-900 bg-gray-50 rounded-lg py-2 px-3 border border-gray-100">
-                   {{ planting.quantity }} <span class="text-gray-500">{{ planting.unit }}</span>
-                </div>
-             </div>
-          </div>
+              </div>
 
-          <!-- Card Footer (Actions) -->
-          <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end" v-if="planting.status === 'sown' || planting.status === 'germinating'">
-             <button
-               @click="confirmUpdateStatus(planting, 'ready', $event)"
-               class="w-full inline-flex justify-center items-center px-4 py-2 border border-blue-200 shadow-sm text-sm font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-             >
-               <CheckCircleIcon class="-ml-1 mr-2 h-4 w-4" />
-               Mark as Ready to Transplant
-             </button>
-          </div>
-          <div class="p-4 bg-green-50 border-t border-green-100 flex justify-center items-center text-green-700 text-sm font-medium space-x-2" v-else-if="planting.status === 'ready'">
-              <CheckCircleIcon class="h-5 w-5" />
-              <span>Ready for Field</span>
-          </div>
+              <dl class="grid grid-cols-2 gap-y-2 text-sm text-gray-600 mb-4 px-6">
+                 <div>
+                  <dt class="font-medium text-gray-500">Quantity</dt>
+                  <dd class="text-gray-900 font-semibold">
+                    {{ planting.quantity }} {{ planting.unit || 'kg' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-500">Sown On</dt>
+                  <dd>{{ formatDate(planting.planting_date) }}</dd>
+                </div>
+                <div class="col-span-2">
+                  <dt class="font-medium text-gray-500">Est. Transplant</dt>
+                  <dd>{{ formatDate(planting.expected_transplant_date) }}</dd>
+                </div>
+              </dl>
+
+              <div class="mt-auto border-t border-gray-200">
+                <div class="flex divide-x divide-gray-200">
+                  <button
+                    @click="goToDetails(planting.id)"
+                    class="flex-1 inline-flex items-center justify-center py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-bl-lg"
+                  >
+                    <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span class="ml-2">Details</span>
+                  </button>
+                  <button
+                    @click="goToEdit(planting.id)"
+                    class="flex-1 inline-flex items-center justify-center py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L13.196 5.232z" />
+                    </svg>
+                    <span class="ml-2">Edit</span>
+                  </button>
+                  <button
+                    @click="confirmDelete(planting)"
+                    class="flex-1 inline-flex items-center justify-center py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-br-lg"
+                  >
+                    <svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span class="ml-2">Delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
-    </div>
+      </div>
       <!-- Confirmation Modal -->
-    <Teleport to="body">
       <ConfirmationModal
         :show="showConfirmModal"
-        :title="modalConfig.title"
-        :message="modalConfig.message"
-        :confirm-text="modalConfig.confirmText"
-        :type="modalConfig.type"
+        title="Delete Sowing"
+        :message="`Are you sure you want to delete this sowing of ${plantingToDelete?.rice_variety?.name || 'unknown variety'}? This action cannot be undone.`"
+        confirm-text="Delete"
+        type="danger"
         @close="showConfirmModal = false"
-        @confirm="handleConfirm"
+        @confirm="deletePlanting"
       />
-    </Teleport>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
-import { 
-  PlusIcon, 
-  BeakerIcon, 
-  TrashIcon, 
-  TagIcon, 
-  CalendarIcon, 
-  ClockIcon, 
-  ScaleIcon,
-  CheckCircleIcon
-} from '@heroicons/vue/24/outline';
-import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue';
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFarmStore } from '@/stores/farm'
+import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
 
-const seedPlantings = ref([]);
-const loading = ref(true);
+const router = useRouter()
+const farmStore = useFarmStore()
 
+const loading = ref(false);
+const filters = ref({
+  status: '',
+  variety: null,
+});
+const error = ref(null);
+
+// Confirmation State
 const showConfirmModal = ref(false)
-const pendingAction = ref(null)
-const modalConfig = ref({
-  title: '',
-  message: '',
-  confirmText: 'Confirm',
-  type: 'danger'
-})
+const plantingToDelete = ref(null)
 
-const fetchSeedPlantings = async () => {
+const seedPlantings = computed(() => farmStore.seedPlantings);
+const varietyOptions = computed(() => {
+  const options = [];
+  const seen = new Set();
+
+  seedPlantings.value.forEach((planting) => {
+    if (planting?.rice_variety) {
+      const varietyId = planting.rice_variety.id;
+      if (varietyId) {
+        const key = `variety-${varietyId}`;
+        if (!seen.has(key)) {
+          options.push({
+            key,
+            label: planting.rice_variety.name,
+            type: 'variety',
+            id: varietyId,
+          });
+          seen.add(key);
+        }
+      }
+    }
+  });
+
+  return options.sort((a, b) => a.label.localeCompare(b.label));
+});
+
+const filteredPlantings = computed(() => {
+  let filtered = seedPlantings.value;
+
+  if (filters.value.status) {
+    filtered = filtered.filter(p => p.status === filters.value.status);
+  }
+
+  if (filters.value.variety) {
+    const { id } = filters.value.variety;
+    filtered = filtered.filter((planting) => {
+        const plantingVarietyId = planting.rice_variety?.id;
+        return plantingVarietyId && Number(plantingVarietyId) === Number(id);
+    });
+  }
+  return filtered;
+});
+
+const statusClass = (status) => {
+  const classes = {
+    sown: 'bg-indigo-100 text-indigo-800',
+    germinating: 'bg-yellow-100 text-yellow-800',
+    ready: 'bg-green-100 text-green-800',
+    transplanted: 'bg-blue-100 text-blue-800',
+    failed: 'bg-red-100 text-red-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+
+const clearFilters = () => {
+  filters.value = {
+    status: '',
+    variety: null,
+  };
+};
+
+const refreshPlantings = async () => {
+  loading.value = true;
+  error.value = null;
   try {
-    const response = await axios.get('/api/seed-plantings');
-    seedPlantings.value = response.data;
-  } catch (error) {
-    console.error('Error fetching seed plantings:', error);
+    await farmStore.fetchSeedPlantings();
+  } catch (err) {
+    console.error('Failed to load seed plantings:', err);
+    error.value = err.userMessage || 'Unable to load plantings.';
   } finally {
     loading.value = false;
   }
 };
 
-const confirmUpdateStatus = (planting, status, event) => {
-  if (event) event.stopPropagation();
-  pendingAction.value = { type: 'update', planting, status }
-  modalConfig.value = {
-    title: 'Update Status',
-    message: `Mark this planting as ${status}?`,
-    confirmText: 'Update',
-    type: 'primary' // or 'info' depending on your modal styles, but primary usually implies safety or normal action
-  }
-  showConfirmModal.value = true
-}
-
-const confirmDelete = (planting) => {
-  pendingAction.value = { type: 'delete', planting }
-  modalConfig.value = {
-    title: 'Delete Sowing',
-    message: 'Are you sure you want to delete this record?',
-    confirmText: 'Delete',
-    type: 'danger'
-  }
-  showConfirmModal.value = true
-}
-
-const handleConfirm = async () => {
-  showConfirmModal.value = false
-  const action = pendingAction.value
-  if (!action) return
-
-  try {
-    if (action.type === 'update') {
-      await axios.put(`/api/seed-plantings/${action.planting.id}`, { status: action.status });
-      await fetchSeedPlantings();
-    } else if (action.type === 'delete') {
-      await axios.delete(`/api/seed-plantings/${action.planting.id}`);
-      await fetchSeedPlantings();
-    }
-  } catch (error) {
-    console.error(`Error performing ${action.type}:`, error);
-    alert(`Failed to ${action.type === 'delete' ? 'delete record' : 'update status'}`);
-  } finally {
-    pendingAction.value = null
-  }
-}
-
-const getStatusClass = (status) => {
-  const classes = {
-    sown: 'bg-gray-100 text-gray-800 border-gray-200',
-    germinating: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    ready: 'bg-green-50 text-green-700 border-green-200',
-    transplanted: 'bg-blue-50 text-blue-700 border-blue-200',
-    failed: 'bg-red-50 text-red-700 border-red-200',
-  };
-  return classes[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+// --- Navigation ---
+const goToCreate = () => {
+  router.push('/seed-plantings/create');
 };
 
-const getStatusDotClass = (status) => {
-   const classes = {
-    sown: 'bg-gray-400',
-    germinating: 'bg-yellow-400',
-    ready: 'bg-green-400',
-    transplanted: 'bg-blue-400',
-    failed: 'bg-red-400',
-  };
-  return classes[status] || 'bg-gray-400';
+const goToDetails = (id) => {
+  router.push(`/seed-plantings/${id}`)
+}
+
+const goToEdit = (id) => {
+  // Assuming edit route exists, otherwise functionality needs to be added or button hidden/disabled
+  router.push(`/seed-plantings/${id}/edit`)
+}
+
+// --- CRUD Actions ---
+const confirmDelete = (planting) => {
+  plantingToDelete.value = planting;
+  showConfirmModal.value = true;
+};
+
+const deletePlanting = async () => {
+  if (!plantingToDelete.value) return;
+  showConfirmModal.value = false;
+  
+  try {
+    await farmStore.deleteSeedPlanting(plantingToDelete.value.id);
+    plantingToDelete.value = null;
+  } catch (err) { 
+    console.error('Failed to delete planting:', err);
+    error.value = err.userMessage || 'Unable to delete planting.';
+  }
+};
+
+// --- Formatters ---
+const formatDate = (value) => {
+  if (!value) return 'N/A'
+  try {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch (e) {
+    return value
+  }
 }
 
 const formatStatus = (status) => {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-};
+  if (!status) return 'Unknown'
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+}
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString(undefined, options);
-};
-
+// --- Lifecycle ---
 onMounted(() => {
-  fetchSeedPlantings();
-});
+  // Always refresh to get latest status (or check if length is 0)
+  refreshPlantings();
+})
 </script>

@@ -19,9 +19,13 @@ class LaborerFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'contact' => fake()->phoneNumber(),
+            'phone' => fake()->phoneNumber(),
+            'email' => fake()->unique()->safeEmail(),
+            'skill_level' => fake()->randomElement(['beginner', 'intermediate', 'advanced', 'expert']),
             'rate' => fake()->randomFloat(2, 300, 800),
             'rate_type' => fake()->randomElement(['daily', 'per_job']),
+            'status' => 'active',
+            'hire_date' => now(),
         ];
     }
 }

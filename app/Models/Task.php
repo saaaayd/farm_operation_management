@@ -19,6 +19,9 @@ class Task extends Model
         'payment_type',
         'revenue_share_percentage',
         'wage_amount',
+        'unit',
+        'quantity',
+        'unit_price',
     ];
 
     protected $casts = [
@@ -27,6 +30,8 @@ class Task extends Model
         'updated_at' => 'datetime',
         'revenue_share_percentage' => 'decimal:2',
         'wage_amount' => 'decimal:2',
+        'quantity' => 'decimal:2',
+        'unit_price' => 'decimal:2',
     ];
 
     /**
@@ -44,6 +49,7 @@ class Task extends Model
      */
     const PAYMENT_TYPE_WAGE = 'wage';
     const PAYMENT_TYPE_SHARE = 'share';
+    const PAYMENT_TYPE_PIECE_RATE = 'piece_rate';
 
     /**
      * Status constants

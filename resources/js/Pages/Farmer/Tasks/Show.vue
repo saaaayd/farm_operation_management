@@ -83,6 +83,39 @@
                   {{ task.laborer.contact }}
                 </p>
               </div>
+              </div>
+            
+            <div class="px-6 py-5 border-t border-gray-100">
+                <p class="text-sm text-gray-500 mb-2">Payment Details</p>
+                
+                <div v-if="task.payment_type === 'piece_rate'" class="bg-emerald-50 rounded-lg p-3 border border-emerald-100 inline-block min-w-[200px]">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-emerald-900">Piece Rate</p>
+                            <p class="text-xs text-emerald-700 mt-0.5">
+                                {{ formatNumber(task.quantity) }} {{ task.unit || 'units' }} × ₱{{ formatNumber(task.unit_price) }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-emerald-600 uppercase font-bold tracking-wider">Total</p>
+                            <p class="text-lg font-bold text-emerald-700">₱{{ formatNumber(task.wage_amount) }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="task.payment_type === 'wage'" class="bg-gray-50 rounded-lg p-3 border border-gray-200 inline-block">
+                    <p class="text-sm font-medium text-gray-900">Standard Wage</p>
+                    <p class="text-lg font-bold text-gray-700 mt-1">₱{{ formatNumber(task.wage_amount) }}</p>
+                </div>
+
+                <div v-else-if="task.payment_type === 'share'" class="bg-orange-50 rounded-lg p-3 border border-orange-100 inline-block">
+                     <p class="text-sm font-medium text-orange-900">Revenue Share</p>
+                     <p class="text-lg font-bold text-orange-700 mt-1">{{ task.revenue_share_percentage }}% <span class="text-sm font-normal text-orange-600">of harvest</span></p>
+                </div>
+
+                <div v-else class="text-sm text-gray-500 italic">
+                    No payment structure defined.
+                </div>
             </div>
           </section>
 
@@ -130,12 +163,18 @@
   </div>
 </template>
 
+
+
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { tasksAPI } from '@/services/api'
 import { useFarmStore } from '@/stores/farm'
 import { getTaskTypeLabel } from '@/utils/taskTypes'
+
+const formatNumber = (num) => {
+  return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 const route = useRoute()
 const router = useRouter()

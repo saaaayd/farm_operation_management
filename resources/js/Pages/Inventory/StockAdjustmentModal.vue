@@ -49,6 +49,33 @@
             />
           </div>
 
+          <!-- Unit Cost & Total Cost (Only for Adding Stock) -->
+          <div v-if="type === 'add'" class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label for="unitCost" class="block text-sm font-medium text-gray-700 mb-1">Unit Cost</label>
+              <div class="relative rounded-md shadow-sm">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span class="text-gray-500 sm:text-sm">₱</span>
+                </div>
+                <input
+                  type="number"
+                  id="unitCost"
+                  v-model.number="unitCost"
+                  min="0"
+                  step="any"
+                  class="block w-full rounded-lg border-gray-300 pl-7 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Total Cost</label>
+              <div class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium">
+                {{ formatCurrency(totalCost) }}
+              </div>
+            </div>
+          </div>
+
           <div v-if="error" class="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">
             {{ error }}
           </div>
@@ -78,9 +105,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import { useInventoryStore } from '@/stores/inventory'
+import { formatCurrency } from '@/utils/format'
 
 const props = defineProps({
   show: Boolean,
@@ -95,8 +123,14 @@ const inventoryStore = useInventoryStore()
 
 const type = ref('add')
 const quantity = ref('')
+const unitCost = ref('')
 const processing = ref(false)
 const error = ref(null)
+
+const totalCost = computed(() => {
+  if (!quantity.value || !unitCost.value) return 0
+  return quantity.value * unitCost.value
+})
 
 const handleModelValueUpdate = (val) => {
   if (!val) closeModal()
@@ -105,6 +139,7 @@ const handleModelValueUpdate = (val) => {
 const closeModal = () => {
   type.value = 'add'
   quantity.value = ''
+  unitCost.value = ''
   error.value = null
   emit('close')
 }
@@ -117,7 +152,7 @@ const handleSubmit = async () => {
 
   try {
     if (type.value === 'add') {
-      await inventoryStore.addStock(props.item.id, quantity.value)
+      await inventoryStore.addStock(props.item.id, quantity.value, unitCost.value)
     } else {
       await inventoryStore.removeStock(props.item.id, quantity.value)
     }
@@ -136,6 +171,8 @@ watch(() => props.show, (val) => {
   if (val) {
     type.value = 'add'
     quantity.value = ''
+    // Initialize unitCost with current unit_price
+    unitCost.value = props.item.unit_price || 0
     error.value = null
   }
 })

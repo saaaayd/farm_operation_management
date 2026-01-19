@@ -264,8 +264,13 @@ class HarvestController extends Controller
             ]
         );
 
-        // Add the harvested quantity to inventory
-        $inventoryItem->addStock($harvest->quantity);
+        // Calculate net quantity (Gross - Harvester Share)
+        $netQuantity = $harvest->quantity - ($harvest->harvester_share ?? 0);
+
+        // Add the net quantity to inventory
+        if ($netQuantity > 0) {
+            $inventoryItem->addStock($netQuantity);
+        }
 
         // Update unit price if provided and different
         if ($harvest->price_per_unit && $harvest->price_per_unit != $inventoryItem->unit_price) {

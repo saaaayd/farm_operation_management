@@ -361,7 +361,26 @@ class InventoryItemController extends Controller
         $createExpense = $request->input('create_expense', true);
         $notes = $request->input('notes', 'Manual stock addition via API');
 
-        $item->current_stock = ($item->current_stock ?? 0) + $quantity;
+        // Calculate Weighted Average Cost (WAC)
+        $currentStock = $item->current_stock ?? 0;
+        $currentUnitPrice = $item->unit_price ?? 0;
+
+        // Calculate total value before adding new stock
+        $currentTotalValue = $currentStock * $currentUnitPrice;
+
+        // Calculate new stock value
+        $addedValue = $quantity * $unitCost;
+
+        // Calculate new total stock
+        $newTotalStock = $currentStock + $quantity;
+
+        if ($newTotalStock > 0) {
+            // Calculate new unit price
+            $newUnitPrice = ($currentTotalValue + $addedValue) / $newTotalStock;
+            $item->unit_price = $newUnitPrice;
+        }
+
+        $item->current_stock = $newTotalStock;
         $item->save();
 
         $totalCost = $quantity * $unitCost;

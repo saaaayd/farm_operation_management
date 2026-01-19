@@ -453,7 +453,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFarmStore } from '@/stores/farm';
 import { useAuthStore } from '@/stores/auth';
@@ -510,7 +510,7 @@ const form = reactive({
 
 
 // Load provinces on mount - REMOVED (Static Location)
-// Load provinces on mount - REMOVED (Static Location)
+
 onMounted(async () => {
   // Static location assumed
   await marketplaceStore.fetchRiceVarieties(); // Fetch varieties for dropdowns

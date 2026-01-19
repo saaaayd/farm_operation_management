@@ -262,7 +262,23 @@
                 <span class="text-gray-600">This Season:</span>
                 <span class="font-medium text-gray-500">~{{ gdd.season }}°</span>
               </div>
-              <p class="text-xs text-gray-400 mt-2">Base: 10°C (rice). Month/season are estimates.</p>
+              <div class="mt-4 pt-3 border-t border-gray-100">
+                <div class="flex items-start space-x-2">
+                  <span class="text-blue-500 text-lg">ℹ️</span>
+                  <div>
+                    <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">About GDD</h4>
+                    <p class="text-xs text-gray-600 leading-relaxed mb-2">
+                      Growing Degree Days (GDD) measure heat accumulation to estimate crop maturity. Higher values indicate faster growth.
+                    </p>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono text-gray-600 border border-gray-100 mb-2">
+                      ((Max Temp + Min Temp) / 2) - 10°C = Daily GDD
+                    </div>
+                    <p class="text-xs text-gray-500 italic">
+                      Rice typically requires ~2200 cumulative GDD to reach maturity.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

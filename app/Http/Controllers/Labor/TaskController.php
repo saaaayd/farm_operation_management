@@ -74,9 +74,12 @@ class TaskController extends Controller
             'assigned_to' => ['nullable', 'exists:laborers,id'],
 
             'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
-            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE])],
+            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE, Task::PAYMENT_TYPE_PIECE_RATE])],
             'revenue_share_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'wage_amount' => ['nullable', 'numeric', 'min:0'],
+            'unit' => ['nullable', 'string'],
+            'quantity' => ['nullable', 'numeric', 'min:0'],
+            'unit_price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         if ($validator->fails()) {
@@ -107,7 +110,12 @@ class TaskController extends Controller
             'laborer_group_id' => $request->laborer_group_id,
             'payment_type' => $request->input('payment_type', Task::PAYMENT_TYPE_WAGE),
             'revenue_share_percentage' => $request->revenue_share_percentage,
-            'wage_amount' => $request->wage_amount,
+            'wage_amount' => $request->payment_type === Task::PAYMENT_TYPE_PIECE_RATE
+                ? ($request->quantity * $request->unit_price)
+                : $request->wage_amount,
+            'unit' => $request->unit,
+            'quantity' => $request->quantity,
+            'unit_price' => $request->unit_price,
         ]);
 
         $task->load(['planting.field', 'laborer', 'laborerGroup']);
@@ -162,9 +170,12 @@ class TaskController extends Controller
             'assigned_to' => ['nullable', 'exists:laborers,id'],
 
             'laborer_group_id' => ['nullable', 'exists:laborer_groups,id'],
-            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE])],
+            'payment_type' => ['nullable', 'string', Rule::in([Task::PAYMENT_TYPE_WAGE, Task::PAYMENT_TYPE_SHARE, Task::PAYMENT_TYPE_PIECE_RATE])],
             'revenue_share_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'wage_amount' => ['nullable', 'numeric', 'min:0'],
+            'unit' => ['nullable', 'string'],
+            'quantity' => ['nullable', 'numeric', 'min:0'],
+            'unit_price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         if ($validator->fails()) {
@@ -222,6 +233,23 @@ class TaskController extends Controller
 
         if ($request->has('wage_amount')) {
             $data['wage_amount'] = $request->wage_amount;
+        }
+
+        if ($request->has('unit'))
+            $data['unit'] = $request->unit;
+        if ($request->has('quantity'))
+            $data['quantity'] = $request->quantity;
+        if ($request->has('unit_price'))
+            $data['unit_price'] = $request->unit_price;
+
+        // Recalculate wage_amount if piece rate fields are updated
+        if (
+            ($data['payment_type'] ?? $task->payment_type) === Task::PAYMENT_TYPE_PIECE_RATE ||
+            (isset($data['payment_type']) && $data['payment_type'] === Task::PAYMENT_TYPE_PIECE_RATE)
+        ) {
+            $qty = $data['quantity'] ?? $task->quantity ?? 0;
+            $price = $data['unit_price'] ?? $task->unit_price ?? 0;
+            $data['wage_amount'] = $qty * $price;
         }
 
         if (!empty($data)) {
@@ -394,6 +422,11 @@ class TaskController extends Controller
 
             if ($wageAmount <= 0) {
                 continue;
+            }
+
+            // Distribute piece rate total among group members
+            if ($task->payment_type === Task::PAYMENT_TYPE_PIECE_RATE && $laborers->count() > 1) {
+                $wageAmount = $wageAmount / $laborers->count();
             }
 
             // Create LaborWage record
