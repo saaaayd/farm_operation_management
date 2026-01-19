@@ -293,12 +293,7 @@
               >
                 📊 View Historical Data
               </button>
-              <button
-                @click="setWeatherAlerts"
-                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                🔔 Set Weather Alerts
-              </button>
+
               <button
                 @click="exportWeatherData"
                 class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
@@ -613,18 +608,41 @@ const viewFieldWeather = (fieldId) => {
 }
 
 const viewHistoricalData = () => {
-  // Navigate to historical data page
-  console.log('View historical data')
-}
-
-const setWeatherAlerts = () => {
-  // Show weather alerts settings modal
-  console.log('Set weather alerts')
+  // Navigate to historical data page (Analytics)
+  router.push('/weather/analytics')
 }
 
 const exportWeatherData = () => {
-  // Export weather data
-  console.log('Export weather data')
+  // Convert field weather data to CSV
+  if (!fieldWeather.value || fieldWeather.value.length === 0) {
+    alert('No weather data available to export.')
+    return
+  }
+
+  const headers = ['Field Name', 'Temperature (°C)', 'Humidity (%)', 'Rainfall (mm)', 'Location']
+  const rows = fieldWeather.value.map(field => [
+    `"${field.name || 'Unknown Field'}"`,
+    field.temperature || '',
+    field.humidity || '',
+    field.rainfall || '',
+    `"${field.location?.lat || ''}, ${field.location?.lon || ''}"`
+  ])
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n')
+
+  // Create download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.setAttribute('href', url)
+  link.setAttribute('download', `weather_data_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 const viewWeatherReports = () => {

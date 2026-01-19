@@ -25,12 +25,34 @@ class TaskPieceRateTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create(['role' => 'farmer']);
         $this->actingAs($this->user);
 
         $farm = Farm::factory()->create(['user_id' => $this->user->id]);
         $field = Field::factory()->create(['user_id' => $this->user->id, 'farm_id' => $farm->id]);
-        $this->planting = Planting::factory()->create(['field_id' => $field->id]);
+
+        $variety = \App\Models\RiceVariety::create([
+            'name' => 'RC222',
+            'variety_code' => 'RC222',
+            'maturity_days' => 114,
+            'average_yield_per_hectare' => 6.0,
+            'season' => 'both',
+            'grain_type' => 'long',
+            'resistance_level' => 'high',
+        ]);
+
+        $this->planting = Planting::create([
+            'field_id' => $field->id,
+            'rice_variety_id' => $variety->id,
+            'crop_type' => 'rice',
+            'planting_date' => now(),
+            'expected_harvest_date' => now()->addMonths(4),
+            'status' => Planting::STATUS_PLANTED,
+            'planting_method' => 'transplanting',
+            'area_planted' => 1.5,
+            'seed_rate' => 2,
+            'season' => 'wet',
+        ]);
 
         $this->laborer = Laborer::factory()->create(['user_id' => $this->user->id, 'rate' => 500]);
         $this->group = LaborerGroup::create([
@@ -44,7 +66,7 @@ class TaskPieceRateTest extends TestCase
     /** @test */
     public function can_create_task_with_piece_rate()
     {
-        $response = $this->postJson(route('tasks.store'), [
+        $response = $this->postJson('/api/tasks', [
             'planting_id' => $this->planting->id,
             'task_type' => Task::TYPE_HARVESTING,
             'due_date' => now()->addDay()->toDateString(),
@@ -74,7 +96,7 @@ class TaskPieceRateTest extends TestCase
         $laborer2 = Laborer::factory()->create(['user_id' => $this->user->id]);
         $this->group->laborers()->attach($laborer2);
 
-        $response = $this->postJson(route('tasks.store'), [
+        $response = $this->postJson('/api/tasks', [
             'planting_id' => $this->planting->id,
             'task_type' => Task::TYPE_HARVESTING,
             'due_date' => now()->addDay()->toDateString(),
@@ -93,7 +115,7 @@ class TaskPieceRateTest extends TestCase
         $this->assertEquals(2000, $task->wage_amount);
 
         // Mark completed to trigger wage distribution
-        $response = $this->postJson(route('tasks.complete', $task));
+        $response = $this->postJson("/api/tasks/{$task->id}/complete");
         $response->assertOk();
 
         // Check labor wages

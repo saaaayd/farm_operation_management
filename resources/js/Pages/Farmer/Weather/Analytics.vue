@@ -59,7 +59,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <!-- Current Weather -->
         <div class="lg:col-span-1">
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="bg-white rounded-lg shadow p-6 h-full">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Weather</h3>
             
             <div v-if="currentWeather" class="space-y-4">
@@ -164,7 +164,7 @@
         <!-- Temperature Chart -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Temperature Trends</h3>
-          <div class="h-64">
+          <div class="h-80">
             <LineChart 
               v-if="weatherHistory.length > 0"
               :data="temperatureChartData"
@@ -174,12 +174,16 @@
               <p>No temperature data available</p>
             </div>
           </div>
+          <p class="mt-4 text-sm text-gray-600">
+            <span class="font-medium">What it shows:</span> Daily average temperature (°C) over the past 30 days. <br/>
+            <span class="font-medium">Tip:</span> Rice grows best between 20°C and 35°C. Monitor temperature trends to plan irrigation and protect crops from heat stress or cold damage.
+          </p>
         </div>
 
         <!-- Rainfall Chart -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Rainfall Patterns</h3>
-          <div class="h-64">
+          <div class="h-80">
             <BarChart 
               v-if="weatherHistory.length > 0"
               :data="rainfallChartData"
@@ -189,6 +193,10 @@
               <p>No rainfall data available</p>
             </div>
           </div>
+          <p class="mt-4 text-sm text-gray-600">
+            <span class="font-medium">What it shows:</span> Daily rainfall amounts (mm) over the past 30 days. <br/>
+            <span class="font-medium">Tip:</span> Rice paddies typically need 1,200–2,000mm of water per growing season. Use rainfall data to optimize irrigation and drainage schedules.
+          </p>
         </div>
       </div>
 
