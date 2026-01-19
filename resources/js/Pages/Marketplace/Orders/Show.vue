@@ -343,11 +343,11 @@
                 </div>
                 <button
                   v-if="order.status === 'pending'"
-                  @click="showCancelModal = true"
+                  @click="showRejectModal = true"
                   :disabled="processing"
                   class="w-full bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
                 >
-                  ✕ Cancel Order
+                  ✕ Reject Order
                 </button>
                 <button
                   @click="contactBuyer"
@@ -362,9 +362,9 @@
       </div>
       </div>
 
-      <!-- Cancel Order Modal -->
+      <!-- Cancel Order Modal (for buyer) -->
       <div
-        v-if="showCancelModal"
+        v-if="showCancelModal && !isFarmer"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
         @click.self="showCancelModal = false"
       >
@@ -394,6 +394,46 @@
             </button>
             <button
               @click="showCancelModal = false; cancelReason = ''"
+              class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reject Order Modal (for farmer) -->
+      <div
+        v-if="showRejectModal && isFarmer"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        @click.self="showRejectModal = false"
+      >
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 class="text-xl font-semibold mb-4">Reject Order</h3>
+          <p class="text-gray-600 mb-4">
+            Are you sure you want to reject Order #{{ order?.id }}?
+          </p>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Rejection Reason (optional)
+            </label>
+            <textarea
+              v-model="rejectReason"
+              rows="4"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Enter reason for rejection..."
+            ></textarea>
+          </div>
+          <div class="flex space-x-3">
+            <button
+              @click="rejectOrder"
+              :disabled="processing"
+              class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {{ processing ? 'Processing...' : 'Confirm Reject' }}
+            </button>
+            <button
+              @click="showRejectModal = false; rejectReason = ''"
               class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
             >
               Cancel
@@ -456,7 +496,9 @@ const messageInput = ref('')
 const messageError = ref('')
 const processing = ref(false)
 const showCancelModal = ref(false)
+const showRejectModal = ref(false)
 const cancelReason = ref('')
+const rejectReason = ref('')
 
 const getStatusBadgeClass = (status) => {
   const classes = {
@@ -685,6 +727,23 @@ const cancelOrder = async () => {
     alert('Order cancelled successfully')
   } catch (err) {
     alert(err.userMessage || err.response?.data?.message || 'Failed to cancel order')
+  } finally {
+    processing.value = false
+  }
+}
+
+const rejectOrder = async () => {
+  processing.value = true
+  try {
+    await axios.post(`/api/rice-marketplace/orders/${order.value.id}/reject`, {
+      reason: rejectReason.value.trim() || 'Rejected by farmer'
+    })
+    showRejectModal.value = false
+    rejectReason.value = ''
+    await loadOrderData(order.value.id)
+    alert('Order rejected successfully')
+  } catch (err) {
+    alert(err.userMessage || err.response?.data?.message || 'Failed to reject order')
   } finally {
     processing.value = false
   }

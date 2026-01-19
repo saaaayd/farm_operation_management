@@ -555,5 +555,16 @@ export const useMarketplaceStore = defineStore('marketplace', {
         throw error;
       }
     },
+
+    async respondToNegotiation(orderId, action) {
+      try {
+        const response = await axios.post(`/api/rice-marketplace/orders/${orderId}/negotiate`, {
+          action: action // 'accept' or 'reject'
+        });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
   },
 });

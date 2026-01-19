@@ -188,7 +188,7 @@
           <!-- Weather Alerts -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Weather Alerts</h2>
-            <div class="space-y-4">
+            <div v-if="weatherAlerts.length > 0" class="space-y-4">
               <div
                 v-for="alert in weatherAlerts"
                 :key="alert.id"
@@ -206,6 +206,12 @@
                   </div>
                 </div>
               </div>
+            </div>
+            <div v-else class="text-center py-8 text-gray-500">
+              <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-sm">No alerts — weather looks good for farming!</p>
             </div>
           </div>
         </div>

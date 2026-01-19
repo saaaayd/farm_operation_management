@@ -141,6 +141,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Status</option>
+              <option value="negotiating">Negotiating</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="ready_for_pickup">Ready for Pickup</option>
@@ -472,6 +473,7 @@ const formatDate = (date) => {
 const formatStatus = (status) => {
   if (!status) return ''
   const labels = {
+    negotiating: 'Negotiating',
     pending: 'Pending',
     confirmed: 'Confirmed',
     ready_for_pickup: 'Ready for Pickup',
@@ -484,6 +486,7 @@ const formatStatus = (status) => {
 
 const getStatusBadgeClass = (status) => {
   const classes = {
+    negotiating: 'bg-orange-100 text-orange-800',
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
     ready_for_pickup: 'bg-purple-100 text-purple-800',

@@ -190,6 +190,14 @@ class WeatherService
                 ? round($weatherData['wind']['speed'] * 3.6, 1) // convert m/s to km/h
                 : 0;
 
+            // Extract rainfall from API response (OpenWeatherMap provides rain in mm for last 1h or 3h)
+            $rainfall = 0;
+            if (isset($weatherData['rain']['1h'])) {
+                $rainfall = round($weatherData['rain']['1h'], 2);
+            } elseif (isset($weatherData['rain']['3h'])) {
+                $rainfall = round($weatherData['rain']['3h'] / 3, 2); // Convert 3h to hourly estimate
+            }
+
             $recordedAt = isset($weatherData['dt'])
                 ? Carbon::createFromTimestamp($weatherData['dt'])
                 : now();
@@ -199,6 +207,7 @@ class WeatherService
                 'temperature' => round($weatherData['main']['temp'], 1),
                 'humidity' => $weatherData['main']['humidity'],
                 'wind_speed' => $windSpeed,
+                'rainfall' => $rainfall,
                 'conditions' => $this->mapWeatherCondition($weatherData['weather'][0]['main'] ?? 'clear'),
                 'recorded_at' => $recordedAt,
             ]);

@@ -145,6 +145,7 @@ class CartController extends Controller
             'delivery_method' => 'required|string',
             'payment_method' => 'required|string',
             'notes' => 'nullable|string',
+            'offer_price' => 'nullable|numeric|min:0.01',
         ]);
 
         $cartItems = CartItem::where('buyer_id', Auth::id())
@@ -156,8 +157,9 @@ class CartController extends Controller
         }
 
         $orders = [];
+        $offerPrice = $request->input('offer_price');
 
-        DB::transaction(function () use ($cartItems, $request, &$orders) {
+        DB::transaction(function () use ($cartItems, $request, &$orders, $offerPrice) {
             foreach ($cartItems as $item) {
                 $product = $item->riceProduct;
 
@@ -168,14 +170,23 @@ class CartController extends Controller
                 }
                 $product->reserveQuantity($item->quantity);
 
+                // Determine if negotiation is active
+                $unitPrice = $product->price_per_unit;
+                $isNegotiating = $offerPrice && (float) $offerPrice < (float) $unitPrice;
+                $orderStatus = $isNegotiating ? RiceOrder::STATUS_NEGOTIATING : RiceOrder::STATUS_PENDING;
+                $totalAmount = $isNegotiating
+                    ? $item->quantity * $offerPrice
+                    : $item->quantity * $unitPrice;
+
                 // Create order
                 $order = RiceOrder::create([
                     'buyer_id' => Auth::id(),
                     'rice_product_id' => $product->id,
                     'quantity' => $item->quantity,
-                    'unit_price' => $product->price_per_unit,
-                    'total_amount' => $item->quantity * $product->price_per_unit,
-                    'status' => RiceOrder::STATUS_PENDING,
+                    'unit_price' => $unitPrice,
+                    'offer_price' => $offerPrice,
+                    'total_amount' => $totalAmount,
+                    'status' => $orderStatus,
                     'payment_status' => RiceOrder::PAYMENT_PENDING,
                     'delivery_address' => $request->delivery_address,
                     'delivery_method' => $request->delivery_method,
@@ -185,11 +196,15 @@ class CartController extends Controller
                 ]);
 
                 // Notify farmer
+                $notificationMessage = $isNegotiating
+                    ? "You have a new price negotiation for {$item->quantity} kg of {$product->name}. Offered: ₱{$offerPrice}/kg"
+                    : "You have a new order for {$item->quantity} kg of {$product->name}";
+
                 \App\Models\Notification::notify(
                     $product->farmer_id,
                     \App\Models\Notification::TYPE_ORDER_PLACED,
-                    'New Order Received',
-                    "You have a new order for {$item->quantity} kg of {$product->name}",
+                    $isNegotiating ? 'New Price Negotiation' : 'New Order Received',
+                    $notificationMessage,
                     ['order_id' => $order->id],
                     "/farmer/orders/{$order->id}"
                 );

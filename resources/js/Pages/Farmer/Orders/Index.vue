@@ -53,9 +53,23 @@
                 <p>{{ order.quantity }} kg • ₱{{ Number(order.total_amount).toLocaleString() }}</p>
                 <p>Buyer: {{ order.buyer?.name || 'N/A' }}</p>
                 <p>Ordered: {{ formatDate(order.order_date) }}</p>
+                <!-- Negotiation Price Info -->
+                <p v-if="order.status === 'negotiating' && order.offer_price" class="text-orange-600 font-medium">
+                  🤝 Buyer offers: ₱{{ Number(order.offer_price).toLocaleString() }}/kg
+                  (Original: ₱{{ Number(order.rice_product?.price_per_unit || order.unit_price).toLocaleString() }}/kg)
+                </p>
               </div>
             </div>
             <div class="flex flex-wrap gap-2">
+              <!-- Negotiating Actions -->
+              <template v-if="order.status === 'negotiating'">
+                <button @click="acceptNegotiation(order)" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                  ✓ Accept Offer
+                </button>
+                <button @click="rejectNegotiation(order)" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200">
+                  ✕ Reject Offer
+                </button>
+              </template>
               <!-- Pending Actions -->
               <template v-if="order.status === 'pending'">
                 <button @click="acceptOrder(order)" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
@@ -107,6 +121,7 @@ const activeTab = ref('pending')
 
 const tabs = [
   { value: 'all', label: 'All' },
+  { value: 'negotiating', label: 'Negotiating' },
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'shipped', label: 'Shipped' },
@@ -125,6 +140,7 @@ const getOrderCount = (status) => {
 
 const getStatusClass = (status) => {
   const classes = {
+    negotiating: 'bg-orange-100 text-orange-800',
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
     shipped: 'bg-purple-100 text-purple-800',
@@ -164,6 +180,27 @@ const shipOrder = async (order) => {
     order.status = 'shipped'
   } catch (err) {
     alert(err.message || 'Failed to ship order')
+  }
+}
+
+const acceptNegotiation = async (order) => {
+  if (!confirm(`Accept buyer's offer of ₱${order.offer_price}/kg? The order will proceed.`)) return
+  try {
+    await marketplaceStore.respondToNegotiation(order.id, 'accept')
+    order.status = 'pending'
+    order.unit_price = order.offer_price
+  } catch (err) {
+    alert(err.message || 'Failed to accept negotiation')
+  }
+}
+
+const rejectNegotiation = async (order) => {
+  if (!confirm('Reject this offer? The order will be cancelled.')) return
+  try {
+    await marketplaceStore.respondToNegotiation(order.id, 'reject')
+    order.status = 'cancelled'
+  } catch (err) {
+    alert(err.message || 'Failed to reject negotiation')
   }
 }
 

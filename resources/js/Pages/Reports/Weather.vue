@@ -35,7 +35,7 @@
       <!-- Filters -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-lg font-semibold mb-4">Report Filters</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <select
@@ -60,24 +60,13 @@
               </option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Weather Station</label>
-            <select
-              v-model="selectedStation"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Stations</option>
-              <option value="main">Main Station</option>
-              <option value="north">North Station</option>
-              <option value="south">South Station</option>
-            </select>
-          </div>
           <div class="flex items-end">
             <button
               @click="updateReport"
-              class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="loading"
+              class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              Update Report
+              {{ loading ? 'Loading...' : 'Update Report' }}
             </button>
           </div>
         </div>
@@ -349,7 +338,6 @@ const fields = ref([])
 
 const dateRange = ref('last30days')
 const selectedField = ref('')
-const selectedStation = ref('')
 const weatherData = ref([])
 const loading = ref(true)
 
@@ -405,10 +393,8 @@ const updateReport = async () => {
   // Reload report data with current filters
   try {
     await loadWeatherData()
-    alert('Report updated successfully')
   } catch (error) {
     console.error('Failed to update report:', error)
-    alert('Failed to update report')
   }
 }
 
@@ -416,10 +402,8 @@ const generateReport = async () => {
   // Generate new report with current filters
   try {
     await loadWeatherData()
-    alert('Report generated successfully')
   } catch (error) {
     console.error('Failed to generate report:', error)
-    alert('Failed to generate report')
   }
 }
 
@@ -436,10 +420,8 @@ const exportReport = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    alert('Report exported successfully')
   } catch (error) {
     console.error('Failed to export report:', error)
-    alert('Failed to export report')
   }
 }
 
@@ -520,7 +502,9 @@ const loadWeatherData = async () => {
     }
     const period = periodMap[dateRange.value] || 30
     
-    const response = await reportsAPI.getWeatherReport(period, selectedField.value === 'all' ? null : selectedField.value)
+    // Pass field ID if selected, otherwise null for all fields
+    const fieldId = selectedField.value ? selectedField.value : null
+    const response = await reportsAPI.getWeatherReport(period, fieldId)
     const data = response.data.data || response.data
     
     if (data.weather_summary) {
@@ -551,6 +535,8 @@ const loadWeatherData = async () => {
     
     if (data.weather_events) {
       weatherEvents.value = data.weather_events
+    } else {
+      weatherEvents.value = []
     }
 
     if (data.daily_history) {
@@ -564,7 +550,6 @@ const loadWeatherData = async () => {
     }
   } catch (error) {
     console.error('Error loading weather data:', error)
-    alert('Failed to load weather data')
   } finally {
     loading.value = false
   }

@@ -266,10 +266,10 @@
                 📊 View Historical Data
               </button>
               <button
-                @click="setFieldAlerts"
+                @click="viewWeatherAnalytics"
                 class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
               >
-                🔔 Set Field Alerts
+                📈 View Weather Analytics
               </button>
               <button
                 @click="exportFieldData"
@@ -278,10 +278,10 @@
                 📤 Export Field Data
               </button>
               <button
-                @click="compareWithOtherFields"
+                @click="viewWeatherDashboard"
                 class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
               >
-                🔄 Compare Fields
+                🏠 View Weather Dashboard
               </button>
             </div>
           </div>
@@ -362,18 +362,18 @@ const viewFieldDetails = () => {
 }
 
 const viewHistoricalData = () => {
-  // Navigate to weather reports page with field filter
+  // Navigate to weather analytics page with field filter (consistent with dashboard)
   router.push({
-    path: '/reports/weather',
+    path: '/weather/analytics',
     query: { field: field.value.id }
   })
 }
 
-const setFieldAlerts = () => {
-  // Navigate to weather analytics page where alerts can be configured
+const viewWeatherAnalytics = () => {
+  // Navigate to weather analytics page with field filter
   router.push({
     path: '/weather/analytics',
-    query: { field: field.value.id, tab: 'alerts' }
+    query: { field: field.value.id }
   })
 }
 
@@ -430,12 +430,9 @@ const exportFieldData = async () => {
   }
 }
 
-const compareWithOtherFields = () => {
-  // Navigate to weather analytics page with comparison view
-  router.push({
-    path: '/weather/analytics',
-    query: { compare: true, field: field.value.id }
-  })
+const viewWeatherDashboard = () => {
+  // Navigate to weather dashboard
+  router.push('/weather')
 }
 
 onMounted(() => {

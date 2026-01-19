@@ -1021,13 +1021,8 @@ class ReportController extends Controller
         $avgHumidity = $weatherData->avg('humidity') ?: 0;
         $avgWindSpeed = $weatherData->avg('wind_speed') ?: 0;
 
-        // Estimate rainfall from conditions (rainy/stormy conditions)
-        $rainyDays = $weatherData->filter(function ($record) {
-            return in_array($record->conditions, ['rainy', 'stormy']);
-        })->unique(function ($record) {
-            return Carbon::parse($record->recorded_at)->format('Y-m-d');
-        })->count();
-        $estimatedRainfall = $rainyDays * 5; // Rough estimate: 5mm per rainy day
+        // Calculate total rainfall from actual data (sum of rainfall column)
+        $totalRainfall = $weatherData->sum('rainfall') ?: 0;
 
         // Estimate sunshine hours (clear days = more sunshine)
         $clearDays = $weatherData->filter(function ($record) {
@@ -1047,20 +1042,17 @@ class ReportController extends Controller
             ];
         })->sortBy('date')->values();
 
-        // Humidity distribution (daily average) - used as proxy for rainfall
-        $humidityDistribution = $weatherData->groupBy(function ($record) {
+        // Rainfall distribution (daily totals from actual data)
+        $rainfallDistribution = $weatherData->groupBy(function ($record) {
             return Carbon::parse($record->recorded_at)->format('Y-m-d');
         })->map(function ($dayRecords, $date) {
-            $avgHumidity = $dayRecords->avg('humidity') ?: 0;
-            // Convert high humidity to estimated rainfall (rough approximation)
-            $estimatedRainfall = $avgHumidity > 80 ? ($avgHumidity - 70) * 0.5 : 0;
             return [
                 'date' => $date,
-                'rainfall' => round($estimatedRainfall, 2),
+                'rainfall' => round($dayRecords->sum('rainfall') ?: 0, 2),
             ];
         })->sortBy('date')->values();
 
-        // Growing Degree Days (GDD) - simplified calculation
+        // Growing Degree Days (GDD) - calculate from daily averages to avoid duplicates
         $baseTemp = 10; // Base temperature for rice
         $todayGDD = 0;
         $weekGDD = 0;
@@ -1072,10 +1064,17 @@ class ReportController extends Controller
         $monthAgo = now()->subDays(30);
         $seasonStart = now()->subDays($days);
 
-        foreach ($weatherData as $record) {
-            $recordDate = Carbon::parse($record->recorded_at);
-            $temp = $record->temperature ?: 0;
-            $gdd = max(0, $temp - $baseTemp);
+        // Group weather data by day and calculate daily average temperature
+        $dailyTemperatures = $weatherData->groupBy(function ($record) {
+            return Carbon::parse($record->recorded_at)->format('Y-m-d');
+        })->map(function ($dayRecords) {
+            return $dayRecords->avg('temperature') ?: 0;
+        });
+
+        // Calculate GDD for each day based on daily average
+        foreach ($dailyTemperatures as $dateStr => $avgTemp) {
+            $recordDate = Carbon::parse($dateStr);
+            $gdd = max(0, $avgTemp - $baseTemp);
 
             if ($recordDate->isToday()) {
                 $todayGDD += $gdd;
@@ -1219,7 +1218,7 @@ class ReportController extends Controller
                 if (isset($ra['estimated_soil_moisture'])) {
                     $impactAnalysis['field_conditions']['soil_moisture'] = ucfirst($ra['estimated_soil_moisture']);
                 } else {
-                    $impactAnalysis['field_conditions']['soil_moisture'] = $estimatedRainfall > 20 ? 'Saturated' : ($estimatedRainfall > 5 ? 'Optimal' : 'Dry');
+                    $impactAnalysis['field_conditions']['soil_moisture'] = $totalRainfall > 20 ? 'Saturated' : ($totalRainfall > 5 ? 'Optimal' : 'Dry');
                 }
 
                 // Workability
@@ -1253,8 +1252,8 @@ class ReportController extends Controller
             $avgHumidity = $dayRecords->avg('humidity') ?: 0;
             $avgWind = $dayRecords->avg('wind_speed') ?: 0;
 
-            // Estimate rainfall (same logic as summary)
-            $estimatedRainfall = $avgHumidity > 80 ? ($avgHumidity - 70) * 0.5 : 0;
+            // Use actual rainfall from database
+            $dailyRainfall = $dayRecords->sum('rainfall') ?: 0;
 
             // Determine dominant condition
             $conditionCounts = $dayRecords->groupBy('conditions')->map->count();
@@ -1263,7 +1262,7 @@ class ReportController extends Controller
             return [
                 'date' => $date,
                 'temperature' => round($avgTemp, 1),
-                'rainfall' => round($estimatedRainfall, 1),
+                'rainfall' => round($dailyRainfall, 1),
                 'wind_speed' => round($avgWind, 1),
                 'humidity' => round($avgHumidity, 0),
                 'condition' => $dominantCondition,
@@ -1274,12 +1273,12 @@ class ReportController extends Controller
             'data' => [
                 'weather_summary' => [
                     'avg_temperature' => round($avgTemperature, 1),
-                    'total_rainfall' => round($estimatedRainfall, 1),
+                    'total_rainfall' => round($totalRainfall, 1),
                     'avg_wind_speed' => round($avgWindSpeed, 1),
                     'sunshine_hours' => round($estimatedSunshineHours, 1),
                 ],
                 'temperature_trends' => $temperatureTrends,
-                'rainfall_distribution' => $humidityDistribution,
+                'rainfall_distribution' => $rainfallDistribution,
                 'daily_history' => $dailyHistory,
                 'gdd_data' => [
                     'today' => round($todayGDD, 1),
