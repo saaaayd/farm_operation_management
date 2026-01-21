@@ -59,7 +59,7 @@ class WeatherTest extends TestCase
         });
 
         $response = $this->actingAs($this->farmer)
-            ->getJson("/api/fields/{$this->field->id}/weather");
+            ->getJson("/api/weather/fields/{$this->field->id}/current");
 
         $response->assertStatus(200)
             ->assertJsonPath('weather.temp', 30);

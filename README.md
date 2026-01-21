@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel">
   <img src="https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue.js">
   <img src="https://img.shields.io/badge/TailwindCSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="TailwindCSS">
-  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/PostgreSQL-14.0-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
 </p>
 
 ---
@@ -30,7 +30,7 @@
 
 ## 🌾 About the Project
 
-**ANIBUKID** is a capstone project designed to digitize and optimize rice farming operations in Bukidnon. The system integrates:
+**ANIBUKID** is a capstone project designed to digitize and optimize rice farming operations in Bukidnon, Philippines. The system integrates:
 
 *   **Smart Weather Analysis:** Real-time weather monitoring with agronomic threshold-based alerts.
 *   **Lifecycle Management:** Tracks crops from planting through all growth stages to harvest.
@@ -69,7 +69,7 @@ Traditional farming relies on manual record-keeping and experience-based decisio
 | **Laravel** | 12.x | MVC Framework |
 | **Laravel Sanctum** | 4.2 | API Token Authentication |
 | **Guzzle HTTP** | 7.8 | External API requests (Weather) |
-| **MySQL** | 8.0 | Relational Database |
+| **PostgreSQL** | 14.0+ | Relational Database |
 | **Doctrine DBAL** | 4.3 | Database schema modifications |
 
 ### Frontend
@@ -83,12 +83,17 @@ Traditional farming relies on manual record-keeping and experience-based decisio
 | **Vite** | 7.0 | Build Tool & Dev Server |
 | **Axios** | 1.11 | HTTP Client |
 | **Heroicons** | 2.1 | Icon Library |
+| **Leaflet** | 1.9 | Interactive Maps (via CDN) |
 
 ### External Services
 | Service | Purpose |
 |---------|---------|
-| **Open-Meteo API** | Weather data (current & forecast) |
+| **Open-Meteo API** | Primary (Current conditions & Historical logs) |
+| **ColorfulClouds API** | Primary Forecasts (10-day precision) |
+| **OpenWeatherMap** | Agricultural Intelligence (Pest/Disease risks) |
+| **Windy.com** | Interactive weather map embed |
 | **Twilio SDK** | SMS Verification (OTP) |
+| **OpenStreetMap** | Base map tiles for field visualization |
 
 ---
 
@@ -122,7 +127,7 @@ Traditional farming relies on manual record-keeping and experience-based decisio
 │         └──────────────────┴────────────────────┘               │
 │                           │                                     │
 │  ┌────────────────────────┴─────────────────────────────────┐   │
-│  │                      MySQL Database                       │   │
+│  │                  PostgreSQL Database                     │   │
 │  │   users, farms, fields, plantings, harvests, expenses,   │   │
 │  │   inventory_items, tasks, rice_products, rice_orders...  │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -237,7 +242,8 @@ The system implements **Laravel Cache** to optimize performance and reduce datab
 | **Buyer Dashboard** | `buyer_dashboard_{user_id}` | 10 min | Order stats, recent orders, products |
 | **Marketplace** | `marketplace_products` | 5 min | Product listings and availability |
 | **Weather Analytics** | `weather_analytics_{field_id}` | 15 min | GDD, stress analysis, recommendations |
-| **Weather Data** | `weather_current_{field_id}` | 30 min | Current weather from external API |
+| **Weather Data** | `weather_current_{lat}_{lon}` | 30 min | Shared regional weather cache (deduplicated) |
+| **Weather Forecast** | `weather_forecast_{lat}_{lon}` | 3 hours | 5-day forecast data (deduplicated) |
 
 ### Cache Invalidation
 Caches are automatically invalidated when:
@@ -255,6 +261,27 @@ CACHE_DRIVER=file  // Options: file, redis, memcached, database
 ---
 
 ## 🌤️ Weather & Analytics Engine
+
+### Data Source Architecture (Hybrid Approach)
+The system leverages a multi-provider strategy to balance accuracy and coverage:
+
+| Provider | Max Forecast | Role | Usage |
+|----------|--------------|------|-------|
+| **Open-Meteo** | 14 days | **Current Weather** | Real-time conditions, historical logging, and forecast fallback. |
+| **ColorfulClouds** | 10 days | **Main Forecasts** | Primary source for extended forecasts, preferred for its range and accuracy. |
+| **OpenWeatherMap** | 5 days | **Agri-Insights** | Specialized data for crop protection, alerts, and detailed agricultural metrics. |
+
+#### Forecast Request Flow
+1. Client requests forecast (up to **14 days** supported)
+2. `WeatherController` routes to `ColorfulCloudsWeatherService` (primary)
+3. If ColorfulClouds fails → Falls back to `WeatherService` (Open-Meteo)
+4. Response is cached for 30 minutes (service-level) and 3 hours (forecast-level)
+
+#### Verified Capabilities
+- ✅ **10-day forecasts** fully supported via ColorfulClouds
+- ✅ **14-day forecasts** available via Open-Meteo fallback
+- ✅ Date handling uses `Carbon` with `Asia/Manila` timezone for consistency
+- ✅ All forecast dates are validated against "today" before response
 
 ### Threshold Alerts (Based on Agronomic Standards)
 
@@ -277,6 +304,14 @@ $effectiveTemp = min($currentTemp, $maxTemp);
 $dailyGDD = max(0, $effectiveTemp - $baseTemp);
 ```
 
+### Performance Optimization
+To minimize external API reliance and costs, the system implements a multi-layered optimization strategy:
+1. **Deduplication:** Coordinates are rounded to 2 decimal places (~1.1km) to group nearby fields.
+2. **Database Caching:** Recent `WeatherLog` entries (< 30 mins) serve as the primary data source.
+3. **Service Caching:** External API responses are cached in Redis/File for 30 minutes (Current) / 3 hours (Forecast).
+4. **Batch Processing:** Fields are grouped by location for bulk weather updates.
+5. **Client-Side Caching:** Frontend prevents redundant requests within a 10-minute window.
+
 ---
 
 ## ⚙️ Installation & Setup
@@ -285,7 +320,7 @@ $dailyGDD = max(0, $effectiveTemp - $baseTemp);
 - PHP 8.2+
 - Composer 2.x
 - Node.js 18+ / npm
-- MySQL 8.0
+- PostgreSQL 14.0+
 
 ### Steps
 
@@ -305,11 +340,11 @@ cp .env.example .env
 php artisan key:generate
 
 # 5. Configure database in .env
-DB_CONNECTION=mysql
+DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
-DB_PORT=3306
+DB_PORT=5432
 DB_DATABASE=farm_management
-DB_USERNAME=root
+DB_USERNAME=postgres
 DB_PASSWORD=your_password
 
 # 6. Run migrations and seeders

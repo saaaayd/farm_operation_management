@@ -4,6 +4,7 @@ import axios from 'axios';
 export const useWeatherStore = defineStore('weather', {
   state: () => ({
     currentWeather: null,
+    fieldsWeather: {}, // Cache for field-specific weather { fieldId: { data: ..., timestamp: ... } }
     forecast: [],
     weatherHistory: [],
     alerts: [],
@@ -27,14 +28,32 @@ export const useWeatherStore = defineStore('weather', {
   },
 
   actions: {
-    async fetchCurrentWeather(fieldId) {
+    async fetchCurrentWeather(fieldId, force = false) {
+      // Check cache first (10 minute TTL)
+      const now = Date.now();
+      const cached = this.fieldsWeather[fieldId];
+      if (!force && cached && (now - cached.timestamp < 10 * 60 * 1000)) {
+        this.currentWeather = cached.data;
+        return { weather: cached.data, alerts: cached.alerts };
+      }
+
       this.loading = true;
       try {
         const response = await axios.get(`/api/weather/fields/${fieldId}/current`);
-        this.currentWeather = response.data.weather;
+        const weatherData = response.data.weather;
+
+        this.currentWeather = weatherData;
         if (response.data.alerts) {
           this.alerts = response.data.alerts;
         }
+
+        // Update cache
+        this.fieldsWeather[fieldId] = {
+          data: weatherData,
+          alerts: response.data.alerts || [],
+          timestamp: now
+        };
+
         return response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch current weather';

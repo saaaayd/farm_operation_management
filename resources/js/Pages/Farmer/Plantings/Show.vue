@@ -54,6 +54,73 @@
 
       <div v-else-if="planting" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-6">
+          
+          <!-- Lifecycle / Stage Management Card -->
+          <div class="bg-white shadow sm:rounded-lg border-l-4 border-green-500">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <h3 class="text-lg font-medium leading-6 text-gray-900">Current Growth Stage</h3>
+                  <div class="mt-2 max-w-xl text-sm text-gray-500">
+                    <p v-if="currentStage">
+                      Currently in <span class="font-bold text-green-700">{{ currentStage.rice_growth_stage?.name }}</span> stage.
+                    </p>
+                    <p v-else class="text-amber-600">No active stage found. Planting may be completed or planned.</p>
+                  </div>
+                </div>
+                <div class="mt-5 sm:mt-0 sm:ml-6 sm:flex-shrink-0">
+                  <button
+                    v-if="canAdvanceStage"
+                    @click="openAdvanceModal"
+                    type="button"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:text-sm"
+                  >
+                    Advance to Next Stage
+                  </button>
+                  <span v-else-if="planting.status === 'ready'" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
+                    Ready for Harvest
+                  </span>
+                </div>
+              </div>
+
+              <!-- Stage Metrics -->
+              <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3" v-if="currentStage">
+                <div class="px-4 py-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Started Date</dt>
+                  <dd class="mt-1 text-lg font-semibold text-gray-900">{{ formatDate(currentStage.started_at) }}</dd>
+                </div>
+                <div class="px-4 py-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Days in Stage</dt>
+                  <dd class="mt-1 text-lg font-semibold text-gray-900">{{ daysInStage }} days</dd>
+                </div>
+                <div class="px-4 py-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Completion</dt>
+                  <dd class="mt-1 text-lg font-semibold text-gray-900">
+                    {{ lifecycleStatus?.next_stage ? 'Next: ' + lifecycleStatus.next_stage.name : 'Final Stage' }}
+                  </dd>
+                </div>
+              </div>
+              
+              <!-- Timeline / Progress Bar -->
+              <div class="mt-6" v-if="stageTimeline.length > 0">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Lifecycle Progress</h4>
+                <div class="relative">
+                  <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
+                    <div 
+                      :style="{ width: `${lifecycleStatus?.progress_percentage || 0}%` }" 
+                      class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"
+                    ></div>
+                  </div>
+                  <div class="flex justify-between text-xs text-gray-400">
+                    <span>Planted</span>
+                    <span>Harvest</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           <div class="bg-white shadow sm:rounded-lg">
             <div class="px-4 py-5 sm:p-6">
               <div class="flex justify-between items-start">
@@ -159,6 +226,70 @@
       @close="showConfirmModal = false"
       @confirm="deletePlanting"
     />
+
+    <!-- Advance Stage Modal -->
+    <div v-if="showAdvanceModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showAdvanceModal = false"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                  Advance to Next Stage
+                </h3>
+                <div class="mt-2">
+                  <p class="text-sm text-gray-500">
+                    Are you sure you want to complete the <strong>{{ currentStage?.rice_growth_stage?.name }}</strong> stage?
+                  </p>
+                  <p class="text-sm text-gray-500 mt-1" v-if="lifecycleStatus?.next_stage">
+                    The next stage will be <strong>{{ lifecycleStatus.next_stage.name }}</strong>.
+                  </p>
+                  
+                  <div class="mt-4">
+                    <label for="stage-notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
+                    <textarea
+                      id="stage-notes"
+                      v-model="advanceNotes"
+                      rows="3"
+                      class="shadow-sm focus:ring-green-500 focus:border-green-500 mt-1 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Any observations about this stage..."
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+              type="button"
+              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+              @click="confirmAdvanceStage"
+              :disabled="advanceLoading"
+            >
+              <span v-if="advanceLoading">Processing...</span>
+              <span v-else>Confirm & Advance</span>
+            </button>
+            <button
+              type="button"
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              @click="showAdvanceModal = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -180,20 +311,48 @@ const plantingId = route.params.id
 const loading = computed(() => farmStore.loadingPlanting)
 const error = computed(() => farmStore.error)
 const planting = computed(() => farmStore.currentPlanting)
+const lifecycleStatus = computed(() => farmStore.lifecycleStatus)
+const stageTimeline = computed(() => farmStore.stageTimeline)
+
+// Computed helpers for stage display
+const currentStage = computed(() => {
+  if (!stageTimeline.value) return null
+  return stageTimeline.value.find(s => s.status === 'in_progress')
+})
+
+const daysInStage = computed(() => {
+  if (!currentStage.value || !currentStage.value.started_at) return 0
+  const start = new Date(currentStage.value.started_at)
+  const now = new Date()
+  const diffTime = Math.abs(now - start)
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) 
+})
+
+const canAdvanceStage = computed(() => {
+  return planting.value && 
+         currentStage.value && 
+         planting.value.status !== 'ready' && 
+         planting.value.status !== 'harvested' &&
+         planting.value.status !== 'failed'
+})
 
 // Confirmation State
 const showConfirmModal = ref(false)
 const plantingToDelete = ref(null)
 
+// Advance Stage State
+const showAdvanceModal = ref(false)
+const advanceNotes = ref('')
+const advanceLoading = ref(false)
+
 const fetchPlantingData = async () => {
   // Clear any previous errors
   farmStore.error = null 
   try {
-    // Call the action we added to the store
-    await farmStore.fetchPlantingById(plantingId)
+    // Call the lifecycle action instead of just getById
+    await farmStore.fetchPlantingLifecycle(plantingId)
   } catch (err) {
     console.error('Failed to fetch planting:', err)
-    // The store action already sets the error, so we just log it
   }
 }
 
@@ -223,6 +382,27 @@ const deletePlanting = async () => {
   } catch (err) {
     console.error('Failed to delete planting:', err)
     // The store action will set the error, which our computed prop will catch
+  }
+}
+
+// --- Stage Actions ---
+const openAdvanceModal = () => {
+  advanceNotes.value = ''
+  showAdvanceModal.value = true
+}
+
+const confirmAdvanceStage = async () => {
+  advanceLoading.value = true
+  try {
+    await farmStore.advanceStage(planting.value.id, {
+      notes: advanceNotes.value
+    })
+    showAdvanceModal.value = false
+    // Notifications are handled by api.js interceptor
+  } catch (err) {
+    console.error('Failed to advance stage:', err)
+  } finally {
+    advanceLoading.value = false
   }
 }
 

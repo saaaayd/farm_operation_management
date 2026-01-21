@@ -28,54 +28,62 @@ class WeatherService
      */
     public function getCurrentWeather(float $lat, float $lon): ?array
     {
-        try {
-            $response = Http::get("https://api.open-meteo.com/v1/forecast", [
-                'latitude' => $lat,
-                'longitude' => $lon,
-                'current' => 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code',
-                'timezone' => 'Asia/Manila'
-            ]);
+        // Round coordinates to 2 decimal places (approx 1.1km) for deduplication
+        $latRounded = round($lat, 2);
+        $lonRounded = round($lon, 2);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $current = $data['current'];
+        $cacheKey = "weather_current_{$latRounded}_{$lonRounded}";
 
-                // Map to a structure similar to our expectations or normalize it
-                return [
-                    'main' => [
-                        'temp' => $current['temperature_2m'],
-                        'humidity' => $current['relative_humidity_2m'],
-                    ],
-                    'wind' => [
-                        'speed' => $current['wind_speed_10m'] / 3.6, // Open-Meteo is km/h, we usually expect m/s in this pipeline
-                    ],
-                    'rain' => [
-                        '1h' => $current['precipitation'],
-                    ],
-                    'weather' => [
-                        [
-                            'main' => $this->mapWmoCode($current['weather_code']),
-                        ]
-                    ],
-                    'dt' => Carbon::parse($current['time'])->timestamp,
-                ];
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($lat, $lon) {
+            try {
+                $response = Http::get("https://api.open-meteo.com/v1/forecast", [
+                    'latitude' => $lat,
+                    'longitude' => $lon,
+                    'current' => 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code',
+                    'timezone' => 'Asia/Manila'
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $current = $data['current'];
+
+                    // Map to a structure similar to our expectations or normalize it
+                    return [
+                        'main' => [
+                            'temp' => $current['temperature_2m'],
+                            'humidity' => $current['relative_humidity_2m'],
+                        ],
+                        'wind' => [
+                            'speed' => $current['wind_speed_10m'] / 3.6, // Open-Meteo is km/h, we usually expect m/s in this pipeline
+                        ],
+                        'rain' => [
+                            '1h' => $current['precipitation'],
+                        ],
+                        'weather' => [
+                            [
+                                'main' => $this->mapWmoCode($current['weather_code']),
+                            ]
+                        ],
+                        'dt' => Carbon::parse($current['time'])->timestamp,
+                    ];
+                }
+
+                Log::error('Open-Meteo current weather API error', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return null;
+            } catch (\Exception $e) {
+                Log::error('Open-Meteo weather API request failed', [
+                    'error' => $e->getMessage(),
+                    'lat' => $lat,
+                    'lon' => $lon
+                ]);
+
+                return null;
             }
-
-            Log::error('Open-Meteo current weather API error', [
-                'status' => $response->status(),
-                'response' => $response->body()
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Open-Meteo weather API request failed', [
-                'error' => $e->getMessage(),
-                'lat' => $lat,
-                'lon' => $lon
-            ]);
-
-            return null;
-        }
+        });
     }
 
     /**
@@ -292,13 +300,40 @@ class WeatherService
         $fields = Field::whereNotNull('location')->get();
         $updated = 0;
 
+        // Group fields by rounded coordinates to minimize API calls
+        $groupedFields = [];
         foreach ($fields as $field) {
-            if ($this->updateFieldWeather($field)) {
-                $updated++;
+            if (isset($field->location['lat']) && isset($field->location['lon'])) {
+                $lat = round((float) $field->location['lat'], 2);
+                $lon = round((float) $field->location['lon'], 2);
+                $key = "{$lat}_{$lon}";
+                $groupedFields[$key][] = $field;
+            } elseif (isset($field->field_coordinates['lat']) && isset($field->field_coordinates['lon'])) {
+                $lat = round((float) $field->field_coordinates['lat'], 2);
+                $lon = round((float) $field->field_coordinates['lon'], 2);
+                $key = "{$lat}_{$lon}";
+                $groupedFields[$key][] = $field;
+            }
+        }
+
+        foreach ($groupedFields as $key => $fieldsInGroup) {
+            // Coordinate key is lat_lon
+            [$lat, $lon] = explode('_', $key);
+
+            // Get weather once for this group (will hit cache if available)
+            $weatherData = $this->getCurrentWeather((float) $lat, (float) $lon);
+
+            if ($weatherData) {
+                foreach ($fieldsInGroup as $field) {
+                    // Pass the fetched weather data to avoid re-fetching
+                    if ($this->updateFieldWeather($field, $weatherData)) {
+                        $updated++;
+                    }
+                }
             }
 
-            // Add delay to respect API rate limits
-            sleep(1);
+            // Small delay between groups to differ load slightly if cache misses occur
+            usleep(100000); // 100ms
         }
 
         return $updated;

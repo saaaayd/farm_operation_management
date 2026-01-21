@@ -559,6 +559,7 @@ const refreshWeather = async () => {
     }
     
     // Fetch weather for all fields with coordinates
+    // Use parallel requests - store handles caching
     const weatherPromises = fieldsWithCoordinates.value.map(async (field) => {
       try {
         const weather = await weatherStore.fetchCurrentWeather(field.id)
@@ -749,39 +750,15 @@ const initMap = () => {
     
     // Update field markers to show selected weather data
     if (selectedWeatherLayer.value !== 'base' && fieldWeather.value.length > 0) {
-      const defaultCoords = [
-        { lat: 14.6095, lon: 120.9842 },
-        { lat: 14.5895, lon: 120.9842 },
-        { lat: 14.5995, lon: 120.9942 },
-      ]
-      
       fieldWeather.value.forEach(async (field, index) => {
-        let lat, lon
-        
-        if (field.location && field.location.lat && field.location.lon) {
-          lat = field.location.lat
-          lon = field.location.lon
-        } else if (field.field_coordinates && field.field_coordinates.lat && field.field_coordinates.lon) {
-          lat = field.field_coordinates.lat
-          lon = field.field_coordinates.lon
-        } else if (defaultCoords[index]) {
-          lat = defaultCoords[index].lat
-          lon = defaultCoords[index].lon
-        } else {
-          return
-        }
-        
-        if (!lat || !lon) return
-        
-        // Fetch weather data
-        const weatherData = await fetchOpenMeteoWeather(lat, lon)
-        if (!weatherData) return
+        // Use data already in fieldWeather (populated from store)
+        const weatherData = field
         
         let value, color, radius, label
         
         switch (selectedWeatherLayer.value) {
           case 'temperature':
-            value = weatherData.temperature || field.temperature || 22
+            value = weatherData.temperature || 22
             // Color gradient: blue (cold) -> green (moderate) -> red (hot) - Celsius
             if (value < 10) color = '#3B82F6'
             else if (value < 20) color = '#10B981'
@@ -791,25 +768,10 @@ const initMap = () => {
             label = `${Math.round(value)}°C`
             break
           case 'precipitation':
-            value = weatherData.precipitation || 0
+            value = weatherData.rainfall || 0
             color = value > 0 ? '#3B82F6' : '#E5E7EB'
             radius = Math.max(15, Math.min(50, value * 20))
-            label = value > 0 ? `${value.toFixed(2)} mm/h` : 'No rain'
-            break
-          case 'clouds':
-            value = weatherData.cloudrate || 0
-            color = `rgba(148, 163, 184, ${value / 100})` // Gray with opacity based on cloud cover
-            radius = 30 + (value / 100) * 20
-            label = `${value}%`
-            break
-          case 'pressure':
-            value = weatherData.pressure || 1013
-            // Pressure gradient: low (red) -> normal (green) -> high (blue)
-            if (value < 1000) color = '#EF4444'
-            else if (value < 1020) color = '#10B981'
-            else color = '#3B82F6'
-            radius = 25
-            label = `${Math.round(value)} hPa`
+            label = value > 0 ? `${Number(value).toFixed(2)} mm/h` : 'No rain'
             break
           case 'wind':
             value = weatherData.wind_speed || 0
@@ -824,6 +786,18 @@ const initMap = () => {
             return
         }
         
+        // Retrieve lat/lon
+        let lat, lon
+        if (field.location && field.location.lat) {
+            lat = field.location.lat
+            lon = field.location.lon
+        } else if (field.field_coordinates && field.field_coordinates.lat) {
+            lat = field.field_coordinates.lat
+            lon = field.field_coordinates.lon
+        }
+        
+        if (!lat || !lon) return
+
         // Create circle overlay
         const circle = L.circle([lat, lon], {
           color: color,
@@ -850,43 +824,6 @@ const initMap = () => {
     } else {
       currentWeatherLayer.value = null
     }
-  }
-}
-
-// Fetch weather data from Open-Meteo API
-const fetchOpenMeteoWeather = async (lat, lon) => {
-  try {
-    // Open-Meteo API - no API key required, good CORS support
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code,cloud_cover,pressure_msl&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm`
-    
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
-    if (data.current) {
-      const current = data.current
-      return {
-        temperature: Math.round(current.temperature_2m || 0),
-        humidity: Math.round(current.relative_humidity_2m || 0),
-        wind_speed: Math.round(current.wind_speed_10m || 0),
-        wind_direction: Math.round(current.wind_direction_10m || 0),
-        pressure: Math.round((current.pressure_msl || 0) / 100), // Convert Pa to hPa
-        conditions: getWeatherCodeDescription(current.weather_code),
-        description: getWeatherCodeDescription(current.weather_code),
-        precipitation: current.precipitation || 0,
-        cloudrate: Math.round(current.cloud_cover || 0),
-        weather_code: current.weather_code || 0,
-      }
-    }
-    
-    return null
-  } catch (error) {
-    console.error('Error fetching Open-Meteo weather:', error)
-    return null
   }
 }
 
@@ -940,8 +877,8 @@ const updateFieldMarkers = async () => {
   // Use actual fields from store
   const fieldsToProcess = fieldsWithCoordinates.value
 
-  // Fetch weather data for all fields in parallel
-  const weatherPromises = fieldsToProcess.map(async (field) => {
+  // Use data from fieldWeatherData which is populated by store
+  const fieldDataWithWeather = fieldsToProcess.map((field) => {
     // Get coordinates from field data
     let lat, lon
     
@@ -957,57 +894,33 @@ const updateFieldMarkers = async () => {
 
     if (!lat || !lon) return null
 
-    // Try to get weather from store first, then fetch from API
+    // Get weather from local state derived from store
     let weatherData = fieldWeatherData.value[field.id]
-    
-    if (!weatherData) {
-      // Try to fetch from weather store API first
-      try {
-        const apiWeather = await weatherStore.fetchCurrentWeather(field.id)
-        if (apiWeather && apiWeather.weather) {
-          weatherData = apiWeather.weather
-          fieldWeatherData.value[field.id] = weatherData
-        }
-      } catch (error) {
-        console.warn(`Failed to fetch weather from API for field ${field.id}, using Open-Meteo fallback`)
-      }
-      
-      // Fallback to Open-Meteo if API doesn't work
-      if (!weatherData) {
-        weatherData = await fetchOpenMeteoWeather(lat, lon)
-        if (weatherData) {
-          fieldWeatherData.value[field.id] = weatherData
-        }
-      }
-    }
     
     return {
       field,
       lat,
       lon,
       weatherData: weatherData || {
-        temperature: 70,
+        temperature: 22,
         humidity: 65,
         wind_speed: 5,
-        description: 'Weather data unavailable',
-        precipitation: 0,
+        conditions: 'Waiting for data...',
+        rainfall: 0,
       }
     }
-  })
-
-  const fieldDataWithWeather = await Promise.all(weatherPromises)
+  }).filter(item => item !== null)
 
   // Add markers for each field with real weather data
   fieldDataWithWeather.forEach(({ field, lat, lon, weatherData }) => {
     if (!field || !lat || !lon || !map.value || !L) return
 
-    // Use real weather data or fallback to field data (Celsius)
-    const temp = weatherData?.temperature || field.temperature || 22
-    const humidity = weatherData?.humidity || field.humidity || 65
-    const rainfall = weatherData?.precipitation || field.rainfall || 0
-    // Wind speed is in km/h from API, ensure it's displayed correctly
+    // Use real weather data or fallback
+    const temp = weatherData?.temperature || 22
+    const humidity = weatherData?.humidity || 65
+    const rainfall = weatherData?.rainfall || 0
     const windSpeed = weatherData?.wind_speed || 0
-    const description = weatherData?.description || 'Weather data unavailable'
+    const description = weatherData?.conditions || 'Unknown'
     
     // Create custom icon based on temperature (Celsius thresholds)
     const iconColor = temp < 15 ? '#3B82F6' : temp > 30 ? '#EF4444' : '#10B981'
@@ -1043,10 +956,10 @@ const updateFieldMarkers = async () => {
           <h3 style="margin: 0 0 8px 0; font-weight: bold;">${field.name}</h3>
           <div style="font-size: 14px; margin-bottom: 8px;">
             <div><strong>Temperature:</strong> ${Math.round(temp)}°C</div>
-            <div><strong>Humidity:</strong> ${humidity}%</div>
+            <div><strong>Humidity:</strong> ${Math.round(humidity)}%</div>
             <div><strong>Wind Speed:</strong> ${Math.round(windSpeed)} km/h</div>
             <div><strong>Conditions:</strong> ${description}</div>
-            ${rainfall > 0 ? `<div><strong>Precipitation:</strong> ${rainfall.toFixed(2)} mm/h</div>` : ''}
+            ${rainfall > 0 ? `<div><strong>Precipitation:</strong> ${Number(rainfall).toFixed(2)} mm/h</div>` : ''}
           </div>
           <button 
             onclick="window.location.href='/weather/fields/${field.id}'"
@@ -1059,10 +972,8 @@ const updateFieldMarkers = async () => {
 
     marker.isField = true
     markers.value.push(marker)
-    
-    // Store weather data for this field
-    fieldWeatherData.value[field.id] = weatherData
   })
+
 
   // Fit map to show all markers
   if (markers.value.length > 0) {
@@ -1156,27 +1067,12 @@ const fetchCurrentWeather = async () => {
         // Weather store will be updated, computed property will react
         return
       } catch (error) {
-        console.warn('Failed to fetch weather from store, using Open-Meteo fallback')
+        console.warn('Failed to fetch weather from store')
       }
     }
     
-    // Fallback: Use default coordinates (Philippines) for main weather display
-    const defaultLat = 14.5995
-    const defaultLon = 120.9842
-    
-    const weatherData = await fetchOpenMeteoWeather(defaultLat, defaultLon)
-    
-    if (weatherData) {
-      // Update fallback weather instead of computed property
-      fallbackWeather.value = {
-        temperature: weatherData.temperature,
-        humidity: weatherData.humidity,
-        rainfall: Number(weatherData.precipitation || 0).toFixed(2),
-        wind_speed: weatherData.wind_speed,
-        condition: weatherData.description,
-        icon: getWeatherIcon(weatherData.weather_code)
-      }
-    }
+    // Fallback if no fields: check default coordinates but use backend proxy if possible
+    // For now we just don't show general weather if no fields are present
   } catch (error) {
     console.error('Error fetching current weather:', error)
   }

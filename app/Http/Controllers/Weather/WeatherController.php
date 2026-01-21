@@ -53,31 +53,48 @@ class WeatherController extends Controller
             ], 400);
         }
 
-        try {
-            $weatherData = $this->weatherService->getCurrentWeather($lat, $lon);
-        } catch (WeatherServiceException $e) {
-            return response()->json([
-                'message' => $e->getMessage()
-            ], 400);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Unable to fetch weather data: ' . $e->getMessage()
-            ], 500);
-        }
+        // First, check if we have a fresh weather log (within last 30 minutes)
+        // This acts as a first-level cache using the database
+        $recencyThreshold = now()->subMinutes(30);
+        $recentLog = $field->weatherLogs()
+            ->where('recorded_at', '>=', $recencyThreshold)
+            ->orderBy('recorded_at', 'desc')
+            ->first();
 
-        if (!$weatherData || !isset($weatherData['main'])) {
-            return response()->json([
-                'message' => 'Unable to fetch weather data'
-            ], 500);
-        }
+        if ($recentLog) {
+            // Use existing log
+            $weatherLog = $recentLog;
 
-        // Save weather data to database
-        $weatherLog = $this->weatherService->updateFieldWeather($field, $weatherData);
+            // Set relation for subsequent usage
+            $field->setRelation('latestWeather', $weatherLog);
+        } else {
+            // Fetch fresh data from service (which has its own cache)
+            try {
+                $weatherData = $this->weatherService->getCurrentWeather($lat, $lon);
+            } catch (WeatherServiceException $e) {
+                return response()->json([
+                    'message' => $e->getMessage()
+                ], 400);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => 'Unable to fetch weather data: ' . $e->getMessage()
+                ], 500);
+            }
 
-        if (!$weatherLog) {
-            return response()->json([
-                'message' => 'Failed to store weather data'
-            ], 500);
+            if (!$weatherData || !isset($weatherData['main'])) {
+                return response()->json([
+                    'message' => 'Unable to fetch weather data'
+                ], 500);
+            }
+
+            // Save weather data to database
+            $weatherLog = $this->weatherService->updateFieldWeather($field, $weatherData);
+
+            if (!$weatherLog) {
+                return response()->json([
+                    'message' => 'Failed to store weather data'
+                ], 500);
+            }
         }
 
         return response()->json([
@@ -118,8 +135,8 @@ class WeatherController extends Controller
         }
 
         $days = $request->get('days', 7);
-        if ($days > 7)
-            $days = 7; // Limit to 7 days
+        if ($days > 14)
+            $days = 14; // Limit to 14 days
 
         // Use ColorfulClouds for forecasts (supports up to 10 days, better than OpenWeatherMap's 5 days)
         // Request one extra day to ensure we get the full requested number (API might exclude today)
@@ -438,7 +455,7 @@ class WeatherController extends Controller
     private function processForecastToDaily(array $forecastList, int $days): array
     {
         $dailyForecasts = [];
-        $today = new \DateTime('today', new \DateTimeZone('Asia/Manila'));
+        $today = \Carbon\Carbon::today('Asia/Manila');
         $todayStr = $today->format('Y-m-d');
 
         foreach ($forecastList as $forecast) {
@@ -579,7 +596,7 @@ class WeatherController extends Controller
     private function processColorfulCloudsForecast(array $forecastData, int $days): array
     {
         $dailyForecasts = [];
-        $today = new \DateTime('today', new \DateTimeZone('Asia/Manila'));
+        $today = \Carbon\Carbon::today('Asia/Manila');
         $todayStr = $today->format('Y-m-d');
 
         // Map skycon to weather code for icon display
@@ -737,7 +754,7 @@ class WeatherController extends Controller
         // Build final result ensuring exactly $days starting from today
         // ColorfulClouds might not include today, so we need to handle that
         $finalResult = [];
-        $currentDate = clone $today;
+        $currentDate = $today->copy();
         $hasToday = false;
 
         // Check if today is in the results
@@ -753,9 +770,9 @@ class WeatherController extends Controller
         $startIndex = 0;
         if (!$hasToday && count($result) > 0) {
             // Check if first result is tomorrow
-            $firstDate = new \DateTime($result[0]['date']);
-            $tomorrow = clone $today;
-            $tomorrow->modify('+1 day');
+            $firstDate = \Carbon\Carbon::parse($result[0]['date']);
+            $tomorrow = $today->copy();
+            $tomorrow->addDay();
 
             if ($firstDate->format('Y-m-d') === $tomorrow->format('Y-m-d')) {
                 // API starts from tomorrow, so we have tomorrow + 6 more days = 7 days total
@@ -822,7 +839,7 @@ class WeatherController extends Controller
             }
 
             // Move to next day
-            $currentDate->modify('+1 day');
+            $currentDate->addDay();
         }
 
         // Ensure we have exactly $days

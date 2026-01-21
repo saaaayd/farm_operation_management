@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 // Make sure fieldsAPI is imported, I'm adding it based on your other imports
-import { plantingsAPI, seedPlantingsAPI, tasksAPI, harvestsAPI, fieldsAPI, farmProfileAPI, salesAPI, expensesAPI } from '@/services/api';
+import { plantingsAPI, seedPlantingsAPI, tasksAPI, harvestsAPI, fieldsAPI, farmProfileAPI, salesAPI, expensesAPI, riceFarmingAPI } from '@/services/api';
 
 export const useFarmStore = defineStore('farm', {
   state: () => ({
@@ -13,6 +13,8 @@ export const useFarmStore = defineStore('farm', {
     harvests: [], // <-- Harvests are here
     sales: [],
     expenses: [],
+    lifecycleStatus: null, // <-- For stage tracking
+    stageTimeline: [],     // <-- For stage history
     loading: false,
     loadingPlanting: false,
     error: null,
@@ -298,6 +300,49 @@ export const useFarmStore = defineStore('farm', {
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to delete planting';
         console.error('Failed to delete planting:', error.response?.data);
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // --- RICE FARMING LIFECYCLE ACTIONS ---
+    async fetchPlantingLifecycle(plantingId) {
+      this.loadingPlanting = true;
+      this.currentPlanting = null;
+      this.lifecycleStatus = null;
+      this.stageTimeline = [];
+      this.error = null;
+      try {
+        const response = await riceFarmingAPI.getPlantingLifecycle(plantingId);
+        if (response.data) {
+          this.currentPlanting = response.data.planting;
+          this.lifecycleStatus = response.data.lifecycle_status;
+          this.stageTimeline = response.data.stage_timeline;
+        }
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to fetch planting lifecycle';
+        console.error('Failed to fetch lifecycle:', error);
+        throw error;
+      } finally {
+        this.loadingPlanting = false;
+      }
+    },
+
+    async advanceStage(plantingId, data = {}) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await riceFarmingAPI.advanceStage(plantingId, data);
+
+        // Refresh lifecycle data to get updated status and timeline
+        await this.fetchPlantingLifecycle(plantingId);
+
+        return response.data;
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to advance stage';
+        console.error('Failed to advance stage:', error);
         throw error;
       } finally {
         this.loading = false;
