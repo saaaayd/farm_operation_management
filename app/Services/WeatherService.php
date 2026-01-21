@@ -6,6 +6,7 @@ use App\Models\Field;
 use App\Models\WeatherLog;
 use App\Models\Task;
 use App\Exceptions\WeatherServiceException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -98,57 +99,62 @@ class WeatherService
      */
     public function getForecast(float $lat, float $lon, int $days = 5): ?array
     {
-        try {
-            $response = Http::get("https://api.open-meteo.com/v1/forecast", [
-                'latitude' => $lat,
-                'longitude' => $lon,
-                'daily' => 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,relative_humidity_2m_max',
-                'timezone' => 'Asia/Manila'
-            ]);
+        // Round coordinates for consistent cache keys
+        $cacheKey = 'weather_forecast_' . round($lat, 2) . '_' . round($lon, 2);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $daily = $data['daily'];
+        return Cache::remember($cacheKey, now()->addHours(3), function () use ($lat, $lon) {
+            try {
+                $response = Http::get("https://api.open-meteo.com/v1/forecast", [
+                    'latitude' => $lat,
+                    'longitude' => $lon,
+                    'daily' => 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,relative_humidity_2m_max',
+                    'timezone' => 'Asia/Manila'
+                ]);
 
-                // Map to OWM-like structure that frontend expects
-                $list = [];
-                foreach ($daily['time'] as $index => $time) {
-                    $list[] = [
-                        'dt' => Carbon::parse($time)->timestamp,
-                        'main' => [
-                            'temp' => ($daily['temperature_2m_max'][$index] + $daily['temperature_2m_min'][$index]) / 2,
-                            'temp_max' => $daily['temperature_2m_max'][$index],
-                            'temp_min' => $daily['temperature_2m_min'][$index],
-                            'humidity' => $daily['relative_humidity_2m_max'][$index],
-                        ],
-                        'weather' => [
-                            [
-                                'main' => $this->mapWmoCode($daily['weather_code'][$index]),
-                            ]
-                        ],
-                        'dt_txt' => $time . ' 12:00:00', // Mocking midday
-                        'pop' => $daily['precipitation_sum'][$index] > 0 ? 1 : 0,
-                    ];
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $daily = $data['daily'];
+
+                    // Map to OWM-like structure that frontend expects
+                    $list = [];
+                    foreach ($daily['time'] as $index => $time) {
+                        $list[] = [
+                            'dt' => Carbon::parse($time)->timestamp,
+                            'main' => [
+                                'temp' => ($daily['temperature_2m_max'][$index] + $daily['temperature_2m_min'][$index]) / 2,
+                                'temp_max' => $daily['temperature_2m_max'][$index],
+                                'temp_min' => $daily['temperature_2m_min'][$index],
+                                'humidity' => $daily['relative_humidity_2m_max'][$index],
+                            ],
+                            'weather' => [
+                                [
+                                    'main' => $this->mapWmoCode($daily['weather_code'][$index]),
+                                ]
+                            ],
+                            'dt_txt' => $time . ' 12:00:00', // Mocking midday
+                            'pop' => $daily['precipitation_sum'][$index] > 0 ? 1 : 0,
+                        ];
+                    }
+
+                    return ['list' => $list];
                 }
 
-                return ['list' => $list];
+                Log::error('Open-Meteo forecast API error', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return null;
+            } catch (\Exception $e) {
+                Log::error('Open-Meteo forecast API request failed', [
+                    'error' => $e->getMessage(),
+                    'lat' => $lat,
+                    'lon' => $lon
+                ]);
+
+                return null;
             }
-
-            Log::error('Open-Meteo forecast API error', [
-                'status' => $response->status(),
-                'response' => $response->body()
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Open-Meteo forecast API request failed', [
-                'error' => $e->getMessage(),
-                'lat' => $lat,
-                'lon' => $lon
-            ]);
-
-            return null;
-        }
+        });
     }
 
     /**

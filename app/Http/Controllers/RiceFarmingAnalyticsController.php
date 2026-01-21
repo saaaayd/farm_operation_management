@@ -11,6 +11,7 @@ use App\Models\WeatherLog;
 use App\Models\Expense;
 use App\Services\WeatherService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -33,15 +34,17 @@ class RiceFarmingAnalyticsController extends Controller
             $period = $request->get('period', '12'); // months
             $startDate = Carbon::now()->subMonths($period);
 
-            $analytics = [
-                'production_analytics' => $this->getProductionAnalytics($user->id, $startDate),
-                'financial_analytics' => $this->getFinancialAnalytics($user->id, $startDate),
-                'field_performance' => $this->getFieldPerformanceAnalytics($user->id, $startDate),
-                'weather_impact' => $this->getWeatherImpactAnalytics($user->id, $startDate),
-                'market_performance' => $this->getMarketPerformanceAnalytics($user->id, $startDate),
-                'efficiency_metrics' => $this->getEfficiencyMetrics($user->id, $startDate),
-                'growth_trends' => $this->getGrowthTrends($user->id, $startDate),
-            ];
+            $analytics = Cache::remember("farming_analytics_{$user->id}_{$period}", now()->addHours(24), function () use ($user, $startDate) {
+                return [
+                    'production_analytics' => $this->getProductionAnalytics($user->id, $startDate),
+                    'financial_analytics' => $this->getFinancialAnalytics($user->id, $startDate),
+                    'field_performance' => $this->getFieldPerformanceAnalytics($user->id, $startDate),
+                    'weather_impact' => $this->getWeatherImpactAnalytics($user->id, $startDate),
+                    'market_performance' => $this->getMarketPerformanceAnalytics($user->id, $startDate),
+                    'efficiency_metrics' => $this->getEfficiencyMetrics($user->id, $startDate),
+                    'growth_trends' => $this->getGrowthTrends($user->id, $startDate),
+                ];
+            });
 
             return response()->json([
                 'analytics' => $analytics,

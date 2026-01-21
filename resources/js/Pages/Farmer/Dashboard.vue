@@ -31,10 +31,39 @@
 <!-- Header -->
 <div class="container mx-auto px-4 py-8">
   <!-- Standard Header -->
-  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
     <div>
       <h1 class="text-3xl font-bold text-gray-800">ANIBUKID Dashboard</h1>
       <p class="text-gray-500 mt-1">Welcome back, <span class="font-semibold text-gray-800">{{ authStore.user?.name }}</span></p>
+    </div>
+
+    <!-- Weather Widget (Moved to Header) -->
+    <div class="w-full md:w-auto min-w-[300px]">
+       <!-- Field Selector Dropdown (Compact) -->
+       <div v-if="fieldsWithCoordinates.length > 1" class="mb-2">
+         <select
+           v-model="selectedFieldId"
+           @change="onFieldChange"
+           class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-xs"
+         >
+           <option v-for="field in fieldsWithCoordinates" :key="field.id" :value="field.id">
+             {{ field.name }}
+           </option>
+         </select>
+       </div>
+       
+       <!-- Weather Card -->
+       <div v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)">
+         <CurrentWeather :field-id="primaryField.id" :compact="true" />
+       </div>
+       <div v-else-if="primaryField && primaryField.id" class="p-4 bg-white rounded-lg shadow border border-gray-100 text-center">
+         <p class="text-xs text-gray-500">Update field location for weather data</p>
+         <button @click="navigateTo('/fields')" class="text-xs text-green-600 font-medium mt-1">Go to Fields</button>
+       </div>
+       <div v-else class="p-4 bg-white rounded-lg shadow border border-gray-100 text-center">
+          <p class="text-xs text-gray-500">No fields available</p>
+          <button @click="navigateTo('/fields')" class="text-xs text-green-600 font-medium mt-1">Add Field</button>
+       </div>
     </div>
   </div>
   
@@ -49,7 +78,7 @@
   <!-- Main Content -->
   <div v-else>
     <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-green-100 transition-all duration-200 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
@@ -120,24 +149,6 @@
         </div>
       </div>
       
-      <div class="bg-gradient-to-br from-white to-purple-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-purple-100 transition-all duration-200 transform hover:-translate-y-1">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="h-12 w-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Orders</p>
-              <p class="text-2xl font-bold text-gray-900 mt-1">{{ pendingOrders }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
       <!-- Nursery Stats -->
       <div class="bg-gradient-to-br from-white to-orange-50 rounded-xl shadow-lg hover:shadow-xl p-6 border border-orange-100 transition-all duration-200 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
@@ -162,74 +173,182 @@
         </div>
       </div>
     </div>
+
+    <!-- Marketplace Overview Section -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Marketplace Overview</h2>
+        <button 
+          @click="navigateTo('/marketplace/my-products')" 
+          class="text-sm font-medium text-purple-600 hover:text-purple-700"
+        >
+          Manage Products
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <!-- Active Listings -->
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex items-center">
+          <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+            <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Active Listings</p>
+            <p class="text-2xl font-bold text-gray-900">{{ marketplaceStats.active_listings }}</p>
+          </div>
+        </div>
+
+        <!-- Pending Orders -->
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex items-center">
+           <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center mr-4">
+             <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm text-gray-500">Pending Orders</p>
+             <p class="text-2xl font-bold text-gray-900">{{ marketplaceStats.pending_orders }}</p>
+           </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex items-center">
+           <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+             <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm text-gray-500">Total Revenue</p>
+             <p class="text-2xl font-bold text-gray-900">₱{{ marketplaceStats.total_revenue.toLocaleString() }}</p>
+           </div>
+        </div>
+        
+        <!-- Total Products -->
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex items-center">
+           <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mr-4">
+             <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm text-gray-500">Total Products</p>
+             <p class="text-2xl font-bold text-gray-900">{{ marketplaceStats.total_products }}</p>
+           </div>
+        </div>
+      </div>
+
+       <!-- Recent Products Table (Collapsed view) -->
+       <div class="bg-white rounded-xl shadow overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-sm font-medium text-gray-900">Recent Products</h3>
+          </div>
+          <div class="divide-y divide-gray-200">
+             <div v-if="recentProducts.length === 0" class="p-6 text-center text-gray-500">
+                No products found
+             </div>
+             <div v-else v-for="product in recentProducts" :key="product.id" class="p-4 flex items-center justify-between hover:bg-gray-50">
+                <div class="flex items-center">
+                   <div class="h-10 w-10 flex-shrink-0 rounded bg-gray-100 mr-3 overflow-hidden">
+                      <img v-if="product.images && product.images.length" :src="product.images[0]" class="h-full w-full object-cover" />
+                      <div v-else class="h-full w-full flex items-center justify-center text-gray-400">
+                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                         </svg>
+                      </div>
+                   </div>
+                   <div>
+                      <p class="text-sm font-medium text-gray-900">{{ product.name }}</p>
+                      <p class="text-xs text-gray-500">{{ product.rice_variety?.name || 'Unknown Variety' }}</p>
+                   </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                   <span class="text-sm font-medium text-gray-900">₱{{ product.price_per_unit }}/{{ product.unit }}</span>
+                   <span 
+                      class="px-2 py-1 text-xs font-semibold rounded-full"
+                      :class="product.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                   >
+                      {{ product.is_available ? 'Available' : 'Unavailable' }}
+                   </span>
+                </div>
+             </div>
+          </div>
+       </div>
+    </div>
   </div>
   <!-- Main Dashboard Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
     <!-- Weather Widget -->
-    <div class="lg:col-span-1 flex flex-col">
-      <!-- Field Selector Dropdown -->
-      <div v-if="fieldsWithCoordinates.length > 1" class="mb-4">
-        <label for="field-selector" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-          <svg class="h-4 w-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-          </svg>
-          Select Field for Weather
-        </label>
-        <select
-        id="field-selector"
-        v-model="selectedFieldId"
-        @change="onFieldChange"
-        class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm transition-all duration-200 hover:border-gray-400"
-        >
-        <option v-for="field in fieldsWithCoordinates" :key="field.id" :value="field.id">
-          {{ field.name }} {{ field.location?.address ? `(${field.location.address})` : '' }}
-        </option>
-      </select>
-    </div>
-    
-    <!-- Show weather if we have a field with valid coordinates -->
-    <div v-if="primaryField && primaryField.id && hasValidCoordinates(primaryField)" class="flex-1 flex flex-col">
-      <CurrentWeather 
-      :field-id="primaryField.id" 
-      />
-    </div>
-    <!-- Show message if field exists but lacks coordinates -->
-    <div v-else-if="primaryField && primaryField.id && !hasValidCoordinates(primaryField)" class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
-      <div class="text-center text-gray-500 flex-1 flex flex-col justify-center">
-        <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <p class="text-sm font-medium text-gray-700 mb-2">Location coordinates needed</p>
-        <p class="text-xs text-gray-500 mb-4">
-          Your field "{{ primaryField.name }}" needs location coordinates to display weather data.
-        </p>
+    <!-- Quick Actions (Moved to Sidebar) -->
+    <div class="lg:col-span-1 flex flex-col space-y-4">
+        <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+        
         <button 
-        @click="navigateTo('/fields')" 
+        @click="navigateTo('/tasks/create')"
         :disabled="isNavigating"
-        class="text-green-600 hover:text-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="bg-white rounded-lg shadow p-4 flex items-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
         >
-        Update field location
+        <div class="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-green-200 transition-colors">
+          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        </div>
+        <div class="text-left">
+           <p class="text-sm font-medium text-gray-900">Create Task</p>
+           <p class="text-xs text-gray-500">Assign new work</p>
+        </div>
       </button>
-    </div>
-  </div>
-  <!-- Show message if no fields exist -->
-  <div v-else class="bg-white rounded-lg shadow-lg p-6 flex-1 flex flex-col">
-    <div class="text-center text-gray-500 flex-1 flex flex-col justify-center">
-      <svg class="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-      </svg>
-      <p class="text-sm">No fields available for weather data</p>
+      
       <button 
-      @click="navigateTo('/fields')" 
+      @click="navigateTo('/harvests/create')"
       :disabled="isNavigating"
-      class="text-green-600 hover:text-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      class="bg-white rounded-lg shadow p-4 flex items-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
       >
-      Add your first field
+      <div class="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-yellow-200 transition-colors">
+        <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+        </svg>
+      </div>
+      <div class="text-left">
+         <p class="text-sm font-medium text-gray-900">Record Harvest</p>
+         <p class="text-xs text-gray-500">Log crop yields</p>
+      </div>
     </button>
-  </div>
-</div>
-</div>
+    
+    <button 
+    @click="navigateTo('/inventory')"
+    :disabled="isNavigating"
+    class="bg-white rounded-lg shadow p-4 flex items-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+    >
+    <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-blue-200 transition-colors">
+      <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    </div>
+    <div class="text-left">
+       <p class="text-sm font-medium text-gray-900">Inventory</p>
+       <p class="text-xs text-gray-500">Check stock levels</p>
+    </div>
+    </button>
+
+    <button 
+    @click="navigateTo('/marketplace')"
+    :disabled="isNavigating"
+    class="bg-white rounded-lg shadow p-4 flex items-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+    >
+    <div class="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-purple-200 transition-colors">
+      <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+      </svg>
+    </div>
+    <div class="text-left">
+      <p class="text-sm font-medium text-gray-900">Marketplace</p>
+      <p class="text-xs text-gray-500">Manage sales</p>
+    </div>
+    </button>
+    </div>
 
         <!-- Column: Tasks & Alerts -->
         <div class="lg:col-span-2 flex flex-col space-y-6">
@@ -366,62 +485,7 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="mt-8">
-  <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <button 
-    @click="navigateTo('/tasks/create')"
-    :disabled="isNavigating"
-    class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-    <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-      <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-      </svg>
-    </div>
-    <p class="text-sm font-medium text-gray-900">Create Task</p>
-  </button>
-  
-  <button 
-  @click="navigateTo('/harvests/create')"
-  :disabled="isNavigating"
-  class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-  <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
-    <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-    </svg>
-  </div>
-  <p class="text-sm font-medium text-gray-900">Record Harvest</p>
-</button>
 
-<button 
-@click="navigateTo('/inventory')"
-:disabled="isNavigating"
-class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
->
-<div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-  <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-  </svg>
-</div>
-<p class="text-sm font-medium text-gray-900">Check Inventory</p>
-</button>
-
-<button 
-@click="navigateTo('/marketplace')"
-:disabled="isNavigating"
-class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
->
-<div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-  <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-  </svg>
-</div>
-<p class="text-sm font-medium text-gray-900">Marketplace</p>
-</button>
-</div>
-</div>
 </div>
 </div>
 </template>
@@ -433,6 +497,7 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
   import { useFarmStore } from '@/stores/farm';
   import { useInventoryStore } from '@/stores/inventory';
   import { useMarketplaceStore } from '@/stores/marketplace';
+  import { dashboardAPI } from '@/services/api';
   import CurrentWeather from '@/Components/Weather/CurrentWeather.vue';
   
   const router = useRouter();
@@ -444,6 +509,15 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
   // Add loading state to prevent button spamming
   const isNavigating = ref(false);
   const isInitialLoading = ref(true);
+
+  // Marketplace Data
+  const marketplaceStats = ref({
+    total_products: 0,
+    active_listings: 0,
+    pending_orders: 0,
+    total_revenue: 0
+  });
+  const recentProducts = ref([]);
   
   // Global error handling for this component
   const hasError = ref(false);
@@ -1017,6 +1091,20 @@ class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-sha
         name: 'seedPlantings',
         loader: () => farmStore.fetchSeedPlantings(),
         delay: 1500,
+        critical: false
+      },
+      {
+        name: 'dashboardStats',
+        loader: async () => {
+          const response = await dashboardAPI.getFarmerStats();
+          if (response.data && response.data.marketplace_stats) {
+            marketplaceStats.value = response.data.marketplace_stats;
+          }
+          if (response.data && response.data.recent_products) {
+            recentProducts.value = response.data.recent_products;
+          }
+        },
+        delay: 1800,
         critical: false
       }
       ];

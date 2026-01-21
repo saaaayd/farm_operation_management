@@ -8,6 +8,7 @@ use App\Models\RiceProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -164,6 +165,9 @@ class RiceOrderController extends Controller
                 "/farmer/orders/{$order->id}"
             );
 
+            // Invalidate farmer order stats cache
+            Cache::forget("farmer_order_stats_{$product->farmer_id}");
+
             return response()->json([
                 'message' => 'Order placed successfully',
                 'order' => $order
@@ -203,6 +207,9 @@ class RiceOrderController extends Controller
             "/orders/{$order->id}"
         );
 
+        // Invalidate farmer order stats cache
+        Cache::forget("farmer_order_stats_{$order->riceProduct->farmer_id}");
+
         return response()->json([
             'message' => 'Order accepted',
             'order' => $order->fresh()
@@ -237,6 +244,9 @@ class RiceOrderController extends Controller
             ['order_id' => $order->id],
             "/orders/{$order->id}"
         );
+
+        // Invalidate farmer order stats cache
+        Cache::forget("farmer_order_stats_{$order->riceProduct->farmer_id}");
 
         return response()->json([
             'message' => 'Order rejected',
@@ -323,6 +333,9 @@ class RiceOrderController extends Controller
             "/orders/{$order->id}"
         );
 
+        // Invalidate farmer order stats cache
+        Cache::forget("farmer_order_stats_{$order->riceProduct->farmer_id}");
+
         return response()->json([
             'message' => 'Order marked as ready for pickup',
             'order' => $order->fresh()
@@ -350,6 +363,9 @@ class RiceOrderController extends Controller
             // If it was COD, we might assume it's now paid via Cash, but keeping original method is safer unless specified
             // 'payment_method' => 'cash' 
         ]);
+
+        // Invalidate farmer order stats cache
+        Cache::forget("farmer_order_stats_{$order->riceProduct->farmer_id}");
 
         return response()->json([
             'message' => 'Order marked as paid',
@@ -384,6 +400,9 @@ class RiceOrderController extends Controller
             ['order_id' => $order->id],
             "/orders/{$order->id}"
         );
+
+        // Invalidate farmer order stats cache
+        Cache::forget("farmer_order_stats_{$order->riceProduct->farmer_id}");
 
         return response()->json([
             'message' => 'Pickup confirmed',

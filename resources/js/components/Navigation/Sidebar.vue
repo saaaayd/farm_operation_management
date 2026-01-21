@@ -259,7 +259,7 @@
           >
             <Bars3Icon class="w-6 h-6" />
           </button>
-          <h1 class="text-lg font-bold text-gray-900 gradient-text">RiceFARM</h1>
+          <h1 class="text-lg font-bold text-gray-900 gradient-text">ANIBUKID</h1>
           <div class="w-6"></div> <!-- Spacer -->
         </div>
       </div>

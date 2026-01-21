@@ -9,6 +9,7 @@ use App\Models\RiceVariety;
 use App\Models\User;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -286,6 +287,9 @@ class RiceMarketplaceController extends Controller
             // Log product creation
             \App\Models\ActivityLog::log('product.created', $product, null, $product->toArray(), "New product listing published");
 
+            // Invalidate marketplace stats cache
+            Cache::forget('marketplace_stats');
+
             return response()->json([
                 'message' => 'Rice product created successfully',
                 'product' => $product->load(['riceVariety', 'farmer']),
@@ -346,6 +350,10 @@ class RiceMarketplaceController extends Controller
 
             $product->update($validator->validated());
 
+            // Invalidate caches
+            Cache::forget('marketplace_stats');
+            Cache::forget("rice_product_{$id}");
+
             return response()->json([
                 'message' => 'Rice product updated successfully',
                 'product' => $product->load(['riceVariety', 'farmer']),
@@ -385,6 +393,9 @@ class RiceMarketplaceController extends Controller
             }
 
             $product->delete();
+
+            // Invalidate marketplace stats cache
+            Cache::forget('marketplace_stats');
 
             return response()->json([
                 'message' => 'Rice product deleted successfully'
@@ -649,31 +660,33 @@ class RiceMarketplaceController extends Controller
     public function getMarketplaceStats()
     {
         try {
-            $stats = [
-                'total_products' => RiceProduct::available()->count(),
-                'total_farmers' => User::where('role', User::ROLE_FARMER)
-                    ->whereHas('riceProducts', function ($query) {
-                        $query->available();
-                    })->count(),
-                'total_orders' => RiceOrder::count(),
-                'active_orders' => RiceOrder::active()->count(),
-                'total_rice_varieties' => RiceVariety::active()->count(),
-                'by_grade' => RiceProduct::available()
-                    ->select('quality_grade', DB::raw('count(*) as count'))
-                    ->groupBy('quality_grade')
-                    ->pluck('count', 'quality_grade'),
-                'by_processing' => RiceProduct::available()
-                    ->select('processing_method', DB::raw('count(*) as count'))
-                    ->groupBy('processing_method')
-                    ->pluck('count', 'processing_method'),
-                'organic_products' => RiceProduct::available()->organic()->count(),
-                'average_price' => RiceProduct::available()->avg('price_per_unit'),
-                'recent_products' => RiceProduct::with(['riceVariety', 'farmer'])
-                    ->available()
-                    ->latest()
-                    ->limit(5)
-                    ->get(),
-            ];
+            $stats = Cache::remember('marketplace_stats', now()->addMinutes(60), function () {
+                return [
+                    'total_products' => RiceProduct::available()->count(),
+                    'total_farmers' => User::where('role', User::ROLE_FARMER)
+                        ->whereHas('riceProducts', function ($query) {
+                            $query->available();
+                        })->count(),
+                    'total_orders' => RiceOrder::count(),
+                    'active_orders' => RiceOrder::active()->count(),
+                    'total_rice_varieties' => RiceVariety::active()->count(),
+                    'by_grade' => RiceProduct::available()
+                        ->select('quality_grade', DB::raw('count(*) as count'))
+                        ->groupBy('quality_grade')
+                        ->pluck('count', 'quality_grade'),
+                    'by_processing' => RiceProduct::available()
+                        ->select('processing_method', DB::raw('count(*) as count'))
+                        ->groupBy('processing_method')
+                        ->pluck('count', 'processing_method'),
+                    'organic_products' => RiceProduct::available()->organic()->count(),
+                    'average_price' => RiceProduct::available()->avg('price_per_unit'),
+                    'recent_products' => RiceProduct::with(['riceVariety', 'farmer'])
+                        ->available()
+                        ->latest()
+                        ->limit(5)
+                        ->get(),
+                ];
+            });
 
             return response()->json([
                 'stats' => $stats,
@@ -699,56 +712,56 @@ class RiceMarketplaceController extends Controller
                 return response()->json(['message' => 'Only farmers can access order stats'], 403);
             }
 
-            // Base query for farmer's orders
-            $baseQuery = RiceOrder::forFarmer($user->id);
+            $stats = Cache::remember("farmer_order_stats_{$user->id}", now()->addMinutes(15), function () use ($user) {
+                // Base query for farmer's orders
+                $baseQuery = RiceOrder::forFarmer($user->id);
 
-            // Total revenue (from all paid orders)
-            $totalRevenue = (clone $baseQuery)
-                ->where('payment_status', RiceOrder::PAYMENT_PAID)
-                ->sum('total_amount');
+                // Total revenue (from all paid orders)
+                $totalRevenue = (clone $baseQuery)
+                    ->where('payment_status', RiceOrder::PAYMENT_PAID)
+                    ->sum('total_amount');
 
-            // Total orders count
-            $totalOrders = (clone $baseQuery)->count();
+                // Total orders count
+                $totalOrders = (clone $baseQuery)->count();
 
-            // Orders by status
-            $ordersByStatus = (clone $baseQuery)
-                ->select('status', DB::raw('count(*) as count'))
-                ->groupBy('status')
-                ->pluck('count', 'status');
+                // Orders by status
+                $ordersByStatus = (clone $baseQuery)
+                    ->select('status', DB::raw('count(*) as count'))
+                    ->groupBy('status')
+                    ->pluck('count', 'status');
 
-            // Revenue trend for last 7 days (Optimized to single query)
-            $endDate = now();
-            $startDate = now()->subDays(6);
+                // Revenue trend for last 7 days (Optimized to single query)
+                $endDate = now();
+                $startDate = now()->subDays(6);
 
-            $dailyRevenueMap = RiceOrder::forFarmer($user->id)
-                ->whereDate('order_date', '>=', $startDate)
-                ->whereDate('order_date', '<=', $endDate)
-                ->where('payment_status', RiceOrder::PAYMENT_PAID)
-                ->selectRaw('DATE(order_date) as date, SUM(total_amount) as daily_total')
-                ->groupBy('date')
-                ->pluck('daily_total', 'date');
+                $dailyRevenueMap = RiceOrder::forFarmer($user->id)
+                    ->whereDate('order_date', '>=', $startDate)
+                    ->whereDate('order_date', '<=', $endDate)
+                    ->where('payment_status', RiceOrder::PAYMENT_PAID)
+                    ->selectRaw('DATE(order_date) as date, SUM(total_amount) as daily_total')
+                    ->groupBy('date')
+                    ->pluck('daily_total', 'date');
 
-            $revenueTrend = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i)->format('Y-m-d');
-                $revenueTrend[] = [
-                    'date' => $date,
-                    'day' => now()->subDays($i)->format('D'),
-                    'revenue' => (float) ($dailyRevenueMap[$date] ?? 0),
-                ];
-            }
+                $revenueTrend = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $date = now()->subDays($i)->format('Y-m-d');
+                    $revenueTrend[] = [
+                        'date' => $date,
+                        'day' => now()->subDays($i)->format('D'),
+                        'revenue' => (float) ($dailyRevenueMap[$date] ?? 0),
+                    ];
+                }
 
-            // Active orders (pending + confirmed + processing + shipped)
-            $pendingCount = $ordersByStatus[RiceOrder::STATUS_PENDING] ?? 0;
-            $confirmedCount = $ordersByStatus[RiceOrder::STATUS_CONFIRMED] ?? 0;
-            $processingCount = $ordersByStatus[RiceOrder::STATUS_PROCESSING] ?? 0;
-            $shippedCount = $ordersByStatus[RiceOrder::STATUS_SHIPPED] ?? 0;
-            $pickedUpCount = $ordersByStatus[RiceOrder::STATUS_PICKED_UP] ?? 0;
-            $deliveredCount = ($ordersByStatus[RiceOrder::STATUS_DELIVERED] ?? 0) + $pickedUpCount;
-            $cancelledCount = $ordersByStatus[RiceOrder::STATUS_CANCELLED] ?? 0;
+                // Active orders (pending + confirmed + processing + shipped)
+                $pendingCount = $ordersByStatus[RiceOrder::STATUS_PENDING] ?? 0;
+                $confirmedCount = $ordersByStatus[RiceOrder::STATUS_CONFIRMED] ?? 0;
+                $processingCount = $ordersByStatus[RiceOrder::STATUS_PROCESSING] ?? 0;
+                $shippedCount = $ordersByStatus[RiceOrder::STATUS_SHIPPED] ?? 0;
+                $pickedUpCount = $ordersByStatus[RiceOrder::STATUS_PICKED_UP] ?? 0;
+                $deliveredCount = ($ordersByStatus[RiceOrder::STATUS_DELIVERED] ?? 0) + $pickedUpCount;
+                $cancelledCount = $ordersByStatus[RiceOrder::STATUS_CANCELLED] ?? 0;
 
-            return response()->json([
-                'stats' => [
+                return [
                     'total_revenue' => (float) $totalRevenue,
                     'total_orders' => $totalOrders,
                     'pending' => $pendingCount,
@@ -759,7 +772,11 @@ class RiceMarketplaceController extends Controller
                     'cancelled' => $cancelledCount,
                     'active_orders' => $pendingCount + $confirmedCount + $processingCount + $shippedCount,
                     'revenue_trend' => $revenueTrend,
-                ],
+                ];
+            });
+
+            return response()->json([
+                'stats' => $stats,
             ]);
 
         } catch (\Exception $e) {
