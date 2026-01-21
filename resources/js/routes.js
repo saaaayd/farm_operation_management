@@ -459,13 +459,13 @@ export const setupRouterGuards = (router) => {
     try {
       const authStore = useAuthStore();
 
-      // Handle root path redirect
+      // Handle root path - allow both guests and auth users
       if (to.path === '/') {
         if (authStore.isAuthenticated) {
           next('/dashboard');
-        } else {
-          next('/login');
+          return;
         }
+        next();
         return;
       }
 
