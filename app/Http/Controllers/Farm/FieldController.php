@@ -57,6 +57,15 @@ class FieldController extends Controller
                     $field->current_crop = null;
                 }
 
+                // Add current planting details for status display
+                if ($currentPlanting) {
+                    $field->current_planting_id = $currentPlanting->id;
+                    $field->current_planting_status = $currentPlanting->status;
+                } else {
+                    $field->current_planting_id = null;
+                    $field->current_planting_status = null;
+                }
+
                 // Calculate available area
                 $occupiedArea = $field->plantings
                     ->filter(function ($planting) {

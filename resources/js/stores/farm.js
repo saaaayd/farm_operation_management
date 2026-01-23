@@ -305,14 +305,16 @@ export const useFarmStore = defineStore('farm', {
         this.loading = false;
       }
     },
-
     // --- RICE FARMING LIFECYCLE ACTIONS ---
     async fetchPlantingLifecycle(plantingId) {
       this.loadingPlanting = true;
-      this.currentPlanting = null;
-      this.lifecycleStatus = null;
-      this.stageTimeline = [];
       this.error = null;
+
+      // Don't clear existing data - allows UI to stay visible during refresh
+      // this.currentPlanting = null;
+      // this.lifecycleStatus = null;
+      // this.stageTimeline = [];
+
       try {
         const response = await riceFarmingAPI.getPlantingLifecycle(plantingId);
         if (response.data) {

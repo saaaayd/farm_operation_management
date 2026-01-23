@@ -257,6 +257,14 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 
+  // Pest Tracker Routes
+  {
+    path: '/pest-tracker',
+    name: 'pest-tracker',
+    component: () => import('@/Pages/Farmer/PestTracker/Index.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+
   // Weather Routes
   {
     path: '/weather',
@@ -271,6 +279,13 @@ const routes = [
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 
+  // Data Analytics Route
+  {
+    path: '/analytics',
+    name: 'data-analytics',
+    component: () => import('@/Pages/Analytics/DataAnalysis.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
 
   // Reports Routes
   {
@@ -427,6 +442,12 @@ const routes = [
     path: '/financial/expenses',
     name: 'financial-expenses',
     component: FinancialExpensesIndex,
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/sales',
+    name: 'sales',
+    component: () => import('@/Pages/Farmer/Sales/Index.vue'),
     meta: { requiresAuth: true, roles: ['farmer'] }
   },
 

@@ -11,6 +11,7 @@ class Sale extends Model
         'harvest_id',
         'buyer_id',
         'user_id',
+        'rice_order_id', // Link to marketplace order
         'quantity',
         'unit_price',
         'total_amount',
@@ -41,11 +42,19 @@ class Sale extends Model
     }
 
     /**
-     * Get the buyer
+     * Get the buyer (for off-platform sales)
      */
     public function buyer()
     {
         return $this->belongsTo(Buyer::class, 'buyer_id');
+    }
+
+    /**
+     * Get the rice order (for marketplace sales)
+     */
+    public function riceOrder()
+    {
+        return $this->belongsTo(RiceOrder::class);
     }
 
     /**

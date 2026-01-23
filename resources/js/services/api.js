@@ -217,25 +217,9 @@ export const farmProfileAPI = {
       farming_experience: data.farming_experience ? parseInt(data.farming_experience) : null,
       farm_description: data.farm_description || null,
 
-      // Field Information
-      field_name: data.field_name || 'Main Rice Field',
-      field_size: parseFloat(data.field_area),
-
-      // Soil Information
-      soil_type: data.soil_type,
-      soil_ph: data.soil_ph ? parseFloat(data.soil_ph) : null,
-      organic_matter_content: data.organic_matter_content ? parseFloat(data.organic_matter_content) : null,
-      nitrogen_level: data.nitrogen_level ? parseFloat(data.nitrogen_level) : null,
-      phosphorus_level: data.phosphorus_level ? parseFloat(data.phosphorus_level) : null,
-      potassium_level: data.potassium_level ? parseFloat(data.potassium_level) : null,
-      elevation: data.elevation ? parseFloat(data.elevation) : null,
-
-
-      // Water Management
-      water_source: data.water_source,
-      irrigation_type: data.irrigation_type,
-      water_access: data.water_access,
-      drainage_quality: data.drainage_quality,
+      // Field Information - REMOVED
+      // Soil Information - REMOVED
+      // Water Management - REMOVED
     };
 
 

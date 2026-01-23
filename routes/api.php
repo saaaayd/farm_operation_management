@@ -315,6 +315,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales management routes
     Route::middleware('farmer')->prefix('sales')->group(function () {
         Route::get('/', [\App\Http\Controllers\MarketPlace\SaleController::class, 'index']);
+        Route::get('/summary', [\App\Http\Controllers\MarketPlace\SaleController::class, 'summary']);
         Route::post('/', [\App\Http\Controllers\MarketPlace\SaleController::class, 'store']);
         Route::get('/{sale}', [\App\Http\Controllers\MarketPlace\SaleController::class, 'show']);
         Route::put('/{sale}', [\App\Http\Controllers\MarketPlace\SaleController::class, 'update']);
@@ -333,6 +334,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rice Farming Analytics routes
     Route::middleware('farmer')->prefix('analytics')->group(function () {
         Route::get('/rice-farming', [\App\Http\Controllers\RiceFarmingAnalyticsController::class, 'getRiceFarmingAnalytics']);
+        Route::get('/data-analysis', [\App\Http\Controllers\Analytics\DataAnalysisController::class, 'getComprehensiveAnalytics']);
     });
 
     // Reports routes

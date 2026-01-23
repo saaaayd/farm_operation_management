@@ -124,6 +124,15 @@
               Inventory
             </router-link>
 
+            <router-link
+              to="/pest-tracker"
+              class="nav-item"
+              :class="{ 'nav-item-active': $route.path.startsWith('/pest-tracker') }"
+            >
+              <BugAntIcon class="nav-icon" />
+              Pest Tracker
+            </router-link>
+
             <div class="nav-section-title">Analytics</div>
             
             <router-link
@@ -142,6 +151,15 @@
             >
               <DocumentChartBarIcon class="nav-icon" />
               Reports
+            </router-link>
+
+            <router-link
+              to="/analytics"
+              class="nav-item"
+              :class="{ 'nav-item-active': $route.path === '/analytics' }"
+            >
+              <ChartBarSquareIcon class="nav-icon" />
+              Data Analytics
             </router-link>
 
             <div class="nav-section-title">Business</div>
@@ -171,6 +189,15 @@
             >
               <CurrencyDollarIcon class="nav-icon" />
               Expenses
+            </router-link>
+
+            <router-link
+              to="/sales"
+              class="nav-item"
+              :class="{ 'nav-item-active': $route.path.startsWith('/sales') }"
+            >
+              <BanknotesIcon class="nav-icon" />
+              Sales
             </router-link>
           </template>
 
@@ -302,6 +329,8 @@ import {
   XMarkIcon,
   Bars3Icon,
   BeakerIcon,
+  BugAntIcon,
+  ChartBarSquareIcon,
 } from '@heroicons/vue/24/outline';
 
 const router = useRouter();

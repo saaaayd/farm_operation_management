@@ -8,12 +8,37 @@
           <p class="text-gray-600 mt-2">Analyze your crop production and yield data</p>
         </div>
         <div class="flex space-x-3">
-          <button
-            @click="exportReport"
-            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Export Report
-          </button>
+          <div class="relative">
+            <button
+              @click="showExportMenu = !showExportMenu"
+              class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              v-if="showExportMenu"
+              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200"
+            >
+              <button
+                @click="exportToPDF"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                📄 Export as PDF
+              </button>
+              <button
+                @click="exportReport"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                📊 Export as CSV
+              </button>
+            </div>
+          </div>
           <button
             @click="generateReport"
             class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -290,10 +315,12 @@ import { ref, onMounted, computed } from 'vue'
 import { formatCurrency } from '@/utils/format'
 import { reportsAPI } from '@/services/api'
 import LineChart from '@/Components/Charts/LineChart.vue'
+import { pdfExport } from '@/utils/pdfExport'
 
 const selectedSeason = ref('')
 const selectedCrop = ref('')
 const selectedField = ref('')
+const showExportMenu = ref(false)
 
 // Filter options from API
 const seasonOptions = ref([])
@@ -334,7 +361,32 @@ const generateReport = async () => {
   }
 }
 
+const exportToPDF = () => {
+  showExportMenu.value = false
+  try {
+    pdfExport.exportCropYieldReport({
+      totalHarvests: cropComparison.value.length,
+      totalYield: yieldSummary.value.totalYield,
+      avgYieldPerHa: yieldSummary.value.avgYieldPerAcre,
+      harvests: cropComparison.value.map(c => ({
+        harvest_date: selectedSeason.value,
+        field_name: c.name,
+        variety_name: c.name,
+        yield: c.totalYield,
+        quality_grade: 'N/A'
+      }))
+    }, {
+      title: `Crop Yield Report - Season ${selectedSeason.value}`
+    })
+    alert('PDF exported successfully!')
+  } catch (error) {
+    console.error('Failed to export PDF:', error)
+    alert('Failed to export PDF')
+  }
+}
+
 const exportReport = () => {
+  showExportMenu.value = false
   // Export report as CSV
   try {
     const csvContent = generateCSV()

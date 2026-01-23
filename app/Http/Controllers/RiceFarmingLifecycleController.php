@@ -73,14 +73,33 @@ class RiceFarmingLifecycleController extends Controller
             // Initialize planting stages based on rice growth stages
             $planting->initializePlantingStages();
 
-            // Start the first stage (usually seedling/germination)
-            $firstStage = $planting->plantingStages()
-                ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
-                ->orderBy('rice_growth_stages.order_sequence')
-                ->first();
+            // Start the appropriate stage based on planting method
+            $plantingMethod = $planting->planting_method;
 
-            if ($firstStage) {
-                $firstStage->markAsStarted();
+            if ($plantingMethod === 'transplanting') {
+                // For transplanting, start Stage 2
+                $stages = $planting->plantingStages()
+                    ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
+                    ->orderBy('rice_growth_stages.order_sequence')
+                    ->select('planting_stages.*')
+                    ->get();
+
+                if ($stages->count() >= 2) {
+                    $stages[0]->markAsCompleted('Completed in nursery (Transplanting)');
+                    $stages[1]->markAsStarted();
+                } elseif ($stages->count() > 0) {
+                    $stages[0]->markAsStarted();
+                }
+            } else {
+                // Start the first stage (usually seedling/germination)
+                $firstStage = $planting->plantingStages()
+                    ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
+                    ->orderBy('rice_growth_stages.order_sequence')
+                    ->first();
+
+                if ($firstStage) {
+                    $firstStage->markAsStarted();
+                }
             }
 
             DB::commit();
@@ -122,6 +141,46 @@ class RiceFarmingLifecycleController extends Controller
             // Check if user owns this planting
             if ($planting->field->user_id !== auth()->id()) {
                 return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            // Auto-initialize stages if none exist (for existing plantings without lifecycle)
+            if ($planting->plantingStages->isEmpty()) {
+                $planting->initializePlantingStages();
+
+                // Start the appropriate stage based on planting method
+                if ($planting->status !== Planting::STATUS_PLANNED) {
+                    $plantingMethod = $planting->planting_method;
+
+                    if ($plantingMethod === 'transplanting') {
+                        // For transplanting, we assume the seedling stage (Stage 1) is done in nursery
+                        $stages = $planting->plantingStages()
+                            ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
+                            ->orderBy('rice_growth_stages.order_sequence')
+                            ->select('planting_stages.*')
+                            ->get();
+
+                        if ($stages->count() >= 2) {
+                            $stages[0]->markAsCompleted('Completed in nursery (Transplanting)');
+                            $stages[1]->markAsStarted();
+                        } elseif ($stages->count() > 0) {
+                            $stages[0]->markAsStarted();
+                        }
+                    } else {
+                        // Direct seeding / Broadcasting starts at Stage 1
+                        $firstStage = $planting->plantingStages()
+                            ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
+                            ->orderBy('rice_growth_stages.order_sequence')
+                            ->select('planting_stages.*')
+                            ->first();
+
+                        if ($firstStage) {
+                            $firstStage->markAsStarted();
+                        }
+                    }
+                }
+
+                // Reload the planting with the newly created stages
+                $planting->load('plantingStages.riceGrowthStage');
             }
 
             $currentStage = $planting->getCurrentStage();

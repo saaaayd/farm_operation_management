@@ -142,8 +142,24 @@
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Current Crop</p>
-                    <p class="text-sm font-bold text-green-700">{{ field.current_crop }}</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Current Planting</p>
+                    <div class="flex items-center gap-2">
+                      <router-link 
+                        v-if="field.current_planting_id"
+                        :to="`/plantings/${field.current_planting_id}`"
+                        class="text-sm font-bold text-green-700 hover:text-green-900 hover:underline"
+                      >
+                        {{ field.current_crop }}
+                      </router-link>
+                      <span v-else class="text-sm font-bold text-green-700">{{ field.current_crop }}</span>
+                      <span 
+                        v-if="field.current_planting_status"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        :class="plantingStatusClass(field.current_planting_status)"
+                      >
+                        {{ formatPlantingStatus(field.current_planting_status) }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -312,6 +328,23 @@ const statusLabel = (status) => {
     maintenance: 'Maintenance'
   }
   return labels[status] || status
+}
+
+const plantingStatusClass = (status) => {
+  const classes = {
+    planned: 'bg-gray-100 text-gray-700',
+    planted: 'bg-blue-100 text-blue-700',
+    growing: 'bg-yellow-100 text-yellow-700',
+    ready: 'bg-teal-100 text-teal-700',
+    harvested: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-700'
+}
+
+const formatPlantingStatus = (status) => {
+  if (!status) return ''
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
 }
 
 const statusClass = (status) => {

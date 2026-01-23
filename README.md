@@ -51,6 +51,7 @@ Traditional farming relies on manual record-keeping and experience-based decisio
 - **Harvest Recording:** Log yields, quality grades, and harvester shares.
 - **Inventory Management:** Track seeds, fertilizers, pesticides with Weighted Average Cost (WAC).
 - **Labor Management:** Assign tasks with Daily Rate, Piece Rate, or Pakyao (contract) payments.
+- **Sales Dashboard:** Track revenue, analyze trends, and record direct sales.
 - **Product Listing:** List rice products for sale in the marketplace.
 
 ### 🛒 For Buyers
@@ -152,7 +153,15 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - Agronomic threshold alerts (Heat Stress, Cold Stress, Drought, etc.)
   - Yield prediction using multi-factor analysis
 
-### 3. Inventory Management
+### 3. Intelligent Data Analytics
+- **Controller:** `DataAnalysisController`
+- **Features:**
+  - **Comprehensive Dashboard:** Aggregates metrics from 8+ modules (Weather, Sales, Expenses, Fields, Nursery, Inventory, Pests, Labor).
+  - **Intelligent Action Suggestions:** AI-driven recommendations based on data patterns (e.g., "Restock seeds" when low, "Apply treatment" when pests detected).
+  - **Visualizations:** Interactive charts for revenue vs expenses, task distribution, and labor productivity.
+  - **Trend Analysis:** Tracks historical performance and identifies anomalies.
+
+### 4. Inventory Management
 - **Model:** `InventoryItem`, `InventoryTransaction`
 - **Controller:** `InventoryItemController`
 - **Features:**
@@ -160,7 +169,7 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - Low stock alerts and expiry tracking
   - Automatic expense creation on stock purchase
 
-### 4. Labor & Tasks
+### 5. Labor & Tasks
 - **Models:** `Task`, `Laborer`, `LaborerGroup`, `LaborWage`
 - **Controller:** `TaskController`
 - **Features:**
@@ -168,12 +177,15 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - Auto-expense generation on task completion
   - Laborer group assignment
 
-### 5. Harvest & Sales
+### 6. Harvest & Sales
 - **Models:** `Harvest`, `Sale`
-- **Controller:** `HarvestController`
-- **Features:** Yield recording, quality grading, harvester share calculation.
+- **Controller:** `HarvestController`, `SalesController`
+- **Features:**
+  - Yield recording, quality grading, harvester share calculation.
+  - **Marketplace Integration:** Auto-creation of sales records upon order completion.
+  - **Sales Tracking:** Unified view of marketplace and off-platform sales.
 
-### 6. Marketplace
+### 7. Marketplace
 - **Models:** `RiceProduct`, `RiceOrder`, `Cart`, `CartItem`
 - **Controllers:** `RiceProductController`, `RiceOrderController`, `CartController`
 - **Features:**
@@ -182,10 +194,13 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - Order state machine (Pending → Confirmed → Ready → Picked Up)
   - Pessimistic locking to prevent overselling
 
-### 7. Financial Reporting
+### 8. Financial Reporting
 - **Models:** `Expense`, `Sale`
 - **Services:** `FinancialService`
-- **Features:** Income/expense tracking, profit/loss reports, crop profitability analysis.
+- **Features:** 
+  - Income/expense tracking, profit/loss reports, crop profitability analysis.
+  - **PDF/CSV Export:** Generate professional reports for records and analysis.
+  - **Scheduled Reports:** Automated email summaries (Financial, Crop Yield).
 
 ---
 
@@ -311,6 +326,20 @@ To minimize external API reliance and costs, the system implements a multi-layer
 3. **Service Caching:** External API responses are cached in Redis/File for 30 minutes (Current) / 3 hours (Forecast).
 4. **Batch Processing:** Fields are grouped by location for bulk weather updates.
 5. **Client-Side Caching:** Frontend prevents redundant requests within a 10-minute window.
+
+---
+
+
+---
+
+## 🤖 Automation & Scheduled Jobs
+
+The system relies on Laravel Scheduler to perform background maintenance and notifications.
+
+| Command | Schedule | Purpose |
+|---------|----------|---------|
+| `inventory:check-expiry` | Daily (8:00 AM) | Checks for expiring items and notifies farmers. |
+| `reports:send-scheduled` | Hourly | Checks for due scheduled reports and emails them. |
 
 ---
 

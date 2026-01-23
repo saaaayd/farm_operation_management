@@ -19,3 +19,9 @@ Schedule::command('inventory:check-expiry')
     ->dailyAt('08:00')
     ->timezone('Asia/Manila')
     ->withoutOverlapping();
+
+// Schedule reports to be sent hourly (checks frequency internally)
+Schedule::command('reports:send-scheduled')
+    ->hourly()
+    ->timezone('Asia/Manila')
+    ->withoutOverlapping();

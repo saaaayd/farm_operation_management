@@ -391,6 +391,9 @@ class RiceOrderController extends Controller
 
         $order->markPickedUp();
 
+        // Create a Sale record for this completed order
+        $this->createSaleFromOrder($order);
+
         // Notify buyer that order has been marked as picked up
         \App\Models\Notification::notify(
             $order->buyer_id,
@@ -408,6 +411,39 @@ class RiceOrderController extends Controller
             'message' => 'Pickup confirmed',
             'order' => $order->fresh()
         ]);
+    }
+
+    /**
+     * Create a Sale record from a completed order
+     */
+    private function createSaleFromOrder(RiceOrder $order): void
+    {
+        try {
+            // Check if sale already exists for this order
+            $existingSale = \App\Models\Sale::where('rice_order_id', $order->id)->first();
+            if ($existingSale) {
+                return; // Sale already created
+            }
+
+            \App\Models\Sale::create([
+                'user_id' => $order->riceProduct->farmer_id,
+                'rice_order_id' => $order->id, // Link to the order
+                'harvest_id' => $order->riceProduct->harvest_id ?? null,
+                'buyer_id' => $order->buyer_id,
+                'quantity' => $order->quantity,
+                'unit_price' => $order->offer_price ?? $order->unit_price,
+                'total_amount' => $order->total_amount,
+                'sale_date' => now(),
+                'payment_method' => $order->payment_method ?? 'marketplace',
+                'payment_status' => $order->payment_status === RiceOrder::PAYMENT_PAID ? 'paid' : 'pending',
+                'notes' => "Marketplace order #{$order->id}",
+            ]);
+
+            \Log::info("Sale created for order #{$order->id}");
+        } catch (\Exception $e) {
+            \Log::error("Failed to create sale for order #{$order->id}: " . $e->getMessage());
+            // Don't throw - sale creation failure shouldn't block order completion
+        }
     }
 
     /**
