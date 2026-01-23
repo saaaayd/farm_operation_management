@@ -17,6 +17,7 @@ use App\Models\PestIncident;
 use App\Models\RiceOrder;
 use App\Models\RiceProduct;
 use App\Models\Harvest;
+use App\Models\InventoryTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -36,25 +37,89 @@ class DataAnalysisController extends Controller
         $cacheKey = "data_analysis_{$user->id}_{$startDate}_{$endDate}";
 
         $data = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $startDate, $endDate) {
-            return [
+            $analytics = [
                 'weather' => $this->getWeatherAnalytics($user->id, $startDate, $endDate),
                 'sales' => $this->getSalesAnalytics($user->id, $startDate, $endDate),
                 'expenses' => $this->getExpenseAnalytics($user->id, $startDate, $endDate),
                 'fields' => $this->getFieldAnalytics($user->id),
                 'nursery' => $this->getNurseryAnalytics($user->id),
-                'inventory' => $this->getInventoryAnalytics($user->id),
+                'inventory' => $this->getInventoryAnalytics($user->id, $startDate, $endDate),
                 'pests' => $this->getPestAnalytics($user->id, $startDate, $endDate),
                 'laborers' => $this->getLaborAnalytics($user->id, $startDate, $endDate),
                 'tasks' => $this->getTaskAnalytics($user->id, $startDate, $endDate),
-                'action_suggestions' => $this->generateActionSuggestions($user->id),
-                'date_range' => [
-                    'start' => $startDate,
-                    'end' => $endDate,
-                ],
             ];
+
+            // Generate executive summary based on the aggregated data
+            $analytics['executive_summary'] = $this->generateExecutiveSummary($analytics);
+            $analytics['action_suggestions'] = $this->generateActionSuggestions($user->id);
+            $analytics['date_range'] = [
+                'start' => $startDate,
+                'end' => $endDate,
+            ];
+
+            return $analytics;
         });
 
         return response()->json($data);
+    }
+
+    /**
+     * Generate a narrative executive summary based on aggregated metrics
+     */
+    private function generateExecutiveSummary(array $data): array
+    {
+        $summary = [];
+        $tone = 'neutral';
+
+        // 1. Financial Assessment
+        $revenue = $data['sales']['total_revenue'] ?? 0;
+        $expenses = $data['expenses']['total_expenses'] ?? 0;
+        $netProfit = $revenue - $expenses;
+        $profitMargin = $revenue > 0 ? ($netProfit / $revenue) * 100 : 0;
+
+        if ($netProfit > 0) {
+            $summary[] = "The farm is currently profitable with a net income of ₱" . number_format($netProfit, 2) . ".";
+            $tone = 'positive';
+        } elseif ($expenses > 0 && $revenue == 0) {
+            $summary[] = "The farm is in an investment phase with significant operational costs (₱" . number_format($expenses, 2) . ") and no revenue yet for this period.";
+            $tone = 'neutral';
+        } else {
+            $summary[] = "The farm is operating at a deficit of ₱" . number_format(abs($netProfit), 2) . ".";
+            $tone = 'concern';
+        }
+
+        // 2. Operational Efficiency
+        $completionRate = $data['tasks']['completion_rate'] ?? 0;
+        $overdueCount = $data['tasks']['overdue_tasks'] ?? 0;
+
+        if ($overdueCount > 5) {
+            $summary[] = "Operational bottlenecks are detected with {$overdueCount} overdue tasks affecting overall efficiency.";
+            $tone = $tone === 'positive' ? 'neutral' : 'concern';
+        } elseif ($completionRate > 85) {
+            $summary[] = "Operations are running smoothly with a high task completion rate of {$completionRate}%.";
+        } elseif ($completionRate < 50 && $data['tasks']['total_tasks'] > 0) {
+            $summary[] = "Labor efficiency requires attention as only {$completionRate}% of assigned tasks are completed.";
+        }
+
+        // 3. Risk Factors
+        $activePests = $data['pests']['active_incidents'] ?? 0;
+        $weatherCondition = strtolower($data['weather']['condition_distribution'][0] ?? ''); // dominant condition
+
+        if ($activePests > 0) {
+            $summary[] = "Immediate attention is required for {$activePests} active pest incidents which may impact yield.";
+            $tone = 'concern';
+        }
+
+        // 4. Inventory Health
+        $lowStock = $data['inventory']['low_stock_count'] ?? 0;
+        if ($lowStock > 0) {
+            $summary[] = "Supply chain risk is elevated with {$lowStock} items below minimum stock levels.";
+        }
+
+        return [
+            'text' => implode(' ', $summary),
+            'tone' => $tone,
+        ];
     }
 
     /**
@@ -257,12 +322,14 @@ class DataAnalysisController extends Controller
     }
 
     /**
-     * Inventory analytics - stock levels, usage
+     * Inventory analytics - stock levels, usage, and historical trends
      */
-    private function getInventoryAnalytics($userId): array
+    private function getInventoryAnalytics($userId, $startDate, $endDate): array
     {
         $items = InventoryItem::where('user_id', $userId)->get();
+        $itemIds = $items->pluck('id');
 
+        // Snapshot data (Current status)
         $totalValue = $items->sum(fn($item) => ($item->current_stock ?? 0) * ($item->unit_price ?? 0));
 
         $lowStockItems = $items->filter(function ($item) {
@@ -274,6 +341,28 @@ class DataAnalysisController extends Controller
             'total_stock' => $group->sum('current_stock'),
             'low_stock' => $group->filter(fn($i) => ($i->current_stock ?? 0) <= ($i->minimum_stock ?? 0))->count(),
         ]);
+
+        // Historical Data (Transactions within date range)
+        $transactions = InventoryTransaction::whereIn('inventory_item_id', $itemIds)
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->get();
+
+        $totalCoonsumed = $transactions->where('transaction_type', 'out')->sum('quantity');
+        $totalRestocked = $transactions->where('transaction_type', 'in')->sum('quantity');
+
+        $mostConsumed = $transactions->where('transaction_type', 'out')
+            ->groupBy('inventory_item_id')
+            ->map(function ($group) {
+                return [
+                    'item_id' => $group->first()->inventory_item_id,
+                    'quantity' => $group->sum('quantity'),
+                    'count' => $group->count(),
+                ];
+            })
+            ->sortByDesc('quantity')
+            ->first();
+
+        $mostConsumedItem = $mostConsumed ? $items->firstWhere('id', $mostConsumed['item_id']) : null;
 
         return [
             'total_items' => $items->count(),
@@ -287,6 +376,17 @@ class DataAnalysisController extends Controller
                 'unit' => $i->unit,
             ])->values(),
             'by_category' => $byCategory,
+            // Historical metrics
+            'historical_usage' => [
+                'total_consumed' => $totalCoonsumed,
+                'total_restocked' => $totalRestocked,
+                'transaction_count' => $transactions->count(),
+                'most_consumed_item' => $mostConsumedItem ? [
+                    'name' => $mostConsumedItem->name,
+                    'quantity' => $mostConsumed['quantity'],
+                    'unit' => $mostConsumedItem->unit,
+                ] : null,
+            ],
         ];
     }
 

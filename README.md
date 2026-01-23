@@ -161,6 +161,26 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - **Visualizations:** Interactive charts for revenue vs expenses, task distribution, and labor productivity.
   - **Trend Analysis:** Tracks historical performance and identifies anomalies.
 
+#### 🧠 AI Inference Engine (Rule-Based)
+The system uses a deterministic expert system to generate narrative insights without external API dependencies.
+
+**Inference Logic:**
+1.  **Financial Health:**
+    - *Profit > 0* → "Profitable" (Positive Tone)
+    - *Loss* → "Operating at a deficit" (Concern Tone)
+    - *High Expense/No Revenue* → "Investment Phase" (Neutral Tone)
+2.  **Operational Efficiency:**
+    - *Task Completion > 85%* → "Smooth Operations"
+    - *Overdue Tasks > 5* → "Operational Bottlenecks"
+3.  **Risk Assessment:**
+    - *Active Pests* → "Immediate Attention Required"
+    - *Low Stock* → "Supply Chain Risk"
+
+**Examples:**
+> "The farm is currently profitable with a net income of ₱50,000. Operations are running smoothly with a high task completion rate of 92%."
+
+> "The farm is operating at a deficit of ₱12,000. Operational bottlenecks are detected with 8 overdue tasks affecting overall efficiency. Immediate attention is required for 2 active pest incidents."
+
 ### 4. Inventory Management
 - **Model:** `InventoryItem`, `InventoryTransaction`
 - **Controller:** `InventoryItemController`
@@ -168,6 +188,7 @@ Traditional farming relies on manual record-keeping and experience-based decisio
   - **Weighted Average Cost (WAC):** Auto-recalculates unit price on restock
   - Low stock alerts and expiry tracking
   - Automatic expense creation on stock purchase
+  - **Historical Usage Tracking:** Monitors consumption and restock patterns over time
 
 ### 5. Labor & Tasks
 - **Models:** `Task`, `Laborer`, `LaborerGroup`, `LaborWage`

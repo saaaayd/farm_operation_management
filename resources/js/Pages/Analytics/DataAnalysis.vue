@@ -55,6 +55,45 @@
 
       <!-- Main Content -->
       <div v-else-if="analyticsData" class="space-y-8">
+        <!-- Executive Summary Card -->
+        <div 
+          v-if="analyticsData.executive_summary"
+          :class="[
+            'rounded-2xl p-6 shadow-lg border backdrop-blur-sm transition-all',
+            analyticsData.executive_summary.tone === 'positive' ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200' :
+            analyticsData.executive_summary.tone === 'concern' ? 'bg-gradient-to-r from-amber-50 to-red-50 border-amber-200' :
+            'bg-gradient-to-r from-blue-50 to-slate-50 border-blue-200'
+          ]"
+        >
+          <div class="flex items-start gap-4">
+            <div 
+              :class="[
+                'p-3 rounded-xl shadow-sm',
+                analyticsData.executive_summary.tone === 'positive' ? 'bg-emerald-100 text-emerald-600' :
+                analyticsData.executive_summary.tone === 'concern' ? 'bg-amber-100 text-amber-600' :
+                'bg-blue-100 text-blue-600'
+              ]"
+            >
+              <span class="text-2xl">✨</span>
+            </div>
+            <div>
+              <h2 
+                :class="[
+                  'text-lg font-bold mb-2',
+                  analyticsData.executive_summary.tone === 'positive' ? 'text-emerald-800' :
+                  analyticsData.executive_summary.tone === 'concern' ? 'text-amber-800' :
+                  'text-blue-800'
+                ]"
+              >
+                Executive Summary
+              </h2>
+              <p class="text-gray-700 leading-relaxed text-sm md:text-base">
+                {{ analyticsData.executive_summary.text }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Action Suggestions Panel -->
         <div v-if="analyticsData.action_suggestions?.length" class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200/50 shadow-lg">
           <div class="flex items-center justify-between mb-4">
@@ -250,19 +289,23 @@
             </div>
             <div class="space-y-2">
               <div class="flex justify-between">
-                <span class="text-xs text-gray-500">Total Items</span>
-                <span class="font-bold text-gray-800">{{ analyticsData.inventory?.total_items ?? 0 }}</span>
-              </div>
-              <div class="flex justify-between">
                 <span class="text-xs text-gray-500">Stock Value</span>
                 <span class="font-bold text-gray-800">₱{{ formatNumber(analyticsData.inventory?.total_value ?? 0) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-xs text-gray-500">Low Stock</span>
-                <span :class="[
-                  'font-bold',
-                  (analyticsData.inventory?.low_stock_count ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600'
-                ]">{{ analyticsData.inventory?.low_stock_count ?? 0 }}</span>
+                <span class="text-xs text-gray-500">Consumed (Period)</span>
+                <span class="font-bold text-gray-800">{{ formatNumber(analyticsData.inventory?.historical_usage?.total_consumed ?? 0) }} units</span>
+              </div>
+              <div v-if="analyticsData.inventory?.historical_usage?.most_consumed_item" class="pt-2 border-t border-gray-50">
+                <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Top Used Item</div>
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-medium text-gray-700 truncate max-w-[120px]" :title="analyticsData.inventory.historical_usage.most_consumed_item.name">
+                    {{ analyticsData.inventory.historical_usage.most_consumed_item.name }}
+                  </span>
+                  <span class="text-xs font-bold text-violet-600">
+                    {{ formatNumber(analyticsData.inventory.historical_usage.most_consumed_item.quantity) }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
