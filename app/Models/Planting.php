@@ -105,6 +105,14 @@ class Planting extends Model
     }
 
     /**
+     * Get the pest incidents for this planting
+     */
+    public function pestIncidents()
+    {
+        return $this->hasMany(PestIncident::class);
+    }
+
+    /**
      * Check if planting is overdue
      */
     public function isOverdue(): bool

@@ -137,6 +137,36 @@ Traditional farming relies on manual record-keeping and experience-based decisio
 
 ---
 
+---
+
+## 🔄 Input-Process-Output (IPO) Model
+
+```text
+       INPUTS                       PROCESS                       OUTPUTS
++-------------------+      +-------------------------+      +---------------------+
+|                   |      |                         |      |                     |
+|  👨‍🌾 Farmer Data   |----->|   Core Business Logic   |----->|  📊 Dashboards      |
+|  🛒 Buyer Orders   |      |   (Auth, Validation)    |      |  🔔 Alerts          |
+|  ☁️ Weather APIs   |      |          +              |      |  📄 Reports         |
+|  🗺️ Map Service    |----->|   🧠 Analytics Engine   |----->|  💡 Suggestions     |
+|                   |      |                         |      |                     |
++-------------------+      +-----------+-------------+      +---------------------+
+                                       |
+                                       v
+                             +---------------------+
+                             |                     |
+                             |  🗄️ Database Storage  |
+                             |                     |
+                             +---------------------+
+```
+
+### Flow Description
+1.  **Input:** User data (from Farmers and Buyers) and External APIs (Weather, Maps) feed into the system.
+2.  **Process:** Data is securely authenticated and processed by the Core Business Logic. The Analytics Engine computes specialized insights (e.g., GDD, Pest Risks). All state is persisted in the Database.
+3.  **Output:** The system generates visual Dashboards, real-time Alerts, formal Reports, and Actionable Suggestions to guide decision-making.
+
+---
+
 ## 📦 Module Overview
 
 ### 1. Farm & Field Management
@@ -180,6 +210,15 @@ The system uses a deterministic expert system to generate narrative insights wit
 > "The farm is currently profitable with a net income of ₱50,000. Operations are running smoothly with a high task completion rate of 92%."
 
 > "The farm is operating at a deficit of ₱12,000. Operational bottlenecks are detected with 8 overdue tasks affecting overall efficiency. Immediate attention is required for 2 active pest incidents."
+
+#### 📊 Advanced Analytics Features
+- **Interactive Field Map (GIS):** Visualizes field status using geocoordinates. Color-coded markers indicate active fields (Green), idle lands (Gray), and pest risks (Red).
+- **Pest & Disease Prediction:** Uses 7-day weather forecasts to predict risks for specific threats:
+  - *Rice Blast* (High Humidity + Rain)
+  - *Stem Borer* (High Temp)
+  - *Brown Plant Hopper* (Warm + Humid)
+- **Financial Forecasting:** Projects cash flow for the next 6 months by analyzing active plantings (expected yield × market price) and historical expense patterns.
+
 
 ### 4. Inventory Management
 - **Model:** `InventoryItem`, `InventoryTransaction`

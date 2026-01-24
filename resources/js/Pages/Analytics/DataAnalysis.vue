@@ -94,6 +94,12 @@
           </div>
         </div>
 
+        <!-- GIS Field Map -->
+        <FieldMap 
+          v-if="analyticsData.fields?.field_status" 
+          :fields="analyticsData.fields.field_status" 
+        />
+
         <!-- Action Suggestions Panel -->
         <div v-if="analyticsData.action_suggestions?.length" class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200/50 shadow-lg">
           <div class="flex items-center justify-between mb-4">
@@ -501,6 +507,110 @@
               </div>
             </div>
           </div>
+
+          <!-- Pest Risk Forecast -->
+          <div v-if="analyticsData.pests?.forecasts?.length" class="col-span-1 lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span>🦠</span> Pest & Disease Forecast
+              <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">Next 7 Days</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="(field, index) in analyticsData.pests.forecasts" :key="index" class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div class="font-bold text-gray-800 mb-2 flex justify-between items-center">
+                  <span>{{ field.field_name }}</span>
+                  <span class="text-xs text-gray-500">Field Risk Analysis</span>
+                </div>
+                <div class="space-y-3">
+                  <div v-for="(pred, pIndex) in field.predictions.slice(0, 3)" :key="pIndex" class="bg-white p-3 rounded-lg border-l-4 shadow-sm"
+                    :class="{
+                      'border-red-500': pred.risks[0].risk_level === 'High',
+                      'border-amber-500': pred.risks[0].risk_level === 'Moderate',
+                      'border-blue-500': pred.risks[0].risk_level === 'Low'
+                    }"
+                  >
+                    <div class="flex justify-between items-start mb-1">
+                      <span class="text-xs font-bold text-gray-600">{{ pred.day_name }} ({{ pred.date }})</span>
+                      <span class="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold"
+                        :class="{
+                          'bg-red-100 text-red-600': pred.risks[0].risk_level === 'High',
+                          'bg-amber-100 text-amber-600': pred.risks[0].risk_level === 'Moderate',
+                          'bg-blue-100 text-blue-600': pred.risks[0].risk_level === 'Low'
+                        }"
+                      >{{ pred.risks[0].risk_level }} Risk</span>
+                    </div>
+                    <div class="text-sm font-bold text-gray-800">{{ pred.risks[0].pest_name }}</div>
+                    <div class="text-xs text-gray-600 mt-1">{{ pred.risks[0].description }}</div>
+                    <div class="text-xs text-gray-500 mt-1 italic">Type: {{ pred.risks[0].type }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cash Flow Forecast Chart -->
+          <div v-if="analyticsData.financial_forecast" class="col-span-1 lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mt-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <span>📈</span> Cash Flow Projection
+              <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">Next 6 Months</span>
+            </h3>
+            
+            <div class="flex items-end justify-around gap-4 h-64 overflow-x-auto pb-4">
+              <div v-for="(month, index) in analyticsData.financial_forecast.months" :key="index" class="flex flex-col items-center gap-2 min-w-[100px] flex-1">
+                
+                <!-- Visualization Area -->
+                <div class="relative w-full h-48 flex items-end justify-center gap-1 border-b border-gray-200 pb-1">
+                  <!-- Revenue Bar -->
+                  <div class="group relative w-4 bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t transition-all hover:w-6 duration-300"
+                    :style="{ height: `${Math.min((analyticsData.financial_forecast.projected_revenue[index] / (Math.max(...analyticsData.financial_forecast.projected_revenue, ...analyticsData.financial_forecast.projected_expenses) || 1)) * 100, 100)}%` }">
+                    <div class="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                      Rev: ₱{{ formatNumber(analyticsData.financial_forecast.projected_revenue[index]) }}
+                    </div>
+                  </div>
+
+                  <!-- Expense Bar -->
+                  <div class="group relative w-4 bg-gradient-to-t from-red-500 to-red-300 rounded-t transition-all hover:w-6 duration-300"
+                    :style="{ height: `${Math.min((analyticsData.financial_forecast.projected_expenses[index] / (Math.max(...analyticsData.financial_forecast.projected_revenue, ...analyticsData.financial_forecast.projected_expenses) || 1)) * 100, 100)}%` }">
+                    <div class="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                      Exp: ₱{{ formatNumber(analyticsData.financial_forecast.projected_expenses[index]) }}
+                    </div>
+                  </div>
+
+                  <!-- Net Line Point (overlay) -->
+                  <!-- Simplified: just using bars for now, typically cash flow is best with bars for rev/exp and line for net, but strictly CSS line chart is hard. 
+                       Let's add a small indicator for Net -->
+                  <div class="group relative w-4 bg-blue-500 rounded-full h-1.5 mb-1 opacity-80"
+                      title="Net Cash Flow"
+                       v-if="analyticsData.financial_forecast.net_cash_flow[index] !== 0">
+                       <div class="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-blue-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                        Net: ₱{{ formatNumber(analyticsData.financial_forecast.net_cash_flow[index]) }}
+                      </div>
+                  </div>
+                </div>
+
+                <!-- Labels -->
+                <div class="text-center">
+                  <div class="text-sm font-bold text-gray-700">{{ month }}</div>
+                  <div class="text-[10px] font-medium" 
+                       :class="analyticsData.financial_forecast.net_cash_flow[index] >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                    {{ analyticsData.financial_forecast.net_cash_flow[index] >= 0 ? '+' : '' }}₱{{ formatNumber(analyticsData.financial_forecast.net_cash_flow[index]) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="flex justify-center gap-6 mt-6 text-xs text-gray-600">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-emerald-400"></span> Expected Revenue
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-red-400"></span> Projected Expenses
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-1.5 rounded-full bg-blue-500"></span> Net Cash Flow
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -524,6 +634,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
+import FieldMap from '@/Components/Analytics/FieldMap.vue';
 
 const router = useRouter();
 

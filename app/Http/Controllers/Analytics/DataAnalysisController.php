@@ -18,6 +18,7 @@ use App\Models\RiceOrder;
 use App\Models\RiceProduct;
 use App\Models\Harvest;
 use App\Models\InventoryTransaction;
+use App\Services\PestPredictionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -25,6 +26,13 @@ use Carbon\Carbon;
 
 class DataAnalysisController extends Controller
 {
+    protected $pestPredictionService;
+
+    public function __construct(PestPredictionService $pestPredictionService)
+    {
+        $this->pestPredictionService = $pestPredictionService;
+    }
+
     /**
      * Get comprehensive data analysis with action suggestions
      */
@@ -47,6 +55,7 @@ class DataAnalysisController extends Controller
                 'pests' => $this->getPestAnalytics($user->id, $startDate, $endDate),
                 'laborers' => $this->getLaborAnalytics($user->id, $startDate, $endDate),
                 'tasks' => $this->getTaskAnalytics($user->id, $startDate, $endDate),
+                'financial_forecast' => $this->getFinancialForecast($user->id),
             ];
 
             // Generate executive summary based on the aggregated data
@@ -267,7 +276,9 @@ class DataAnalysisController extends Controller
      */
     private function getFieldAnalytics($userId): array
     {
-        $fields = Field::where('user_id', $userId)->with('plantings')->get();
+        $fields = Field::where('user_id', $userId)
+            ->with(['plantings.pestIncidents'])
+            ->get();
 
         $totalArea = $fields->sum('size');
         $plantedArea = $fields->sum(function ($field) {
@@ -278,12 +289,18 @@ class DataAnalysisController extends Controller
 
         $fieldStatus = $fields->map(function ($field) {
             $activePlantings = $field->plantings->where('status', '!=', 'harvested');
+            $hasActivePests = $activePlantings->flatMap->pestIncidents
+                ->where('status', 'active')->count() > 0;
+
             return [
                 'id' => $field->id,
                 'name' => $field->name,
                 'size' => $field->size,
                 'active_plantings' => $activePlantings->count(),
                 'status' => $activePlantings->count() > 0 ? 'active' : 'idle',
+                'location' => $field->location,
+                'coordinates' => $field->field_coordinates,
+                'has_pests' => $hasActivePests,
             ];
         });
 
@@ -408,6 +425,25 @@ class DataAnalysisController extends Controller
         $activeIncidents = $incidents->where('status', PestIncident::STATUS_ACTIVE);
         $resolvedIncidents = $incidents->where('status', PestIncident::STATUS_RESOLVED);
 
+        // Get predictions for active fields (limit to 5 to avoid performance issues)
+        $activeFields = Field::where('user_id', $userId)
+            ->whereNotNull('location')
+            ->orWhereNotNull('field_coordinates')
+            ->take(5)
+            ->get();
+
+        $forecasts = [];
+        foreach ($activeFields as $field) {
+            $risks = $this->pestPredictionService->predictRisks($field);
+            if (!empty($risks)) {
+                $forecasts[] = [
+                    'field_id' => $field->id,
+                    'field_name' => $field->name,
+                    'predictions' => $risks
+                ];
+            }
+        }
+
         return [
             'total_incidents' => $incidents->count(),
             'active_incidents' => $activeIncidents->count(),
@@ -420,6 +456,7 @@ class DataAnalysisController extends Controller
                 'severity' => $i->severity,
                 'field' => $i->planting->field->name ?? 'Unknown',
             ])->values(),
+            'forecasts' => $forecasts,
         ];
     }
 
@@ -665,5 +702,76 @@ class DataAnalysisController extends Controller
         });
 
         return array_slice($suggestions, 0, 8); // Return top 8 suggestions
+    }
+
+    /**
+     * Financial forecasting (Cash Flow Projection)
+     */
+    private function getFinancialForecast($userId): array
+    {
+        $fieldIds = Field::where('user_id', $userId)->pluck('id');
+
+        // 1. Projected Revenue from Harvests (Next 6 months)
+        $plantings = Planting::whereIn('field_id', $fieldIds)
+            ->where('status', '!=', 'harvested')
+            ->where('status', '!=', 'failed')
+            ->whereNotNull('expected_harvest_date')
+            ->where('expected_harvest_date', '>', now())
+            ->with('riceVariety')
+            ->get();
+
+        // Get average market price (fallback to 20 if no products)
+        $avgPrice = RiceProduct::where('farmer_id', $userId)->avg('price_per_unit') ?? 20;
+
+        $projectedRevenue = [];
+        $today = Carbon::now();
+
+        // Initialize next 6 months
+        for ($i = 0; $i < 6; $i++) {
+            $month = $today->copy()->addMonths($i)->format('Y-m');
+            $projectedRevenue[$month] = 0;
+        }
+
+        foreach ($plantings as $planting) {
+            $harvestMonth = Carbon::parse($planting->expected_harvest_date)->format('Y-m');
+
+            if (isset($projectedRevenue[$harvestMonth])) {
+                $yieldPerHa = $planting->riceVariety->average_yield_per_hectare ?? 4000; // kg/ha
+                $yield = $planting->area_planted * $yieldPerHa;
+                $revenue = $yield * $avgPrice;
+                $projectedRevenue[$harvestMonth] += $revenue;
+            }
+        }
+
+        // 2. Projected Expenses (Based on 3-month average)
+        $threeMonthsAgo = now()->subMonths(3);
+        $plantingIds = Planting::whereIn('field_id', $fieldIds)->pluck('id');
+
+        $pastExpenses = Expense::whereIn('planting_id', $plantingIds)
+            ->where('date', '>=', $threeMonthsAgo)
+            ->sum('amount');
+
+        $avgMonthlyExpense = $pastExpenses / 3;
+
+        $forecast = [];
+        $months = [];
+        $revenueData = [];
+        $expenseData = [];
+        $netData = [];
+
+        foreach ($projectedRevenue as $month => $revenue) {
+            $monthLabel = Carbon::parse($month . '-01')->format('M Y');
+            $months[] = $monthLabel;
+            $revenueData[] = round($revenue, 2);
+            $expenseData[] = round($avgMonthlyExpense, 2);
+            $netData[] = round($revenue - $avgMonthlyExpense, 2);
+        }
+
+        return [
+            'months' => $months,
+            'projected_revenue' => $revenueData,
+            'projected_expenses' => $expenseData,
+            'net_cash_flow' => $netData
+        ];
     }
 }
