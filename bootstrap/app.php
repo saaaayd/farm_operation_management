@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'farmer' => \App\Http\Middleware\FarmerMiddleware::class,
             'buyer' => \App\Http\Middleware\BuyerMiddleware::class,
         ]);
+        // Prevent "Route [login] not defined" error for API auth failures
+        $middleware->redirectGuestsTo(
+            fn(Request $request) =>
+            $request->is('api/*') || $request->expectsJson() ? null : '/login'
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // 👇 ADD THIS BLOCK
