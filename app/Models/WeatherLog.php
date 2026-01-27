@@ -40,7 +40,7 @@ class WeatherLog extends Model
     /**
      * Get the field that owns the weather log
      */
-    public function field()
+    public function field(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Field::class);
     }

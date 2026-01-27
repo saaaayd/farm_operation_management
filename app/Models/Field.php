@@ -62,7 +62,7 @@ class Field extends Model
     /**
      * Get the user that owns the field
      */
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -70,7 +70,7 @@ class Field extends Model
     /**
      * Get the plantings for this field
      */
-    public function plantings()
+    public function plantings(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Planting::class);
     }
@@ -78,7 +78,7 @@ class Field extends Model
     /**
      * Get the weather logs for this field
      */
-    public function weatherLogs()
+    public function weatherLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WeatherLog::class);
     }
@@ -86,7 +86,7 @@ class Field extends Model
     /**
      * Get the latest weather log
      */
-    public function latestWeather()
+    public function latestWeather(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(WeatherLog::class)->latest('recorded_at');
     }
@@ -94,7 +94,7 @@ class Field extends Model
     /**
      * Get the farm that owns this field
      */
-    public function farm()
+    public function farm(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Farm::class);
     }

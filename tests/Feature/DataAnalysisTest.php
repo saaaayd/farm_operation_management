@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Farm;
 use App\Models\Field;
 use App\Models\Planting;
 use App\Models\Task;
@@ -18,6 +19,7 @@ class DataAnalysisTest extends TestCase
     use RefreshDatabase;
 
     protected $farmer;
+    protected $farm;
     protected $field;
     protected $planting;
     protected $variety;
@@ -32,9 +34,16 @@ class DataAnalysisTest extends TestCase
             'phone_verified_at' => now(),
         ]);
 
+        // Create farm
+        $this->farm = Farm::factory()->create([
+            'user_id' => $this->farmer->id,
+            'name' => 'Test Farm',
+        ]);
+
         // Create field manually
         $this->field = Field::create([
             'user_id' => $this->farmer->id,
+            'farm_id' => $this->farm->id,
             'name' => 'Test Field',
             'size' => 2.5,
             'soil_type' => 'loam',
@@ -49,17 +58,21 @@ class DataAnalysisTest extends TestCase
             'description' => 'Test variety for testing',
             'maturity_days' => 120,
             'average_yield_per_hectare' => 5000,
+            'season' => 'both',
+            'grain_type' => 'long',
+            'resistance_level' => 'high',
         ]);
 
         // Create planting manually
         $this->planting = Planting::create([
             'field_id' => $this->field->id,
             'rice_variety_id' => $this->variety->id,
-            'status' => 'vegetative',
+            'status' => 'growing',
             'area_planted' => 2.0,
             'planting_date' => now()->subDays(30),
             'expected_harvest_date' => now()->addDays(90),
             'planting_method' => 'transplanting',
+            'season' => 'dry',
         ]);
     }
 
@@ -166,6 +179,7 @@ class DataAnalysisTest extends TestCase
         // Create expense outside date range
         Expense::create([
             'planting_id' => $this->planting->id,
+            'user_id' => $this->farmer->id,
             'category' => 'fertilizer',
             'description' => 'Old expense',
             'date' => now()->subMonths(6),
@@ -175,6 +189,7 @@ class DataAnalysisTest extends TestCase
         // Create expense inside date range
         Expense::create([
             'planting_id' => $this->planting->id,
+            'user_id' => $this->farmer->id,
             'category' => 'fertilizer',
             'description' => 'Recent expense',
             'date' => now()->subDays(30),

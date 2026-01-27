@@ -4,8 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Harvest extends Model
 {
+    use HasFactory;
 
     protected $fillable = [
         'planting_id',
@@ -45,7 +48,7 @@ class Harvest extends Model
     /**
      * Get the planting that owns the harvest
      */
-    public function planting()
+    public function planting(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Planting::class);
     }

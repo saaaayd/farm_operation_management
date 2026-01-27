@@ -43,7 +43,7 @@ class ProductReview extends Model
     /**
      * Get the rice product being reviewed
      */
-    public function riceProduct()
+    public function riceProduct(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RiceProduct::class);
     }
@@ -51,7 +51,7 @@ class ProductReview extends Model
     /**
      * Get the buyer who wrote the review
      */
-    public function buyer()
+    public function buyer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');
     }
@@ -59,7 +59,7 @@ class ProductReview extends Model
     /**
      * Get the order this review is for
      */
-    public function riceOrder()
+    public function riceOrder(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RiceOrder::class);
     }

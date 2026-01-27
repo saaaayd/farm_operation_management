@@ -35,14 +35,15 @@ class DashboardController extends Controller
             $fields = Field::where('user_id', $user->id)->get();
             $fieldIds = $fields->pluck('id');
 
-            // Get plantings for user's fields
-            $plantings = Planting::whereIn('field_id', $fieldIds)->get();
-            $plantingIds = $plantings->pluck('id');
+            // Get planting IDs for user's fields
+            $plantingIds = Planting::whereIn('field_id', $fieldIds)->pluck('id');
 
             // Dashboard stats
             $stats = [
                 'total_fields' => $fields->count(),
-                'active_plantings' => $plantings->where('status', '!=', 'harvested')->count(),
+                'active_plantings' => Planting::whereIn('field_id', $fieldIds)
+                    ->where('status', '!=', 'harvested')
+                    ->count(),
                 'active_seed_plantings' => SeedPlanting::where('user_id', $user->id)
                     ->whereIn('status', ['sown', 'germinating', 'ready'])
                     ->count(),

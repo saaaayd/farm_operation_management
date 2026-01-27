@@ -1,0 +1,13 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    # Level 5 is a good middle ground
+    level: 5
+
+    ignoreErrors:
+        # Ignore common false positives or noise for now
+        #- '#PHPDoc tag @var#'

@@ -42,6 +42,12 @@ class DataAnalysisController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->subMonths(3)->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
 
+        // Ensure date range covers the full days
+        if (strlen($startDate) === 10)
+            $startDate .= ' 00:00:00';
+        if (strlen($endDate) === 10)
+            $endDate .= ' 23:59:59';
+
         $cacheKey = "data_analysis_{$user->id}_{$startDate}_{$endDate}";
 
         $data = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $startDate, $endDate) {

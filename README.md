@@ -27,6 +27,7 @@
 10. [Installation & Setup](#installation--setup)
 11. [API Endpoints](#api-endpoints)
 12. [Testing](#testing)
+13. [Code Quality & Audit](#code-quality--audit)
 
 ---
 
@@ -177,6 +178,16 @@ All five core project objectives have been **fully achieved** with comprehensive
 | **Windy.com** | Interactive weather map embed |
 | **Twilio SDK** | SMS Verification (OTP) |
 | **OpenStreetMap** | Base map tiles for field visualization |
+
+### DevOps & Quality Assurance
+| Tool | Version | Purpose |
+|------|---------|---------|
+| **Larastan** | 3.9 | Static Analysis & Type Checking |
+| **PHPUnit** | 11.5 | Unit & Feature Testing |
+| **Laravel Pint** | 1.24 | Code Style Fixer (PSR-12) |
+| **Faker** | 1.23 | Data Seeding & Testing |
+| **Mockery** | 1.6 | Test Mocking |
+| **Git** | - | Version Control |
 
 ---
 
@@ -354,6 +365,7 @@ The system uses a deterministic expert system to generate narrative insights wit
 |--------|----------------|
 | Token-based API Auth | **Laravel Sanctum** |
 | Password Hashing | **Bcrypt/Argon2** (via `Hash::make`) |
+| Verification Enforcement | **Strict Login Gate** (Email or Phone must be verified) |
 | Two-Factor Verification | SMS OTP via **Twilio** |
 
 ### Authorization (RBAC)
@@ -797,6 +809,39 @@ php artisan test --filter=HarvestTest
 - **HarvestTest:** Yield recording, share calculation
 - **OrderNegotiationTest:** Price negotiation flow
 - **SystemSimulationTest:** End-to-end farmer/buyer lifecycle
+
+---
+
+## 🛡️ Code Quality & Audit (Ongoing)
+
+We are currently conducting a **Comprehensive Module Error Audit** (v2025-01) to ensure system reliability.
+
+### 📅 Audit Timeline & Progress
+
+#### ✅ Phase 1: Module Discovery & Inventory
+- **Objective**: Map the entire system architecture.
+- **Outcome**: Documented 18+ modules, 32 models, and 35+ controllers. Confirmed architecture alignment with IPO model.
+
+#### ✅ Phase 2: Static Analysis & Type Safety
+- **Objective**: Eliminate structural bugs and type errors.
+- **Tools**: Larastan (PHPStan Level 5).
+- **Results**:
+    - **Reduced Errors**: From ~433 to ~320 (non-critical).
+    - **Critical Fix**: Restored missing `fields()` and `user()` relationships in `Farm` model.
+    - **Type Hardening**: Added explicit return types to 15+ core models (User, Planting, Harvest, Sale, etc.) to fix "Relationship Not Found" issues.
+
+#### 🔄 Phase 3: Module-by-Module Reliability Check
+This phase focuses on logical correctness, security, and performance.
+
+1.  **Auth Module** (✅ Completed)
+    -   **Security**: Enforced verification check on Login (Email/Phone).
+    -   **Cleanup**: Removed unused legacy controllers (`LoginController`, `RegisterController`).
+    -   **Validation**: Added `test_unverified_user_cannot_login` to test suite.
+
+2.  **Dashboard Module** (🔄 In Progress)
+    -   **Focus**: Optimizing data aggregation to prevent memory warnings on large datasets.
+
+3.  **Upcoming**: Farm, Weather, Inventory, and Financial Modules.
 
 ---
 

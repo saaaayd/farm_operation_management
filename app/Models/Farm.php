@@ -38,4 +38,14 @@ class Farm extends Model
         'slope' => 'decimal:2',
         'is_setup_complete' => 'boolean',
     ];
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function fields(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Field::class);
+    }
 }

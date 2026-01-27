@@ -26,7 +26,7 @@ class LaborWage extends Model
     /**
      * Get the laborer that owns the wage record
      */
-    public function laborer()
+    public function laborer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Laborer::class);
     }
@@ -34,7 +34,7 @@ class LaborWage extends Model
     /**
      * Get the task associated with this wage
      */
-    public function task()
+    public function task(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Task::class);
     }

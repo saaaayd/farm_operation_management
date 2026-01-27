@@ -81,9 +81,9 @@ class User extends Authenticatable
         return $this->role === self::ROLE_USER;
     }
 
-    public function farm()
+    public function farm(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(Farm::class); // 👈 ADD THIS FUNCTION
+        return $this->hasOne(Farm::class);
     }
     /**
      * Check if user can sell in marketplace
@@ -96,7 +96,7 @@ class User extends Authenticatable
     /**
      * Get the fields for this user
      */
-    public function fields()
+    public function fields(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Field::class);
     }
@@ -104,7 +104,7 @@ class User extends Authenticatable
     /**
      * Get the orders for this user (if buyer)
      */
-    public function orders()
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Order::class, 'buyer_id');
     }
@@ -112,7 +112,7 @@ class User extends Authenticatable
     /**
      * Get the sales for this user (if farmer)
      */
-    public function sales()
+    public function sales(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Sale::class, 'user_id');
     }
@@ -120,7 +120,7 @@ class User extends Authenticatable
     /**
      * Get the rice products for this farmer
      */
-    public function riceProducts()
+    public function riceProducts(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RiceProduct::class, 'farmer_id');
     }
@@ -128,7 +128,7 @@ class User extends Authenticatable
     /**
      * Get the rice orders for this buyer
      */
-    public function buyerRiceOrders()
+    public function buyerRiceOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RiceOrder::class, 'buyer_id');
     }
@@ -136,7 +136,7 @@ class User extends Authenticatable
     /**
      * Get activity logs for this user
      */
-    public function activityLogs()
+    public function activityLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(ActivityLog::class);
     }

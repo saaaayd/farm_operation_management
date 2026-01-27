@@ -54,7 +54,7 @@ class Laborer extends Model
     /**
      * Alias for wages relationship expected by controllers
      */
-    public function wages()
+    public function wages(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(LaborWage::class);
     }
@@ -93,7 +93,7 @@ class Laborer extends Model
     /**
      * Get the groups that the laborer belongs to.
      */
-    public function groups()
+    public function groups(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(LaborerGroup::class, 'group_laborer');
     }

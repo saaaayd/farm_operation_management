@@ -36,7 +36,7 @@ class Sale extends Model
     /**
      * Get the harvest that was sold
      */
-    public function harvest()
+    public function harvest(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Harvest::class);
     }
@@ -44,7 +44,7 @@ class Sale extends Model
     /**
      * Get the buyer (for off-platform sales)
      */
-    public function buyer()
+    public function buyer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'buyer_id');
     }
@@ -52,7 +52,7 @@ class Sale extends Model
     /**
      * Get the rice order (for marketplace sales)
      */
-    public function riceOrder()
+    public function riceOrder(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RiceOrder::class);
     }
@@ -60,7 +60,7 @@ class Sale extends Model
     /**
      * The farmer/farm owner who created the sale
      */
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }

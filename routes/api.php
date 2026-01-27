@@ -324,6 +324,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Financial management routes
     Route::middleware('farmer')->prefix('expenses')->group(function () {
+        Route::get('/summary', [\App\Http\Controllers\Financial\ExpenseController::class, 'summary']);
         Route::get('/', [\App\Http\Controllers\Financial\ExpenseController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Financial\ExpenseController::class, 'store']);
         Route::get('/{expense}', [\App\Http\Controllers\Financial\ExpenseController::class, 'show']);

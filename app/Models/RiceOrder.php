@@ -91,7 +91,7 @@ class RiceOrder extends Model
     /**
      * Get the buyer for this order
      */
-    public function buyer()
+    public function buyer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');
     }
@@ -99,7 +99,7 @@ class RiceOrder extends Model
     /**
      * Get the rice product for this order
      */
-    public function riceProduct()
+    public function riceProduct(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RiceProduct::class);
     }
@@ -107,7 +107,7 @@ class RiceOrder extends Model
     /**
      * Get the farmer through the product
      */
-    public function farmer()
+    public function farmer(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
     {
         return $this->hasOneThrough(User::class, RiceProduct::class, 'id', 'id', 'rice_product_id', 'farmer_id');
     }
@@ -115,7 +115,7 @@ class RiceOrder extends Model
     /**
      * Get messages associated with the order
      */
-    public function messages()
+    public function messages(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RiceOrderMessage::class, 'rice_order_id')->latest();
     }

@@ -5,8 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Planting extends Model
 {
+    use HasFactory;
 
     protected $fillable = [
         'field_id',
@@ -51,7 +54,7 @@ class Planting extends Model
     /**
      * Get the field that owns the planting
      */
-    public function field()
+    public function field(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Field::class);
     }
@@ -59,7 +62,7 @@ class Planting extends Model
     /**
      * Get the rice variety for this planting
      */
-    public function riceVariety()
+    public function riceVariety(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RiceVariety::class);
     }
@@ -67,7 +70,7 @@ class Planting extends Model
     /**
      * Get the seed planting source
      */
-    public function seedPlanting()
+    public function seedPlanting(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(SeedPlanting::class);
     }
@@ -75,7 +78,7 @@ class Planting extends Model
     /**
      * Get the planting stages for this planting
      */
-    public function plantingStages()
+    public function plantingStages(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PlantingStage::class);
     }
@@ -83,7 +86,7 @@ class Planting extends Model
     /**
      * Get the harvests for this planting
      */
-    public function harvests()
+    public function harvests(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Harvest::class);
     }
@@ -91,7 +94,7 @@ class Planting extends Model
     /**
      * Get the tasks for this planting
      */
-    public function tasks()
+    public function tasks(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Task::class);
     }
@@ -99,7 +102,7 @@ class Planting extends Model
     /**
      * Get the expenses for this planting
      */
-    public function expenses()
+    public function expenses(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Expense::class);
     }
@@ -107,7 +110,7 @@ class Planting extends Model
     /**
      * Get the pest incidents for this planting
      */
-    public function pestIncidents()
+    public function pestIncidents(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PestIncident::class);
     }

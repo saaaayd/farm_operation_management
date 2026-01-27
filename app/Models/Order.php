@@ -32,7 +32,7 @@ class Order extends Model
     /**
      * Get the buyer that owns the order
      */
-    public function buyer()
+    public function buyer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');
     }
@@ -40,7 +40,7 @@ class Order extends Model
     /**
      * Get the order items for this order
      */
-    public function orderItems()
+    public function orderItems(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(OrderItem::class);
     }
@@ -96,7 +96,7 @@ class Order extends Model
      */
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'yellow',
             self::STATUS_CONFIRMED => 'blue',
             self::STATUS_PROCESSING => 'purple',

@@ -47,4 +47,20 @@ class AuthTest extends TestCase
         // $this->assertAuthenticatedAs($user); // Session auth assertion doesn't apply to token-based login response
         $response->assertJsonStructure(['token', 'user']); // Assuming response returns token and user
     }
+    public function test_unverified_user_cannot_login()
+    {
+        $password = 'password123';
+        $user = User::factory()->unverified()->create([
+            'email' => 'unverified_' . uniqid() . '@example.com',
+            'password' => bcrypt($password),
+            'phone_verified_at' => null, // Explicitly nullify phone verification
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'login_id' => $user->email,
+            'password' => $password,
+        ]);
+
+        $response->assertStatus(403);
+    }
 }

@@ -120,6 +120,13 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Enforce verification
+        if (!$user->hasVerifiedEmail() && !$user->phone_verified_at) {
+            return response()->json([
+                'message' => 'Account not verified. Please verify your email or phone.'
+            ], 403);
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([

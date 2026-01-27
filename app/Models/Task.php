@@ -5,8 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Task extends Model
 {
+    use HasFactory;
 
     protected $fillable = [
         'planting_id',
@@ -62,7 +65,7 @@ class Task extends Model
     /**
      * Get the planting that owns the task
      */
-    public function planting()
+    public function planting(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Planting::class);
     }
@@ -70,7 +73,7 @@ class Task extends Model
     /**
      * Get the laborer assigned to this task
      */
-    public function laborer()
+    public function laborer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Laborer::class, 'assigned_to');
     }
@@ -78,7 +81,7 @@ class Task extends Model
     /**
      * Get the laborer group assigned to this task
      */
-    public function laborerGroup()
+    public function laborerGroup(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(LaborerGroup::class, 'laborer_group_id');
     }
@@ -86,7 +89,7 @@ class Task extends Model
     /**
      * Get the labor wages for this task
      */
-    public function laborWages()
+    public function laborWages(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(LaborWage::class);
     }
