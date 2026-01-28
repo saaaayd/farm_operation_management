@@ -4,34 +4,8 @@
       <!-- Standard Header -->
       <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">Buyer Dashboard</h1>
+          <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
           <p class="text-gray-500 mt-1">Welcome back, {{ authStore.user?.name }}</p>
-        </div>
-        <div class="flex items-center space-x-4">
-          <router-link
-            to="/cart"
-            class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-            </svg>
-            <span
-              v-if="marketplaceStore.cartItemsCount > 0"
-              class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
-            >
-              {{ marketplaceStore.cartItemsCount }}
-            </span>
-          </router-link>
-
-          <button
-            @click="logout"
-            class="p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -403,11 +377,6 @@ const getProductImage = (product) => {
 const handleImageError = (event) => {
   // Hide broken image and let v-else show the fallback
   event.target.style.display = 'none';
-};
-
-const logout = async () => {
-  await authStore.logout();
-  router.push('/login');
 };
 
 onMounted(async () => {

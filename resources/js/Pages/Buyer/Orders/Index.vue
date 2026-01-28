@@ -57,7 +57,7 @@
                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 text-center"
               >View Details</router-link>
 
-              <button v-if="order.status === 'picked_up' && !order.has_review"
+              <button v-if="(order.status === 'picked_up' || order.status === 'delivered') && !order.has_review"
                 @click="openReviewModal(order)"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
               >Leave Review</button>
@@ -158,7 +158,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useMarketplaceStore } from '@/stores/marketplace'
-import axios from 'axios'
+import api from '@/services/api'
 
 const marketplaceStore = useMarketplaceStore()
 const loading = ref(true)
@@ -245,25 +245,33 @@ const openReviewModal = (order) => {
 
 const submitReview = async () => {
   if (reviewForm.value.rating === 0) {
-    alert('Please select a rating')
+    // We can keep this validation alert or use a toast error if preferred, 
+    // but simple client-side validation alert is acceptable or better yet, just return.
+    // Let's rely on the form disabled state for rating=0, but adding a check is fine.
+    // For consistency, let's just make sure the button handles it (it does :disabled="... rating === 0").
     return
   }
+  
+  // Validation for text length handled by form attributes but double check
   if (reviewForm.value.review_text.length < 10) {
-    alert('Review must be at least 10 characters')
-    return
+     // Optional: could show error toast here if we imported notification store, 
+     // but let's just let HTML5 validation handle visual feedback if possible, 
+     // or just return.
+     return
   }
 
   submittingReview.value = true
   try {
-    await axios.post('/api/rice-marketplace/reviews', {
+    await api.post('/reviews', { // Route is /reviews in api.php, mapped to ProductReviewController::store
       rice_order_id: reviewOrder.value.id,
       ...reviewForm.value,
     })
-    alert('Review submitted successfully!')
+    // Global toast handles success
     reviewOrder.value.has_review = true
     showReviewModal.value = false
   } catch (err) {
-    alert(err.response?.data?.message || 'Failed to submit review')
+    console.error('Failed to submit review', err)
+    // Global toast handles error
   } finally {
     submittingReview.value = false
   }

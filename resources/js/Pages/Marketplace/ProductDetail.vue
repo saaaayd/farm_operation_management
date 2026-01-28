@@ -44,6 +44,17 @@
         <div class="flex space-x-3">
           <button
             type="button"
+            @click="toggleFavorite"
+            :disabled="processingFavorite"
+            class="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 border border-gray-300"
+            :class="isFavorited ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-400 hover:text-red-500'"
+          >
+            <svg class="h-6 w-6" :fill="isFavorited ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
+          <button
+            type="button"
             @click="addToCart"
             class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
@@ -277,25 +288,6 @@
     </div>
       </div>
     
-    <!-- Toast Notification -->
-    <Transition name="toast">
-      <div 
-        v-if="toast.show" 
-        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-lg border"
-        :class="{
-          'bg-green-50 border-green-200 text-green-800': toast.type === 'success',
-          'bg-red-50 border-red-200 text-red-800': toast.type === 'error'
-        }"
-      >
-        <svg v-if="toast.type === 'success'" class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <svg v-else class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span class="font-medium">{{ toast.message }}</span>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -303,7 +295,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCurrency } from '@/utils/format'
-import { riceMarketplaceAPI } from '@/services/api'
+import api, { riceMarketplaceAPI } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -336,20 +328,6 @@ const product = ref({
 const reviews = ref([])
 const relatedProducts = ref([])
 
-// Toast notification state
-const toast = ref({
-  show: false,
-  message: '',
-  type: 'success'
-});
-
-const showToast = (message, type = 'success') => {
-  toast.value = { show: true, message, type };
-  setTimeout(() => {
-    toast.value.show = false;
-  }, 3000);
-};
-
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
@@ -367,16 +345,18 @@ const decreaseQuantity = () => {
 }
 
 import { useMarketplaceStore } from '@/stores/marketplace';
+import { useAuthStore } from '@/stores/auth';
 
 const marketplaceStore = useMarketplaceStore();
+const authStore = useAuthStore();
 
 const addToCart = async () => {
   try {
     await marketplaceStore.addToCart(product.value, quantity.value);
-    showToast(`Added ${quantity.value} ${product.value.unit} of ${product.value.name} to cart!`, 'success');
+    // Global toast handles success
   } catch (err) {
     console.error('Failed to add to cart:', err);
-    showToast(err.message || 'Failed to add item to cart. Please try again.', 'error');
+    // Global toast handles error
   } 
 }
 
@@ -441,6 +421,10 @@ const loadProductData = async (id) => {
       production_status: data.production_status,
       minimum_order_quantity: data.minimum_order_quantity,
     }
+    // Check favorite status
+    checkFavoriteStatus(id)
+    // Load reviews
+    loadReviews(id)
     
   } catch (err) {
     console.error('Error loading product data:', err)
@@ -449,21 +433,63 @@ const loadProductData = async (id) => {
     loading.value = false
   }
 }
+
+const isFavorited = ref(false)
+const processingFavorite = ref(false)
+
+const checkFavoriteStatus = async (productId) => {
+  try {
+    // Only check if user is logged in as buyer
+    if (authStore.user && authStore.user.role === 'buyer') {
+      const response = await api.get(`/rice-marketplace/favorites/check/${productId}`)
+      isFavorited.value = response.data.is_favorited
+    }
+  } catch (err) {
+    console.error('Failed to check favorite status:', err)
+  }
+}
+
+const toggleFavorite = async () => {
+  if (processingFavorite.value) return
+  
+  processingFavorite.value = true
+  try {
+    const response = await api.post('/rice-marketplace/favorites/toggle', {
+      rice_product_id: product.value.id
+    })
+    
+    isFavorited.value = response.data.is_favorited
+    // Global toast handles success message
+  } catch (err) {
+    console.error('Failed to toggle favorite:', err)
+    // Global toast handles error message via api interceptor
+  } finally {
+    processingFavorite.value = false
+  }
+}
+
+const loadReviews = async (productId) => {
+  try {
+    const response = await api.get(`/products/${productId}/reviews`)
+    // Response structure: { reviews: { data: [...] }, average_rating: ..., ... }
+    const reviewsData = response.data.reviews?.data || response.data.reviews || []
+    
+    reviews.value = reviewsData.map(review => ({
+      id: review.id,
+      author: review.buyer?.name || 'Anonymous',
+      rating: review.rating,
+      date: review.created_at,
+      comment: review.review_text || review.comment || ''
+    }))
+  } catch (err) {
+    console.error('Failed to load reviews:', err)
+  }
+}
 </script>
 
 <style scoped>
 .product-detail-page {
   min-height: 100vh;
   background-color: #f8fafc;
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
-}
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(100px);
 }
 </style>

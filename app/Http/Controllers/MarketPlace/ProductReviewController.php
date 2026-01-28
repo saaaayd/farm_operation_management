@@ -72,10 +72,10 @@ class ProductReviewController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Check order is delivered
-        if ($order->status !== RiceOrder::STATUS_DELIVERED) {
+        // Check order is delivered or picked up
+        if (!in_array($order->status, [RiceOrder::STATUS_DELIVERED, RiceOrder::STATUS_PICKED_UP])) {
             return response()->json([
-                'message' => 'Only delivered orders can be reviewed'
+                'message' => 'Only delivered or picked up orders can be reviewed'
             ], 422);
         }
 
@@ -130,8 +130,8 @@ class ProductReviewController extends Controller
             return response()->json(['can_review' => false, 'reason' => 'Not your order']);
         }
 
-        if ($order->status !== RiceOrder::STATUS_DELIVERED) {
-            return response()->json(['can_review' => false, 'reason' => 'Order not delivered']);
+        if (!in_array($order->status, [RiceOrder::STATUS_DELIVERED, RiceOrder::STATUS_PICKED_UP])) {
+            return response()->json(['can_review' => false, 'reason' => 'Order not delivered or picked up']);
         }
 
         $existingReview = ProductReview::where('rice_order_id', $order->id)->first();

@@ -360,6 +360,12 @@ const routes = [
     component: () => import('@/Pages/Marketplace/Orders/Show.vue'),
     meta: { requiresAuth: true, roles: ['buyer'] }
   },
+  {
+    path: '/buyer/cart',
+    name: 'buyer-cart',
+    component: () => import('@/Pages/Buyer/Cart.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
 
   // Farmer Order Routes
   {

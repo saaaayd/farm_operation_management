@@ -59,7 +59,7 @@
           </router-link>
 
           <!-- Farmer Section -->
-          <template v-if="authStore.user?.role === 'farmer'">
+          <template v-if="authStore.isFarmer">
             <!-- Core Farm Management -->
             <router-link
               to="/fields"
@@ -202,7 +202,7 @@
           </template>
 
           <!-- Marketplace Buyer Section -->
-          <template v-if="authStore.user?.role === 'buyer'">
+          <template v-if="authStore.isBuyer">
             <div class="nav-section-title">Marketplace</div>
             
             <router-link

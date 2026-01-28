@@ -166,9 +166,12 @@ class AuthController extends Controller
         $user = $request->user();
 
         $validator = Validator::make($request->all(), [
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
+            'bio' => 'nullable|string|max:1000',
             'address' => 'nullable|array',
             'address.street' => 'nullable|string',
             'address.city' => 'nullable|string',
@@ -184,7 +187,17 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user->update($request->only(['name', 'email', 'phone', 'address']));
+        // Get the fields to update
+        $updateData = $request->only(['first_name', 'last_name', 'email', 'phone', 'bio', 'address']);
+
+        // Also update the 'name' field for backward compatibility
+        if ($request->has('first_name') || $request->has('last_name')) {
+            $firstName = $request->input('first_name', $user->first_name);
+            $lastName = $request->input('last_name', $user->last_name);
+            $updateData['name'] = trim($firstName . ' ' . $lastName);
+        }
+
+        $user->update($updateData);
 
         return response()->json([
             'message' => 'Profile updated successfully',

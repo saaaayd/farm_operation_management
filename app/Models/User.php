@@ -28,6 +28,8 @@ class User extends Authenticatable
         'phone_verified_at',
         'verification_code',
         'address',
+        'bio',
+        'profile_picture',
     ];
 
     /**
