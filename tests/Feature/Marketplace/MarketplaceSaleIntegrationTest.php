@@ -89,13 +89,18 @@ class MarketplaceSaleIntegrationTest extends TestCase
         $order->refresh();
         $this->assertEquals('picked_up', $order->status);
 
-        // 5. Verify Sale record created
+        // 5. Verify Sale record created with correct fields
         $this->assertDatabaseHas('sales', [
             'rice_order_id' => $order->id,
             'user_id' => $this->farmer->id,
-            'buyer_id' => $this->buyer->id,
             'quantity' => 10,
             'total_amount' => 500, // 10 * 50
+        ]);
+
+        // Verify a Buyer record was created for the marketplace user
+        $this->assertDatabaseHas('buyers', [
+            'user_id' => $this->farmer->id,
+            'email' => $this->buyer->email,
         ]);
 
         // Verify stock remains deducted (not double deducted)

@@ -418,33 +418,57 @@ class RiceOrderController extends Controller
      */
     private function createSaleFromOrder(RiceOrder $order): void
     {
-        //        try {
-        // Check if sale already exists for this order
-        $existingSale = \App\Models\Sale::where('rice_order_id', $order->id)->first();
-        if ($existingSale) {
-            return; // Sale already created
+        // Use a nested transaction (savepoint) to prevent PostgreSQL from aborting the outer transaction
+        // if the sale creation fails. The try-catch is inside the transaction to properly handle errors.
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                // Check if sale already exists for this order
+                $existingSale = \App\Models\Sale::where('rice_order_id', $order->id)->first();
+                if ($existingSale) {
+                    return; // Sale already created
+                }
+
+                // Find or create a Buyer record for this marketplace user
+                $farmerId = $order->riceProduct->farmer_id;
+                $buyerUser = \App\Models\User::find($order->buyer_id);
+
+                $buyer = \App\Models\Buyer::where('user_id', $farmerId)
+                    ->where('email', $buyerUser->email)
+                    ->first();
+
+                if (!$buyer) {
+                    $buyer = \App\Models\Buyer::create([
+                        'user_id' => $farmerId,
+                        'name' => $buyerUser->name,
+                        'email' => $buyerUser->email,
+                        'contact_info' => $buyerUser->phone ?? $buyerUser->email,
+                        'address' => is_array($order->delivery_address) ? ($order->delivery_address['address'] ?? 'Marketplace') : 'Marketplace',
+                        'type' => 'individual',
+                        'status' => 'active',
+                        'notes' => 'Created from Marketplace Order',
+                    ]);
+                }
+
+                \App\Models\Sale::create([
+                    'user_id' => $farmerId,
+                    'rice_order_id' => $order->id,
+                    'harvest_id' => $order->riceProduct->harvest_id ?? null,
+                    'buyer_id' => $buyer->id, // Link to Buyer record, not User
+                    'quantity' => $order->quantity,
+                    'unit_price' => $order->offer_price ?? $order->unit_price,
+                    'total_amount' => $order->total_amount,
+                    'sale_date' => now(),
+                    'payment_method' => $order->payment_method ?? 'marketplace',
+                    'payment_status' => $order->payment_status === RiceOrder::PAYMENT_PAID ? 'paid' : 'pending',
+                    'notes' => "Marketplace order #{$order->id}",
+                ]);
+
+                \Log::info("Sale created for order #{$order->id}");
+            });
+        } catch (\Exception $e) {
+            \Log::error("Failed to create sale for order #{$order->id}: " . $e->getMessage());
+            // Don't throw - sale creation failure shouldn't block order completion
         }
-
-        \App\Models\Sale::create([
-            'user_id' => $order->riceProduct->farmer_id,
-            'rice_order_id' => $order->id, // Link to the order
-            'harvest_id' => $order->riceProduct->harvest_id ?? null,
-            'buyer_id' => $order->buyer_id,
-            'quantity' => $order->quantity,
-            'unit_price' => $order->offer_price ?? $order->unit_price,
-            'total_amount' => $order->total_amount,
-            'sale_date' => now(),
-            'payment_method' => $order->payment_method ?? 'marketplace',
-            'payment_status' => $order->payment_status === RiceOrder::PAYMENT_PAID ? 'paid' : 'pending',
-            'notes' => "Marketplace order #{$order->id}",
-        ]);
-
-        \Log::info("Sale created for order #{$order->id}");
-        //        } catch (\Exception $e) {
-//            \Log::error("Failed to create sale for order #{$order->id}: " . $e->getMessage());
-//            // Don't throw - sale creation failure shouldn't block order completion
-//             throw $e; 
-//        }
     }
 
     /**
