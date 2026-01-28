@@ -318,6 +318,12 @@ export const riceMarketplaceAPI = {
   deleteProduct: (id) => api.delete(`/rice-marketplace/products/${id}`),
   getStats: () => api.get('/rice-marketplace/stats'),
 
+  // Image management
+  uploadImages: (formData) => api.post('/rice-marketplace/products/images/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteImage: (url) => api.post('/rice-marketplace/products/images/delete', { url }),
+
   // Orders
   getOrders: (filters = {}) => api.get('/rice-marketplace/orders', { params: filters }),
   getOrderById: (id) => api.get(`/rice-marketplace/orders/${id}`),

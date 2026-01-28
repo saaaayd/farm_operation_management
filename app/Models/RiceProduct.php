@@ -47,7 +47,7 @@ class RiceProduct extends Model
         'minimum_order_quantity' => 'decimal:2',
         'harvest_date' => 'date',
         'available_from' => 'date',
-        'images' => 'array',
+        // Note: 'images' cast removed - handled by accessor below
         'location' => 'array',
         'packaging_options' => 'array',
         'delivery_options' => 'array',
@@ -57,6 +57,49 @@ class RiceProduct extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Get the images attribute with normalized URLs.
+     * Converts legacy full URLs to relative paths for cross-environment compatibility.
+     *
+     * @param mixed $value
+     * @return array|null
+     */
+    public function getImagesAttribute($value): ?array
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        // Decode JSON if it's a string
+        $images = is_string($value) ? json_decode($value, true) : $value;
+
+        if (!is_array($images)) {
+            return null;
+        }
+
+        // Normalize each image URL
+        return array_map(function ($url) {
+            if (empty($url)) {
+                return null;
+            }
+
+            // If already a relative path, return as-is
+            if (str_starts_with($url, '/storage/')) {
+                return $url;
+            }
+
+            // Extract relative path from full URL (legacy data)
+            // Handles URLs like "http://127.0.0.1:8000/storage/products/file.jpg"
+            if (preg_match('#/storage/(products/[^?]+)#', $url, $matches)) {
+                return '/storage/' . $matches[1];
+            }
+
+            // Fallback: return original if we can't parse it
+            return $url;
+        }, $images);
+    }
+
 
     /**
      * Quality grade constants

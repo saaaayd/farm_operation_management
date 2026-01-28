@@ -44,8 +44,9 @@ class ProductImageController extends Controller
                 // Store in public disk under products directory
                 $path = $image->storeAs('products', $filename, 'public');
 
-                // Generate public URL using asset helper
-                $url = asset('storage/' . $path);
+                // Store relative path for portability across environments
+                // The frontend or API response will handle constructing full URLs if needed
+                $url = '/storage/' . $path;
                 $uploadedUrls[] = $url;
             }
 
@@ -68,7 +69,7 @@ class ProductImageController extends Controller
     public function delete(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'url' => 'required|string|url',
+            'url' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -81,9 +82,16 @@ class ProductImageController extends Controller
         try {
             $url = $request->input('url');
 
-            // Extract filename from URL
-            $filename = basename(parse_url($url, PHP_URL_PATH));
-            $path = 'products/' . $filename;
+            // Handle both relative paths and full URLs
+            // For relative paths like /storage/products/file.jpg, extract products/file.jpg
+            // For full URLs, extract filename from the path
+            if (str_starts_with($url, '/storage/')) {
+                $path = str_replace('/storage/', '', $url);
+            } else {
+                // Legacy support for full URLs
+                $filename = basename(parse_url($url, PHP_URL_PATH));
+                $path = 'products/' . $filename;
+            }
 
             // Check if file exists and delete
             if (Storage::disk('public')->exists($path)) {

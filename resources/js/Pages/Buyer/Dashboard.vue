@@ -8,7 +8,7 @@
           <p class="text-gray-500 mt-1">Welcome back, {{ authStore.user?.name }}</p>
         </div>
         <div class="flex items-center space-x-4">
-          <router-link 
+          <router-link
             to="/cart"
             class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
           >
@@ -16,14 +16,14 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 3h1.5l1.5 12h11.5l1.5-8h-14" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.25 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
             </svg>
-            <span 
+            <span
               v-if="marketplaceStore.cartItemsCount > 0"
               class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
             >
               {{ marketplaceStore.cartItemsCount }}
             </span>
           </router-link>
-          
+
           <button
             @click="logout"
             class="p-2 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-lg border border-gray-300"
@@ -39,7 +39,7 @@
       <!-- Quick Actions -->
       <section class="mb-8">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <router-link 
+          <router-link
             to="/buyer/products"
             class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
           >
@@ -51,7 +51,7 @@
             <p class="text-sm font-medium text-gray-900">Browse Rice Products</p>
           </router-link>
 
-          <router-link 
+          <router-link
             to="/cart"
             class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
           >
@@ -64,7 +64,7 @@
             <p class="text-sm font-medium text-gray-900">View Cart</p>
           </router-link>
 
-          <router-link 
+          <router-link
             to="/orders"
             class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
           >
@@ -76,7 +76,7 @@
             <p class="text-sm font-medium text-gray-900">Order History</p>
           </router-link>
 
-          <router-link 
+          <router-link
             to="/profile"
             class="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition-shadow"
           >
@@ -104,8 +104,8 @@
       <div v-if="notifications.length > 0" class="mb-8">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
         <div class="space-y-3">
-          <div 
-            v-for="notification in notifications" 
+          <div
+            v-for="notification in notifications"
             :key="notification.id"
             class="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start justify-between"
           >
@@ -118,8 +118,8 @@
               <div>
                 <h4 class="text-sm font-medium text-blue-900">{{ notification.title }}</h4>
                 <p class="text-sm text-blue-700 mt-1">{{ notification.message }}</p>
-                <router-link 
-                  v-if="notification.link" 
+                <router-link
+                  v-if="notification.link"
                   :to="notification.link"
                   class="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 underline"
                   @click="markAsRead(notification)"
@@ -128,7 +128,7 @@
                 </router-link>
               </div>
             </div>
-            <button 
+            <button
               @click="markAsRead(notification)"
               class="text-blue-400 hover:text-blue-600"
               title="Mark as read"
@@ -145,7 +145,7 @@
       <div class="mb-10">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">Available Products</h3>
-          <router-link 
+          <router-link
             to="/marketplace"
             class="text-green-600 hover:text-green-700 text-sm font-medium"
           >
@@ -159,19 +159,28 @@
             <div class="h-4 bg-gray-200 rounded w-3/4"></div>
           </div>
         </div>
-        
+
         <div v-else-if="featuredProducts.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div 
-            v-for="product in featuredProducts" 
+          <div
+            v-for="product in featuredProducts"
             :key="product.id"
             class="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
             @click="viewProduct(product)"
           >
             <div class="p-6">
-              <div class="h-32 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-4 flex items-center justify-center">
-                <svg class="h-16 w-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+              <div class="h-32 rounded-lg mb-4 overflow-hidden">
+                <img
+                  v-if="getProductImage(product)"
+                  :src="getProductImage(product)"
+                  :alt="product.name"
+                  class="w-full h-full object-cover"
+                  @error="handleImageError($event)"
+                />
+                <div v-else class="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                  <svg class="h-16 w-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
               </div>
               <h4 class="font-semibold text-gray-900 mb-2">{{ product.name }}</h4>
               <p class="text-sm text-gray-600 mb-3">{{ getProductDescription(product) }}</p>
@@ -183,7 +192,7 @@
                   {{ getProductQuantity(product) }} available
                 </span>
               </div>
-              <button 
+              <button
                 @click.stop="addToCart(product)"
                 class="w-full mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
               >
@@ -198,7 +207,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 13h20l-1.5 7.5a2 2 0 01-2 1.5H5.5a2 2 0 01-2-1.5L2 13z" />
           </svg>
           <p class="text-gray-600 mb-4">No products available yet. Check back soon!</p>
-          <router-link 
+          <router-link
             to="/marketplace"
             class="text-green-600 hover:text-green-700 font-medium"
           >
@@ -211,18 +220,18 @@
       <div class="mb-8">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">Recent Orders</h3>
-          <router-link 
+          <router-link
             to="/orders"
             class="text-green-600 hover:text-green-700 text-sm font-medium"
           >
             View all orders
           </router-link>
         </div>
-        
+
         <div v-if="recentOrders.length > 0" class="bg-white rounded-lg shadow">
           <div class="divide-y divide-gray-200">
-            <div 
-              v-for="order in recentOrders.slice(0, 5)" 
+            <div
+              v-for="order in recentOrders.slice(0, 5)"
               :key="order.id"
               class="p-6 hover:bg-gray-50 transition-colors"
             >
@@ -239,7 +248,7 @@
                   </p>
                 </div>
                 <div class="text-right">
-                  <span 
+                  <span
                     :class="getOrderStatusClass(order.status)"
                     class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
                   >
@@ -253,13 +262,13 @@
             </div>
           </div>
         </div>
-        
+
         <div v-else class="bg-white rounded-lg shadow p-8 text-center">
           <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
           <p class="text-gray-600 mb-4">No orders yet</p>
-          <router-link 
+          <router-link
             to="/marketplace"
             class="text-green-600 hover:text-green-700 font-medium"
           >
@@ -373,6 +382,27 @@ const getProductUnit = (product) => {
 
 const getProductDescription = (product) => {
   return product.description || product.summary || 'Premium rice variety';
+};
+
+const getProductImage = (product) => {
+  // Check for images array (from API response)
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+    return product.images[0];
+  }
+  // Check for single image property
+  if (product.image) {
+    return product.image;
+  }
+  // Check for thumbnail
+  if (product.thumbnail) {
+    return product.thumbnail;
+  }
+  return null;
+};
+
+const handleImageError = (event) => {
+  // Hide broken image and let v-else show the fallback
+  event.target.style.display = 'none';
 };
 
 const logout = async () => {

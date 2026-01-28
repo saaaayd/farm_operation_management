@@ -390,7 +390,7 @@ import { useFarmStore } from '@/stores/farm'
 import FormAlert from '@/Components/UI/FormAlert.vue'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 import { extractFormErrors, resetFormErrors } from '@/utils/form'
-import axios from 'axios'
+import { riceMarketplaceAPI } from '@/services/api'
 
 const router = useRouter()
 const marketplaceStore = useMarketplaceStore()
@@ -531,9 +531,7 @@ const uploadImages = async (files) => {
     const formData = new FormData()
     files.forEach(file => formData.append('images[]', file))
     
-    const response = await axios.post('/api/rice-marketplace/products/images/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const response = await riceMarketplaceAPI.uploadImages(formData)
     
     uploadedImages.value.push(...response.data.urls)
   } catch (error) {
@@ -548,7 +546,7 @@ const removeImage = async (index) => {
   const url = uploadedImages.value[index]
   
   try {
-    await axios.post('/api/rice-marketplace/products/images/delete', { url })
+    await riceMarketplaceAPI.deleteImage(url)
   } catch (error) {
     console.warn('Failed to delete image from server:', error)
   }

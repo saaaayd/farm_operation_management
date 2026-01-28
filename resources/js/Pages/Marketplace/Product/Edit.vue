@@ -337,7 +337,7 @@ import InputField from '@/Components/Forms/InputField.vue'
 import SelectDropdown from '@/Components/Forms/SelectDropdown.vue'
 import LoadingSpinner from '@/Components/UI/LoadingSpinner.vue'
 import ConfirmationModal from '@/Components/UI/ConfirmationModal.vue'
-import axios from 'axios'
+import { riceMarketplaceAPI } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -514,9 +514,7 @@ const uploadImages = async (files) => {
     const formData = new FormData()
     files.forEach(file => formData.append('images[]', file))
     
-    const response = await axios.post('/api/rice-marketplace/products/images/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const response = await riceMarketplaceAPI.uploadImages(formData)
     
     uploadedImages.value.push(...response.data.urls)
   } catch (error) {
@@ -531,7 +529,7 @@ const removeImage = async (index) => {
   const url = uploadedImages.value[index]
   
   try {
-    await axios.post('/api/rice-marketplace/products/images/delete', { url })
+    await riceMarketplaceAPI.deleteImage(url)
   } catch (error) {
     console.warn('Failed to delete image from server:', error)
   }
