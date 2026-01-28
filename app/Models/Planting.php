@@ -176,6 +176,7 @@ class Planting extends Model
             ->where('status', 'pending')
             ->join('rice_growth_stages', 'planting_stages.rice_growth_stage_id', '=', 'rice_growth_stages.id')
             ->orderBy('rice_growth_stages.order_sequence')
+            ->select('planting_stages.*')
             ->first();
     }
 

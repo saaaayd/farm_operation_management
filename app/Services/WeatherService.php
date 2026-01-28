@@ -183,7 +183,7 @@ class WeatherService
             $lon = (float) $field->field_coordinates['lon'];
         }
 
-        if ($lat === null || $lon === null) {
+        if ($lat === 0.0 || $lon === 0.0) {
             Log::warning('Field location coordinates missing', ['field_id' => $field->id]);
             return null;
         }
@@ -325,6 +325,7 @@ class WeatherService
 
             if ($weatherData) {
                 foreach ($fieldsInGroup as $field) {
+                    /** @var Field $field */
                     // Pass the fetched weather data to avoid re-fetching
                     if ($this->updateFieldWeather($field, $weatherData)) {
                         $updated++;
@@ -346,6 +347,7 @@ class WeatherService
     {
         $alerts = [];
         $latestWeather = $field->latestWeather;
+        /** @var WeatherLog|null $latestWeather */
 
         if (!$latestWeather) {
             return $alerts;
@@ -356,6 +358,7 @@ class WeatherService
         $currentStage = $currentPlanting?->getCurrentStage();
 
         // Rice-specific temperature alerts
+        // Use property access on the WeatherLog model instance
         $recordedAt = optional($latestWeather->recorded_at)->toIso8601String();
         $temperature = (float) $latestWeather->temperature;
         $humidity = (float) $latestWeather->humidity;
@@ -537,7 +540,7 @@ class WeatherService
             'avg_humidity' => round($weatherLogs->avg('humidity'), 1),
             'avg_wind_speed' => round($weatherLogs->avg('wind_speed'), 1),
             'most_common_condition' => $weatherLogs->groupBy('conditions')
-                ->map->count()
+                ->map(fn($group) => $group->count())
                 ->sortDesc()
                 ->keys()
                 ->first(),
@@ -795,11 +798,11 @@ class WeatherService
                 $lowHumidityDays = $recentWeather->where('humidity', '<', 60)->count();
 
                 if ($hotDays > 1) {
-                    $suitabilityScore -= 30;
+                    $suitabilityScore -= 40;
                     $recommendations[] = 'Critical: Maintain 5-10cm water depth during flowering to prevent heat stress.';
                 }
                 if ($lowHumidityDays > 2) {
-                    $suitabilityScore -= 20;
+                    $suitabilityScore -= 30;
                     $recommendations[] = 'Increase field humidity through proper water management.';
                 }
                 break;

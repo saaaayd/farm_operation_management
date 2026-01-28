@@ -33,10 +33,10 @@ class WeatherForecastService
         }
 
         $cacheKey = "weather_forecast_{$field->id}_{$days}_{$forecastType}";
-        
+
         return Cache::remember($cacheKey, 1800, function () use ($field, $days, $forecastType) {
             $forecast = $this->fetchWeatherForecast($field->location['lat'], $field->location['lon'], $days);
-            
+
             if (!$forecast) {
                 return ['error' => 'Unable to fetch weather forecast'];
             }
@@ -50,7 +50,7 @@ class WeatherForecastService
      */
     public function getExtendedForecast(Field $field, string $period = 'weekly')
     {
-        $days = match($period) {
+        $days = match ($period) {
             'weekly' => 7,
             'monthly' => 30,
             'seasonal' => 90,
@@ -58,7 +58,7 @@ class WeatherForecastService
         };
 
         $forecast = $this->getFieldForecast($field, min($days, 14)); // API limit
-        
+
         if ($period === 'seasonal') {
             // For seasonal forecasts, we'd typically use climate models
             $forecast['seasonal_trends'] = $this->getSeasonalTrends($field);
@@ -79,7 +79,7 @@ class WeatherForecastService
     {
         $basicForecast = $this->getFieldForecast($field, 7, 'detailed');
         $currentPlanting = $field->getCurrentRicePlanting();
-        
+
         $agriculturalForecast = [
             'basic_forecast' => $basicForecast,
             'agricultural_insights' => $this->generateAgriculturalInsights($basicForecast, $field),
@@ -121,9 +121,10 @@ class WeatherForecastService
     {
         $fields = $farm->fields;
         $fieldForecasts = [];
-        
+
         foreach ($fields as $field) {
             if (isset($field->location['lat']) && isset($field->location['lon'])) {
+                /** @var Field $field */
                 $fieldForecasts[$field->id] = $this->getFieldForecast($field, $days);
             }
         }
@@ -143,7 +144,7 @@ class WeatherForecastService
     {
         $forecast = $this->getFieldForecast($field, 7);
         $currentPlanting = $field->getCurrentRicePlanting();
-        
+
         $recommendations = [];
 
         if (isset($forecast['daily_forecasts'])) {
@@ -174,7 +175,7 @@ class WeatherForecastService
         if (isset($forecast['daily_forecasts'])) {
             foreach ($forecast['daily_forecasts'] as $day) {
                 $suitability = $this->evaluateActivitySuitability($day, $activityType, $field);
-                
+
                 if ($suitability['suitable']) {
                     $optimalWindows[] = [
                         'date' => $day['date'],
@@ -206,7 +207,7 @@ class WeatherForecastService
     {
         $forecast = $this->getFieldForecast($field, 7);
         $currentPlanting = $field->getCurrentRicePlanting();
-        
+
         return [
             'disease_risk_forecast' => $this->forecastDiseaseRisk($forecast, $field),
             'pest_risk_forecast' => $this->forecastPestRisk($forecast, $field),
@@ -218,11 +219,11 @@ class WeatherForecastService
     /**
      * Get seasonal weather outlook
      */
-    public function getSeasonalOutlook(Farm $farm, string $season = null, int $monthsAhead = 3)
+    public function getSeasonalOutlook(Farm $farm, ?string $season = null, int $monthsAhead = 3)
     {
         // This would typically integrate with seasonal climate models
         // For now, providing a structured placeholder
-        
+
         return [
             'season' => $season,
             'outlook_period' => $monthsAhead,
@@ -240,7 +241,7 @@ class WeatherForecastService
     {
         // This would integrate with a notification system
         // For now, returning a structured response
-        
+
         return [
             'field_id' => $field->id,
             'alert_types' => $alertTypes,
@@ -263,7 +264,7 @@ class WeatherForecastService
 
         // This would compare historical forecasts with actual weather
         // For now, providing placeholder metrics
-        
+
         return [
             'period_days' => $periodDays,
             'temperature_accuracy' => 85.2,
@@ -307,7 +308,7 @@ class WeatherForecastService
     private function processForecast(array $forecastData, string $forecastType, Field $field)
     {
         $dailyForecasts = $this->groupForecastsByDay($forecastData['list'] ?? []);
-        
+
         $processed = [
             'daily_forecasts' => $dailyForecasts,
             'summary' => $this->generateForecastSummary($dailyForecasts),
@@ -324,10 +325,10 @@ class WeatherForecastService
     private function groupForecastsByDay(array $forecastList)
     {
         $dailyForecasts = [];
-        
+
         foreach ($forecastList as $forecast) {
             $date = Carbon::parse($forecast['dt_txt'])->format('Y-m-d');
-            
+
             if (!isset($dailyForecasts[$date])) {
                 $dailyForecasts[$date] = [
                     'date' => $date,
@@ -338,7 +339,7 @@ class WeatherForecastService
                     'hourly_data' => [],
                 ];
             }
-            
+
             $temp = $forecast['main']['temp'];
             $dailyForecasts[$date]['temperature']['min'] = min($dailyForecasts[$date]['temperature']['min'], $temp);
             $dailyForecasts[$date]['temperature']['max'] = max($dailyForecasts[$date]['temperature']['max'], $temp);
@@ -374,7 +375,7 @@ class WeatherForecastService
 
         $temperatures = array_column($dailyForecasts, 'temperature');
         $avgTemps = array_column($temperatures, 'avg');
-        
+
         return [
             'avg_temperature' => round(array_sum($avgTemps) / count($avgTemps), 1),
             'temperature_range' => [
@@ -392,7 +393,7 @@ class WeatherForecastService
         foreach ($dailyForecasts as $day) {
             $allConditions[] = $day['most_common_condition'];
         }
-        
+
         $counts = array_count_values($allConditions);
         arsort($counts);
         return array_key_first($counts);
@@ -415,34 +416,34 @@ class WeatherForecastService
     private function generateAgriculturalInsights(array $forecast, Field $field)
     {
         $insights = [];
-        
+
         if (isset($forecast['daily_forecasts'])) {
             foreach ($forecast['daily_forecasts'] as $day) {
                 $dayInsights = [];
-                
+
                 // Temperature insights
                 if ($day['temperature']['max'] > 35) {
                     $dayInsights[] = 'High temperature may cause heat stress in rice plants';
                 }
-                
+
                 if ($day['temperature']['min'] < 15) {
                     $dayInsights[] = 'Low temperature may slow rice growth';
                 }
-                
+
                 // Humidity insights
                 if ($day['humidity_avg'] > 85) {
                     $dayInsights[] = 'High humidity increases disease risk';
                 }
-                
+
                 // Wind insights
                 if ($day['wind_speed_avg'] > 15) {
                     $dayInsights[] = 'Strong winds may cause lodging in mature rice plants';
                 }
-                
+
                 $insights[$day['date']] = $dayInsights;
             }
         }
-        
+
         return $insights;
     }
 
@@ -472,7 +473,7 @@ class WeatherForecastService
     private function analyzeDayForAlerts($day, $field)
     {
         $alerts = [];
-        
+
         if ($day['temperature']['max'] > 35) {
             $alerts[] = [
                 'type' => 'temperature',
@@ -481,7 +482,7 @@ class WeatherForecastService
                 'date' => $day['date'],
             ];
         }
-        
+
         return $alerts;
     }
 
@@ -527,16 +528,16 @@ class WeatherForecastService
     {
         // Simplified suitability evaluation
         $score = 50; // Base score
-        
+
         // Adjust based on conditions
         if ($day['most_common_condition'] === 'Clear') {
             $score += 20;
         }
-        
+
         if ($day['wind_speed_avg'] < 10) {
             $score += 15;
         }
-        
+
         return [
             'suitable' => $score >= 60,
             'score' => $score,

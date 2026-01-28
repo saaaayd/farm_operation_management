@@ -10,6 +10,13 @@ class Field extends Model
 {
     use HasFactory;
 
+    /**
+     * @property int $id
+     * @property array|null $location
+     * @property array|null $field_coordinates
+     * @property WeatherLog|null $latestWeather
+     */
+
     protected $fillable = [
         'user_id',
         'farm_id',

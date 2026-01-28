@@ -94,11 +94,7 @@
           </div>
         </div>
 
-        <!-- GIS Field Map -->
-        <FieldMap 
-          v-if="analyticsData.fields?.field_status" 
-          :fields="analyticsData.fields.field_status" 
-        />
+
 
         <!-- Action Suggestions Panel -->
         <div v-if="analyticsData.action_suggestions?.length" class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200/50 shadow-lg">
@@ -634,7 +630,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
-import FieldMap from '@/Components/Analytics/FieldMap.vue';
+
 
 const router = useRouter();
 

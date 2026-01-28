@@ -127,6 +127,62 @@
             </div>
           </div>
 
+          <!-- Growth Stages Timeline -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Growth Stages</h2>
+            <div class="relative pl-4 border-l-2 border-gray-200 space-y-8">
+              <div 
+                v-for="(stage, index) in planting.planting_stages" 
+                :key="stage.id"
+                class="relative"
+              >
+                <!-- Timeline Dot -->
+                <div 
+                  class="absolute -left-[21px] top-0 h-4 w-4 rounded-full border-2 bg-white"
+                  :class="{
+                    'border-green-500 bg-green-500': stage.status === 'completed',
+                    'border-blue-500 bg-blue-500': stage.status === 'in_progress',
+                    'border-gray-300': stage.status === 'pending'
+                  }"
+                ></div>
+
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h3 class="text-lg font-medium text-gray-900">
+                      {{ stage.rice_growth_stage?.name || 'Unknown Stage' }}
+                    </h3>
+                    <p class="text-sm text-gray-500">
+                      {{ stage.rice_growth_stage?.description }}
+                    </p>
+                    <div v-if="stage.notes" class="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                      {{ stage.notes }}
+                    </div>
+                  </div>
+                  <span 
+                    class="px-2 py-1 text-xs font-medium rounded-full shrink-0 ml-2"
+                    :class="{
+                      'bg-green-100 text-green-800': stage.status === 'completed',
+                      'bg-blue-100 text-blue-800': stage.status === 'in_progress',
+                      'bg-gray-100 text-gray-800': stage.status === 'pending'
+                    }"
+                  >
+                    {{ stage.status === 'in_progress' ? 'In Progress' : stage.status }}
+                  </span>
+                </div>
+
+                <!-- Stage Details if Active/Completed -->
+                <div v-if="stage.status !== 'pending'" class="mt-2 text-sm text-gray-600">
+                   <div v-if="stage.completed_at">
+                      Completed: {{ formatDate(stage.completed_at) }}
+                   </div>
+                   <div v-else-if="stage.started_at">
+                      Started: {{ formatDate(stage.started_at) }}
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Recent Activities -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Recent Activities</h2>
