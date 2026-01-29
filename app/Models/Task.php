@@ -40,10 +40,15 @@ class Task extends Model
     /**
      * Task type constants
      */
+    const TYPE_LAND_PREPARATION = 'land_preparation';
+    const TYPE_SEEDLING_MANAGEMENT = 'seedling';
+    const TYPE_TRANSPLANTING = 'transplanting';
     const TYPE_WATERING = 'watering';
+    const TYPE_WATER_MANAGEMENT = 'water_management';
     const TYPE_FERTILIZING = 'fertilizing';
     const TYPE_WEEDING = 'weeding';
     const TYPE_PEST_CONTROL = 'pest_control';
+    const TYPE_PESTICIDE_APPLICATION = 'pesticide_application';
     const TYPE_HARVESTING = 'harvesting';
     const TYPE_MAINTENANCE = 'maintenance';
 

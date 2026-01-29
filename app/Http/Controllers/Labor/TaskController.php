@@ -470,10 +470,15 @@ class TaskController extends Controller
     private function taskTypeOptions(): array
     {
         return [
+            Task::TYPE_LAND_PREPARATION,
+            Task::TYPE_SEEDLING_MANAGEMENT,
+            Task::TYPE_TRANSPLANTING,
             Task::TYPE_WATERING,
+            Task::TYPE_WATER_MANAGEMENT,
             Task::TYPE_FERTILIZING,
             Task::TYPE_WEEDING,
             Task::TYPE_PEST_CONTROL,
+            Task::TYPE_PESTICIDE_APPLICATION,
             Task::TYPE_HARVESTING,
             Task::TYPE_MAINTENANCE,
         ];

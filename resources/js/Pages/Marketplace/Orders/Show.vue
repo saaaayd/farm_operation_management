@@ -207,7 +207,7 @@
                 v-for="message in messages"
                 :key="message.id"
                 class="max-w-md rounded-lg px-4 py-3 text-sm"
-                :class="message.sender_id === currentUserId ? 'ml-auto bg-green-100 text-right' : 'mr-auto bg-white text-left border border-gray-200'"
+                :class="message.sender_id == currentUserId ? 'ml-auto bg-green-100 text-right' : 'mr-auto bg-white text-left border border-gray-200'"
               >
                 <div class="text-xs text-gray-500">
                   {{ message.sender?.name || 'Participant' }} • {{ formatDateTime(message.created_at) }}
@@ -317,7 +317,7 @@
                   {{ processing ? 'Processing...' : '✓ Confirm Pickup' }}
                 </button>
                 <button
-                  v-if="order.payment_status !== 'paid' && isFarmer"
+                  v-if="order.payment_status !== 'paid' && isFarmer && order.status !== 'cancelled'"
                   @click="markAsPaid"
                   :disabled="processing"
                   class="w-full bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
@@ -773,12 +773,23 @@ const loadMessages = async () => {
   messageError.value = ''
   try {
     const response = await riceMarketplaceAPI.getOrderMessages(order.value.id)
-    messages.value = response.data.messages || []
+    // Sort messages: Oldest at the top, Newest at the bottom
+    messages.value = (response.data.messages || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    scrollToBottom()
   } catch (err) {
     messageError.value = err.userMessage || err.response?.data?.message || 'Failed to load messages'
   } finally {
     messagesLoading.value = false
   }
+}
+
+const scrollToBottom = () => {
+  setTimeout(() => {
+    const container = document.querySelector('.max-h-64.overflow-y-auto')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, 100)
 }
 
 const sendMessage = async () => {
@@ -794,6 +805,7 @@ const sendMessage = async () => {
     })
     messages.value.push(response.data.data)
     messageInput.value = ''
+    scrollToBottom()
   } catch (err) {
     messageError.value = err.userMessage || err.response?.data?.message || 'Failed to send message'
   } finally {

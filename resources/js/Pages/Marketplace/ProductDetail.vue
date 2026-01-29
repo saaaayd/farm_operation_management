@@ -470,7 +470,7 @@ const toggleFavorite = async () => {
 
 const loadReviews = async (productId) => {
   try {
-    const response = await api.get(`/products/${productId}/reviews`)
+    const response = await api.get(`/rice-marketplace/products/${productId}/reviews`)
     // Response structure: { reviews: { data: [...] }, average_rating: ..., ... }
     const reviewsData = response.data.reviews?.data || response.data.reviews || []
     

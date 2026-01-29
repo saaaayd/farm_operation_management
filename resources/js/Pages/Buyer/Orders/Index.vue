@@ -262,7 +262,7 @@ const submitReview = async () => {
 
   submittingReview.value = true
   try {
-    await api.post('/reviews', { // Route is /reviews in api.php, mapped to ProductReviewController::store
+    await api.post('/rice-marketplace/reviews', { // Route is /rice-marketplace/reviews in api.php
       rice_order_id: reviewOrder.value.id,
       ...reviewForm.value,
     })
